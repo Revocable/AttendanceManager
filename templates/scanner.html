@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <!-- Crucial para responsividade e evitar zoom inicial -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Check-in QR Code</title>
+    <!-- Biblioteca para ler QR Codes no Frontend -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <style>
+        /* Reset básico e box-sizing */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box; /* Aplica a todos os elementos */
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex; /* Para centralizar o container principal */
+            justify-content: center;
+            align-items: center;
+            background-color: #f0f2f5;
+            color: #1c1e21;
+            line-height: 1.5;
+            overflow-x: hidden; /* Previne scroll horizontal no body */
+        }
+
+        .container.scanner-only-container {
+            width: 100%;
+            max-width: 450px; /* Um pouco maior para acomodar padding */
+            padding: 20px; /* Padding para não colar nas bordas da tela */
+            /* margin: auto; não é mais necessário com flex no body */
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* Centraliza o conteúdo do container */
+        }
+
+        .section.scanner-section {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+            width: 100%; /* Ocupa a largura do .container */
+            text-align: center; /* Centraliza h1 e outros textos */
+        }
+
+        .scanner-title {
+            font-size: 1.6em; /* Ajustado */
+            color: #007bff;
+            margin-bottom: 20px;
+        }
+
+        #qrReaderMessageContainer {
+            margin-bottom: 15px;
+        }
+        #qrReaderMessageContainer p {
+            font-size: 0.9em;
+            color: #555;
+            margin-bottom: 5px;
+        }
+
+        #qrScannerWrapper {
+            position: relative;
+            width: 80vw;       /* 80% da largura da viewport */
+            max-width: 300px;  /* Limite máximo */
+            min-width: 180px;  /* Limite mínimo */
+            aspect-ratio: 1 / 1; /* Mantém proporção quadrada */
+            margin: 15px auto; /* Centraliza o wrapper */
+            border: 3px solid #007bff;
+            display: none; 
+            background-color: #333;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        #qrReader {
+            width: 100%;
+            height: 100%;
+        }
+
+        #qrReader video {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover;
+            display: block;
+        }
+
+        .scan-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            background-color: rgba(0, 0, 0, 0.0); color: white;
+            font-size: 1.8em; font-weight: bold; text-align: center;
+            opacity: 0; transition: opacity 0.3s ease-in-out, background-color 0.3s ease-in-out;
+            pointer-events: none; z-index: 10; padding: 10px;
+        }
+        .scan-overlay.visible { opacity: 1; }
+        .scan-overlay .overlay-icon { font-size: 2.8em; line-height: 1; }
+        .scan-overlay .overlay-message { font-size: 0.65em; margin-top: 8px; max-width: 95%; }
+        .scan-overlay.success-bg { background-color: rgba(40, 167, 69, 0.75); }
+        .scan-overlay.error-bg { background-color: rgba(220, 53, 69, 0.75); }
+        .scan-overlay.warning-bg { background-color: rgba(255, 193, 7, 0.75); }
+
+        .scanner-controls {
+            display: flex;
+            flex-direction: column; /* Botões empilhados em telas pequenas */
+            gap: 10px;
+            margin-top: 20px;
+            width: 100%;
+            max-width: 280px; /* Limita largura dos botões */
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .scanner-controls button {
+            padding: 12px 20px;
+            font-size: 1.1em;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%; /* Botões ocupam largura total do seu container */
+        }
+        .scanner-controls button:hover { background-color: #0056b3; }
+        #stopScanButton { background-color: #6c757d; }
+        #stopScanButton:hover { background-color: #545b62; }
+
+
+        #scanResultText {
+            text-align: center; margin-top: 15px; font-weight: bold;
+            min-height: 1.5em; font-size: 1em; padding: 8px; border-radius: 5px;
+        }
+        #scanResultText.processing { color: #495057; background-color: #e9ecef; border: 1px solid #ced4da; }
+        #scanResultText.success { color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb;}
+        #scanResultText.error { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb;}
+        #scanResultText.warning { color: #856404; background-color: #fff3cd; border: 1px solid #ffeeba;}
+
+
+        .spinner {
+            display: inline-block; width: 1em; height: 1em;
+            border: 2px solid currentColor; border-right-color: transparent;
+            border-radius: 50%; animation: spinner-border .75s linear infinite;
+            vertical-align: text-bottom; margin-left: 5px;
+        }
+        @keyframes spinner-border { to { transform: rotate(360deg); } }
+
+        /* Media query para telas um pouco maiores, se precisar de ajustes finos */
+        @media (min-width: 400px) {
+            .scanner-controls {
+                flex-direction: row; /* Botões lado a lado */
+                justify-content: center;
+            }
+            .scanner-controls button {
+                width: auto; /* Largura automática para os botões */
+                min-width: 120px;
+            }
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container scanner-only-container">
+        <div class="section scanner-section">
+            <h1 class="scanner-title">Check-in QR Code</h1>
+            
+            <div id="qrReaderMessageContainer">
+                <p>Clique em "Iniciar Scanner".</p>
+                <p><strong>Importante:</strong> Requer HTTPS e permissão de câmera.</p>
+            </div>
+            
+            <div id="qrScannerWrapper">
+                <div id="qrReader"></div>
+                <div id="scanOverlayFeedback" class="scan-overlay"></div>
+            </div>
+
+            <div class="scanner-controls">
+                <button id="startScanButton" onclick="startQrScanner()">Iniciar Scanner</button>
+                <button id="stopScanButton" onclick="stopQrScanner()" style="display:none;">Parar Scanner</button>
+            </div>
+            <p id="scanResultText"></p>
+        </div>
+    </div>
+
+    <audio id="beepSound" src="{{ url_for('static', filename='beep.mp3') }}" preload="auto"></audio>
+
+    <script>
+        // JAVASCRIPT EMBUTIDO (o mesmo da resposta anterior, pois a lógica não precisa mudar para este ajuste de layout)
+
+        const API_BASE_URL = ''; 
+        let html5QrCode = null;
+        let beepAudio = null;
+        const OVERLAY_TIMEOUT_MS = 2500; 
+        let overlayTimeoutId = null; 
+
+        let lastScannedHash = null;
+        let lastScanTime = 0;
+        const SCAN_COOLDOWN_MS = 3000; 
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const qrReaderElementId = "qrReader";
+            if (document.getElementById(qrReaderElementId)) {
+                html5QrCode = new Html5Qrcode(qrReaderElementId, /* verbose= */ true);
+                console.log("Instância Html5Qrcode criada para scanner.html.");
+            } else {
+                console.error("Elemento 'qrReader' não encontrado na página do scanner! O Scanner não funcionará.");
+            }
+
+            beepAudio = document.getElementById('beepSound');
+            if (beepAudio) {
+                beepAudio.onerror = () => console.error("Erro ao carregar 'beep.mp3'. Verifique o caminho e o arquivo.");
+            } else {
+                console.warn("Elemento de áudio 'beepSound' não encontrado.");
+            }
+        });
+
+        function showOverlayFeedback(type, icon, message) {
+            const overlay = document.getElementById('scanOverlayFeedback');
+            const textFeedback = document.getElementById('scanResultText'); 
+
+            if (overlayTimeoutId) {
+                clearTimeout(overlayTimeoutId); 
+            }
+
+            if (overlay) {
+                overlay.innerHTML = `<span class="overlay-icon">${icon}</span><span class="overlay-message">${message}</span>`;
+                overlay.className = 'scan-overlay visible'; 
+                if (type === 'success') overlay.classList.add('success-bg');
+                else if (type === 'error') overlay.classList.add('error-bg');
+                else if (type === 'warning') overlay.classList.add('warning-bg'); 
+                
+                if (type !== 'processing') { 
+                    overlayTimeoutId = setTimeout(() => {
+                        overlay.classList.remove('visible');
+                        overlay.classList.remove('success-bg', 'error-bg', 'warning-bg');
+                    }, OVERLAY_TIMEOUT_MS);
+                }
+            }
+
+            if(textFeedback) {
+                textFeedback.textContent = (type === 'processing') ? `Processando QR...` : message;
+                textFeedback.className = type; 
+            }
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            const currentTime = Date.now();
+
+            if (decodedText === lastScannedHash && (currentTime - lastScanTime) < SCAN_COOLDOWN_MS) {
+                console.log(`[SCANNER_PAGE] QR (${decodedText.substring(0,10)}...) cooldown. Ignorando.`);
+                return; 
+            }
+
+            console.log(`[SCANNER_PAGE] QR LIDO: ${decodedText}`);
+            showOverlayFeedback('processing', '<span class="spinner"></span>', `Processando...`);
+            
+            lastScannedHash = decodedText; 
+            lastScanTime = currentTime;
+
+            processScannedQr(decodedText);
+        }
+
+        function onScanFailure(error) {
+            // console.warn(`[SCANNER_PAGE] Falha no scan: ${error}`);
+        }
+
+        async function processScannedQr(qrHash) {
+            console.log(`[SCANNER_PAGE] Enviando hash '${qrHash}' para API /api/guests/${qrHash}/enter`);
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/guests/${qrHash}/enter`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+
+                if (!response.ok) { 
+                     showOverlayFeedback('error', '✗', result.error || 'QR inválido ou não encontrado.');
+                } else { 
+                    const guestName = result.name || "Convidado";
+                    let message = result.message || (guestName + ' check-in OK!');
+
+                    if (result.is_new_entry === true) {
+                        showOverlayFeedback('success', '✓', message);
+                        if (beepAudio) { 
+                            beepAudio.currentTime = 0; 
+                            beepAudio.play().catch(e => console.error("Erro ao tocar beep:", e)); 
+                        }
+                    } else {
+                        showOverlayFeedback('warning', 'ⓘ', message);
+                    }
+                }
+            } catch (error) { 
+                console.error('[SCANNER_PAGE] Erro de rede:', error);
+                showOverlayFeedback('error', '✗', 'Erro de rede ao validar QR.');
+            }
+        }
+
+        function startQrScanner() {
+            if (!html5QrCode) { alert("Erro: Leitor QR não inicializado."); return; }
+            const qrScannerWrapper = document.getElementById('qrScannerWrapper');
+            const msgContainer = document.getElementById('qrReaderMessageContainer');
+            const startBtn = document.getElementById('startScanButton');
+            const stopBtn = document.getElementById('stopScanButton');
+            const textFeedback = document.getElementById('scanResultText');
+
+            if (msgContainer) msgContainer.style.display = 'none';
+            if (qrScannerWrapper) qrScannerWrapper.style.display = 'block'; 
+
+            const config = { 
+                fps: 10, 
+                qrbox: (viewfinderWidth, viewfinderHeight) => {
+                    const boxSize = Math.min(viewfinderWidth, viewfinderHeight, 250); // Limita a 250px
+                    return { width: boxSize, height: boxSize };
+                },
+                rememberLastUsedCamera: true, 
+                supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA] 
+            };
+            
+            if (html5QrCode.isScanning) { 
+                console.log("Scanner já ativo."); 
+                return; 
+            }
+
+            if (textFeedback) {
+                textFeedback.textContent = 'Iniciando câmera...'; 
+                textFeedback.className = 'processing';
+            }
+            
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure)
+            .then(() => {
+                console.log("Scanner iniciado.");
+                if(startBtn) startBtn.style.display = 'none';
+                if(stopBtn) stopBtn.style.display = 'inline-block';
+                if(textFeedback) { 
+                    textFeedback.textContent = 'Câmera ativa. Aponte para QR Code.'; 
+                    textFeedback.className = ''; 
+                }
+            }).catch(err => {
+                console.error("Erro ao iniciar scanner:", err);
+                if(textFeedback) { 
+                    textFeedback.textContent = `Erro câmera: ${err}.`; 
+                    textFeedback.className = 'error'; 
+                }
+                if (msgContainer) msgContainer.style.display = 'block';
+                if (qrScannerWrapper) qrScannerWrapper.style.display = 'none';
+                if(startBtn) startBtn.style.display = 'inline-block';
+                if(stopBtn) stopBtn.style.display = 'none';
+            });
+        }
+
+        async function stopQrScanner() {
+            if (!html5QrCode) { return; }
+            const startBtn = document.getElementById('startScanButton'); 
+            const stopBtn = document.getElementById('stopScanButton');
+            const textFeedback = document.getElementById('scanResultText'); 
+            const qrScannerWrapper = document.getElementById('qrScannerWrapper');
+            const msgContainer = document.getElementById('qrReaderMessageContainer');
+            const overlay = document.getElementById('scanOverlayFeedback');
+
+            if (html5QrCode.isScanning) {
+                try {
+                    await html5QrCode.stop(); 
+                    console.log("Scanner parado.");
+                    if(textFeedback) { 
+                        textFeedback.textContent = 'Scanner parado.'; 
+                        textFeedback.className = ''; 
+                    }
+                } catch (err) {
+                    console.error("Erro ao parar scanner:", err);
+                    if(textFeedback) { 
+                        textFeedback.textContent = `Erro ao parar scanner.`; 
+                        textFeedback.className = 'error'; 
+                    }
+                } finally {
+                    if(startBtn) startBtn.style.display = 'inline-block'; 
+                    if(stopBtn) stopBtn.style.display = 'none';
+                    if (qrScannerWrapper) qrScannerWrapper.style.display = 'none';
+                    if (msgContainer) msgContainer.style.display = 'block';
+                    if (overlay) { 
+                        overlay.classList.remove('visible');
+                        overlay.classList.remove('success-bg', 'error-bg', 'warning-bg', 'processing-bg');
+                    }
+                }
+            } else { 
+                if(startBtn) startBtn.style.display = 'inline-block'; 
+                if(stopBtn) stopBtn.style.display = 'none';
+                if (qrScannerWrapper) qrScannerWrapper.style.display = 'none';
+                if (msgContainer) msgContainer.style.display = 'block';
+                if(textFeedback && !textFeedback.textContent.includes("Erro")) { 
+                    textFeedback.textContent = 'Scanner não estava ativo.'; 
+                    textFeedback.className = ''; 
+                }
+                if (overlay) {
+                    overlay.classList.remove('visible');
+                    overlay.classList.remove('success-bg', 'error-bg', 'warning-bg', 'processing-bg');
+                }
+            }
+        }
+    </script>
+</body>
+</html>

@@ -63,7 +63,6 @@ input[type="text"] {
     margin-right: 0; /* Remove margem direita */
 }
 
-
 button, .button { 
     padding: 12px 18px; /* Aumenta padding para toque */
     background-color: #007bff; 
@@ -84,14 +83,12 @@ button:last-child { margin-right: 0; }
 button:hover, .button:hover { background-color: #0056b3; }
 button:disabled { background-color: #ccc; cursor: not-allowed; }
 
-
 #newQrCodeArea { 
     margin-top: 15px; padding: 10px; border: 1px dashed #ccc; 
     border-radius: 6px; min-height: 50px; text-align: center; 
 }
 #newGuestQrImage { display: block; margin: 10px auto; border: 1px solid #eee; max-width: 120px; } /* Reduzido max-width */
 #downloadQrLink { margin-top: 10px; font-size: 0.9em; }
-
 
 /* Tabela Responsiva - wrapper para scroll horizontal */
 .table-responsive-wrapper {
@@ -104,7 +101,6 @@ table {
     width: 100%; 
     min-width: 600px; /* Largura mínima para forçar scroll se necessário, ajuste conforme seu conteúdo */
     border-collapse: collapse; 
-    /* margin-top: 15px; Movido para o wrapper */
 }
 th, td { 
     border: 1px solid #ddd; padding: 8px 10px; /* Padding ajustado */
@@ -123,7 +119,6 @@ td .button-mark, td .button-unmark, td .button-remove {
     display: inline-block; /* Garante que fiquem na linha */
     margin-bottom: 3px;
 }
-
 
 #qrReaderMessageContainer p { font-size: 0.9em; color: #555; margin-bottom: 5px; }
 
@@ -168,7 +163,6 @@ td .button-mark, td .button-unmark, td .button-remove {
 .scan-overlay.error-bg { background-color: rgba(220, 53, 69, 0.75); }
 .scan-overlay.warning-bg { background-color: rgba(255, 193, 7, 0.75); }
 
-
 #scanResultText { 
     margin-top: 10px; font-weight: bold; min-height: 1.5em; 
     text-align: center; padding: 5px; border-radius: 5px; 
@@ -178,7 +172,6 @@ td .button-mark, td .button-unmark, td .button-remove {
 #scanResultText.error { color: #721c24; }
 #scanResultText.warning { color: #856404; }
 
-
 .spinner { 
     display: inline-block; width: 1em; height: 1em; 
     border: 2px solid currentColor; border-right-color: transparent; 
@@ -187,7 +180,6 @@ td .button-mark, td .button-unmark, td .button-remove {
 }
 @keyframes spinner-border { to { transform: rotate(360deg); } }
 
-
 .button-mark { background-color: #28a745; }
 .button-mark:hover { background-color: #1e7e34; }
 .button-unmark { background-color: #ffc107; color: #212529;}
@@ -195,7 +187,6 @@ td .button-mark, td .button-unmark, td .button-remove {
 .button-remove { background-color: #dc3545; }
 .button-remove:hover { background-color: #c82333; }
 #guestAddedInfo { font-weight: bold; margin-bottom: 10px; }
-
 
 /* Media Queries para telas maiores (Desktop) */
 @media (min-width: 768px) {
@@ -218,7 +209,6 @@ td .button-mark, td .button-unmark, td .button-remove {
         font-size: 1.8em; /* Maior para desktop */
         padding-bottom: 10px; /* Restaura padding */
     }
-
     #addGuestForm {
         flex-direction: row; /* Lado a lado em desktop */
         align-items: center; /* Alinha verticalmente */
@@ -226,13 +216,11 @@ td .button-mark, td .button-unmark, td .button-remove {
     input[type="text"] {
         margin-right: 10px; /* Espaço entre input e botão */
         margin-bottom: 0;   /* Remove margem inferior */
-        /* width: auto; Não precisa de width 100% se flex-grow:1 está ativo */
         flex-grow: 1; /* Input cresce para preencher espaço */
     }
     #addGuestForm button {
         width: auto; /* Botão com largura automática */
     }
-
     th, td {
         padding: 10px 12px; /* Restaura padding da tabela */
         font-size: 1em; /* Restaura tamanho da fonte da tabela */
@@ -245,7 +233,6 @@ td .button-mark, td .button-unmark, td .button-remove {
         padding: 8px 12px; /* Restaura tamanho dos botões na tabela */
         font-size: 0.9em;
     }
-
     #qrScannerWrapper {
         width: 300px; /* Tamanho fixo em desktop */
         height: 300px;
@@ -259,4 +246,41 @@ td .button-mark, td .button-unmark, td .button-remove {
     #scanResultText {
         font-size: 1.2em; /* Restaura tamanho */
     }
+}
+
+/* Estilos específicos para a página do scanner (opcional) */
+.scanner-only-container {
+    max-width: 600px; /* Pode ser um container mais estreito para foco no scanner */
+    padding-top: 30px; /* Mais espaço no topo */
+}
+
+.scanner-title {
+    font-size: 2em;
+    color: #007bff;
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.scanner-section {
+    padding: 20px;
+}
+
+.scanner-controls {
+    display: flex;
+    justify-content: center;
+    gap: 15px; /* Espaço entre os botões */
+    margin-top: 20px;
+}
+
+.scanner-controls button {
+    padding: 12px 25px; /* Botões um pouco maiores */
+    font-size: 1.1em;
+}
+
+.back-button {
+    background-color: #6c757d; /* Cor diferente para o botão de voltar */
+    font-size: 0.9em;
+}
+.back-button:hover {
+    background-color: #5a6268;
 }

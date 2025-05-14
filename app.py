@@ -44,6 +44,10 @@ with app.app_context():
 @app.route('/')
 def index(): return render_template('index.html')
 
+@app.route('/scanner')
+def scanner_page():
+    return render_template('scanner.html') # Nova página HTML
+
 @app.route('/api/guests', methods=['POST'])
 def add_guest():
     data = request.get_json()
