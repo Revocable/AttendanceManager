@@ -1,6 +1,7 @@
 import os
 import hashlib
-import qrcode
+import qrcode # Para gerar a imagem do QR Code base
+from PIL import Image, ImageDraw, ImageFont # Para manipular a imagem e adicionar texto
 from flask import Flask, request, jsonify, render_template, url_for
 from flask_sqlalchemy import SQLAlchemy
 
@@ -46,7 +47,7 @@ def index(): return render_template('index.html')
 
 @app.route('/scanner')
 def scanner_page():
-    return render_template('scanner.html') # Nova página HTML
+    return render_template('scanner.html')
 
 @app.route('/api/guests', methods=['POST'])
 def add_guest():
@@ -55,19 +56,83 @@ def add_guest():
     name = data['name'].strip()
     if not name: return jsonify({'error': 'Nome vazio'}), 400
     if Guest.query.filter_by(name=name).first(): return jsonify({'error': f'"{name}" já existe.'}), 409
+    
     qr_hash = hashlib.sha256(name.encode('utf-8')).hexdigest()
     qr_fn = f"{qr_hash}.png"
     qr_fp = os.path.join(QR_CODE_SAVE_PATH, qr_fn)
+
     try:
-        qrcode.make(qr_hash).save(qr_fp)
+        # 1. Gerar o QR Code base
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=10, # Tamanho de cada "caixa" do QR code
+            border=4,    # Espessura da borda do QR code
+        )
+        qr.add_data(qr_hash) # O dado do QR é o hash
+        qr.make(fit=True)
+        img_qr = qr.make_image(fill_color="black", back_color="white").convert('RGB')
+
+        # 2. Configurações para adicionar texto
+        padding_bottom_for_text = 60  # Espaço extra abaixo do QR para o texto
+        text_color = (0, 0, 0)      # Preto
+        background_color_canvas = (255, 255, 255) # Branco
+
+        # Tenta carregar uma fonte. Se não encontrar, usa a padrão do Pillow (que pode ser bem básica)
+        try:
+            font = ImageFont.truetype("Montserrat-Regular.ttf", 30)
+        except IOError:
+            app.logger.warning("Fonte Montserrat não encontrada, usando fonte padrão. O texto pode não ficar ideal.")
+            font = ImageFont.load_default() # Garante que temos uma fonte
+
+        # 3. Criar uma nova imagem (canvas) maior para acomodar o QR e o texto
+        new_width = img_qr.width
+        new_height = img_qr.height + padding_bottom_for_text
+        img_canvas = Image.new('RGB', (new_width, new_height), background_color_canvas)
+
+        # 4. Colar o QR code no canvas
+        img_canvas.paste(img_qr, (0, 0))
+
+        # 5. Desenhar o texto no canvas
+        draw = ImageDraw.Draw(img_canvas)
+        
+        # Calcula a largura do texto para centralizar
+        # No Pillow antigo, textsize era usado. No novo, getbbox ou getlength.
+        try:
+            text_bbox = draw.textbbox((0,0), name, font=font)
+            text_width = text_bbox[2] - text_bbox[0]
+            # text_height = text_bbox[3] - text_bbox[1] # Se precisar da altura
+        except AttributeError: # Fallback para versões mais antigas do Pillow
+            text_width, _ = draw.textsize(name, font=font)
+
+
+        text_x = (new_width - text_width) / 2
+        text_y = img_qr.height + 15 # Posição Y abaixo do QR code (10px de padding)
+
+        draw.text((text_x, text_y), name, font=font, fill=text_color)
+
+        # 6. Salvar a imagem composta
+        img_canvas.save(qr_fp)
+        app.logger.info(f"QR Code com nome para '{name}' salvo em: {qr_fp}")
+
     except Exception as e:
-        app.logger.error(f"Erro ao salvar QR para {name}: {e}")
-        return jsonify({'error': 'Falha ao gerar imagem QR'}), 500
+        app.logger.error(f"Erro ao gerar/salvar QR com texto para '{name}': {e}")
+        # Se falhar ao adicionar texto, tenta salvar o QR simples como fallback
+        try:
+            qrcode.make(qr_hash).save(qr_fp)
+            app.logger.info(f"Fallback: QR Code simples para '{name}' salvo em: {qr_fp}")
+        except Exception as e_fallback:
+            app.logger.error(f"Erro crítico ao salvar QR (mesmo fallback) para {name}: {e_fallback}")
+            return jsonify({'error': 'Falha crítica ao gerar imagem QR'}), 500
+        # Continua para salvar no DB mesmo que só o QR simples tenha sido salvo
+        # ou retorna erro se preferir não continuar sem o texto.
+
     new_guest = Guest(name=name, qr_hash=qr_hash, qr_image_filename=qr_fn)
     db.session.add(new_guest); db.session.commit()
     return jsonify({'id': new_guest.id, 'name': new_guest.name, 'qr_hash': new_guest.qr_hash,
                     'entered': new_guest.entered, 'qr_image_url': new_guest.qr_image_url}), 201
 
+# ... (o resto das suas rotas: get_guests, mark_entered, toggle_entry_manually, delete_guest permanecem iguais) ...
 @app.route('/api/guests', methods=['GET'])
 def get_guests():
     return jsonify([{'id': g.id, 'name': g.name, 'qr_hash': g.qr_hash,
@@ -79,11 +144,9 @@ def mark_entered(qr_hash):
     guest = Guest.query.filter_by(qr_hash=qr_hash).first()
     is_new_entry = False
     message = ""
-
     if not guest:
         app.logger.warning(f"Check-in: QR Hash não encontrado: {qr_hash}")
         return jsonify({'error': 'Convidado não encontrado (QR inválido)'}), 404
-
     if guest.entered:
         app.logger.info(f"Check-in: '{guest.name}' já entrou.")
         message = f'{guest.name} já entrou na festa.'
@@ -93,11 +156,10 @@ def mark_entered(qr_hash):
         is_new_entry = True
         message = f'{guest.name} marcou presença!'
         app.logger.info(f"Check-in: '{guest.name}' marcado como presente.")
-
     return jsonify({
         'id': guest.id, 'name': guest.name, 'qr_hash': guest.qr_hash,
         'entered': guest.entered, 'message': message,
-        'is_new_entry': is_new_entry # Campo para indicar se foi uma nova entrada
+        'is_new_entry': is_new_entry
     })
 
 @app.route('/api/guests/<qr_hash>/toggle_entry', methods=['PUT'])
@@ -113,23 +175,17 @@ def toggle_entry_manually(qr_hash):
 def delete_guest(qr_hash):
     guest = Guest.query.filter_by(qr_hash=qr_hash).first()
     if not guest:
-        app.logger.warning(f"Deletar: Convidado não encontrado com hash: {qr_hash}")
         return jsonify({'error': 'Convidado não encontrado'}), 404
-
     if guest.qr_image_filename:
         qr_image_path = os.path.join(QR_CODE_SAVE_PATH, guest.qr_image_filename)
         try:
-            if os.path.exists(qr_image_path):
-                os.remove(qr_image_path)
-                app.logger.info(f"Arquivo QR '{guest.qr_image_filename}' removido.")
+            if os.path.exists(qr_image_path): os.remove(qr_image_path)
         except Exception as e:
             app.logger.error(f"Erro ao remover arquivo QR '{guest.qr_image_filename}': {e}")
-            # Decida se isso deve impedir a remoção do DB ou apenas logar
-
     db.session.delete(guest)
     db.session.commit()
-    app.logger.info(f"Convidado '{guest.name}' (hash: {qr_hash}) removido.")
     return jsonify({'message': f'Convidado {guest.name} removido com sucesso'}), 200
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
