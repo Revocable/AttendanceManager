@@ -10,6 +10,12 @@
 <body>
     <h1>Gerenciador de Convidados da Festa</h1>
 
+    <!-- BOTÃO PARA IR PARA A PÁGINA DO SCANNER DEDICADA -->
+    <div style="text-align: center; margin-bottom: 20px;">
+        <a href="{{ url_for('scanner_page') }}" class="button scanner-page-button">Abrir Página de Check-in (Scanner)</a>
+    </div>
+    <!-- FIM DO BOTÃO -->
+
     <div class="container">
         <!-- Adicionar Convidado -->
         <div class="section add-guest-section">
@@ -26,28 +32,28 @@
         </div>
 
         <!-- Lista de Convidados -->
-<div class="section guest-list-section">
-    <h2>Lista de Convidados</h2>
-    <button onclick="fetchGuests()">Atualizar Lista</button>
-    <div class="table-responsive-wrapper"> <!-- NOVO WRAPPER AQUI -->
-        <table id="guestTable">
-            <thead>
-                <tr>
-                    <th>Nome</th>
-                    <th>Hash (QR Data)</th>
-                    <th>QR Code</th>
-                    <th>Entrou?</th>
-                    <th>Ações</th>
-                </tr>
-            </thead>
-            <tbody id="guestList"></tbody>
-        </table>
-    </div> <!-- FIM DO WRAPPER -->
-</div>
+        <div class="section guest-list-section">
+            <h2>Lista de Convidados</h2>
+            <button onclick="fetchGuests()">Atualizar Lista</button>
+            <div class="table-responsive-wrapper">
+                <table id="guestTable">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Hash (QR Data)</th>
+                            <th>QR Code</th>
+                            <th>Entrou?</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="guestList"></tbody>
+                </table>
+            </div>
+        </div>
 
-        <!-- Scanner de QR Code -->
+        <!-- Scanner de QR Code (EXISTENTE NA INDEX.HTML - pode ser mantido para testes rápidos ou removido se preferir focar na página dedicada) -->
         <div class="section scanner-section">
-            <h2>Check-in por QR Code</h2>
+            <h2>Check-in Rápido (nesta página)</h2>
             <div id="qrReaderMessageContainer">
                 <p>Clique em "Iniciar Scanner" para ativar a câmera.</p>
                 <p><strong>Importante:</strong> O scanner requer conexão HTTPS e permissão de câmera.</p>
