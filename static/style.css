@@ -1,98 +1,262 @@
+/* Estilos Base (Desktop First Approach) */
 body {
-    font-family: sans-serif;
-    margin: 20px;
-    background-color: #f4f4f4;
-    color: #333;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    margin: 0; 
+    padding: 10px; /* Reduzido padding para telas menores começarem bem */
+    background-color: #f0f2f5; 
+    color: #1c1e21; 
+    line-height: 1.5;
+    font-size: 16px; /* Tamanho de fonte base */
 }
-.container {
-    display: flex;
-    flex-direction: column;
-    gap: 30px;
+
+.container { 
+    max-width: 900px; 
+    margin: 10px auto; /* Margem reduzida para telas menores */
+    display: flex; 
+    flex-direction: column; 
+    gap: 20px; /* Gap reduzido */
 }
-.section {
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+
+.section { 
+    background-color: #fff; 
+    padding: 15px; /* Padding reduzido */
+    border-radius: 8px; 
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.1); 
 }
-h1, h2 {
-    color: #555;
+
+h1 { 
+    text-align: center; 
+    color: #007bff; 
+    margin-bottom: 20px; /* Margem reduzida */
+    font-size: 1.8em; /* Ajuste de tamanho */
 }
-input[type="text"] {
-    padding: 10px;
-    margin-right: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    width: calc(100% - 120px); /* Ajustar conforme necessidade */
+
+h2 { 
+    color: #333; 
+    border-bottom: 1px solid #eee; 
+    padding-bottom: 8px; /* Padding reduzido */
+    margin-top: 0; 
+    margin-bottom: 15px; /* Adicionado espaço abaixo */
+    font-size: 1.4em; /* Ajuste de tamanho */
 }
-button {
-    padding: 10px 15px;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    margin-top: 5px;
+
+input[type="text"] { 
+    padding: 10px 12px; 
+    margin-right: 0; /* Removido para empilhamento */
+    margin-bottom: 10px; /* Adicionado para empilhamento */
+    border: 1px solid #dddfe2; 
+    border-radius: 6px; 
+    font-size: 1em; /* Relativo ao body */
+    width: 100%; /* Ocupa largura total */
+    box-sizing: border-box; /* Para incluir padding e border na largura */
 }
-button:hover {
-    background-color: #0056b3;
+
+#addGuestForm { 
+    display: flex; 
+    flex-direction: column; /* Empilha por padrão para mobile first */
+    align-items: stretch; /* Estica os itens */
+    margin-bottom: 15px; 
 }
-#qrCodeContainer {
-    margin-top: 15px;
-    padding: 10px;
-    border: 1px dashed #ccc;
-    display: inline-block; /* Para não ocupar largura total se vazio */
-    min-height: 130px; /* Para dar espaço ao QR Code */
-    min-width: 130px;
+
+#addGuestForm button {
+    width: 100%; /* Botão ocupa largura total */
+    margin-right: 0; /* Remove margem direita */
 }
-#qrCodeContainer img {
-    display: block; /* Para centralizar se o container tiver text-align center */
-    margin: auto;
+
+
+button, .button { 
+    padding: 12px 18px; /* Aumenta padding para toque */
+    background-color: #007bff; 
+    color: white; 
+    border: none; 
+    border-radius: 6px; 
+    cursor: pointer; 
+    font-size: 1em; /* Relativo ao body */
+    font-weight: bold; 
+    text-decoration: none; 
+    display: inline-block; 
+    transition: background-color 0.2s ease-in-out; 
+    margin-top: 5px; 
+    margin-right: 5px; 
+    box-sizing: border-box;
 }
-table {
+button:last-child { margin-right: 0; }
+button:hover, .button:hover { background-color: #0056b3; }
+button:disabled { background-color: #ccc; cursor: not-allowed; }
+
+
+#newQrCodeArea { 
+    margin-top: 15px; padding: 10px; border: 1px dashed #ccc; 
+    border-radius: 6px; min-height: 50px; text-align: center; 
+}
+#newGuestQrImage { display: block; margin: 10px auto; border: 1px solid #eee; max-width: 120px; } /* Reduzido max-width */
+#downloadQrLink { margin-top: 10px; font-size: 0.9em; }
+
+
+/* Tabela Responsiva - wrapper para scroll horizontal */
+.table-responsive-wrapper {
     width: 100%;
-    border-collapse: collapse;
+    overflow-x: auto; /* Permite scroll horizontal se a tabela for muito larga */
+    -webkit-overflow-scrolling: touch; /* Melhora scroll em iOS */
     margin-top: 15px;
 }
-th, td {
-    border: 1px solid #ddd;
-    padding: 8px;
-    text-align: left;
+table { 
+    width: 100%; 
+    min-width: 600px; /* Largura mínima para forçar scroll se necessário, ajuste conforme seu conteúdo */
+    border-collapse: collapse; 
+    /* margin-top: 15px; Movido para o wrapper */
 }
-th {
-    background-color: #e9e9e9;
+th, td { 
+    border: 1px solid #ddd; padding: 8px 10px; /* Padding ajustado */
+    text-align: left; vertical-align: middle; font-size: 0.9em; /* Fonte menor na tabela */
+}
+th { background-color: #f8f9fa; font-weight: bold; }
+td img { max-width: 40px; max-height: 40px; /* Imagem QR menor */
+    object-fit: contain; border: 1px solid #eee; border-radius: 4px; 
+}
+/* Botões dentro da célula de ações da tabela */
+td .button-mark, td .button-unmark, td .button-remove {
+    padding: 6px 10px; /* Botões menores na tabela */
+    font-size: 0.85em;
+    margin-right: 3px; /* Espaçamento menor */
+    margin-top: 3px;
+    display: inline-block; /* Garante que fiquem na linha */
+    margin-bottom: 3px;
+}
+
+
+#qrReaderMessageContainer p { font-size: 0.9em; color: #555; margin-bottom: 5px; }
+
+/* Scanner Wrapper e QR Reader */
+#qrScannerWrapper { 
+    position: relative;
+    width: 90vw; /* Usa viewport width */
+    max-width: 300px; /* Limita o tamanho máximo */
+    height: 90vw;   /* Mantém proporção quadrada */
+    max-height: 300px; /* Limita o tamanho máximo */
+    margin: 15px auto; /* Aumenta margem superior */
+    border: 2px solid #007bff; /* Borda mais destacada */
+    overflow: hidden; 
+    border-radius: 8px; 
 }
 #qrReader {
-    border: 1px solid #ccc;
-    margin-bottom: 10px;
+    width: 100%;
+    height: 100%;
 }
-#scanResult {
-    margin-top: 10px;
-    font-weight: bold;
-}
-
-/* ... (seus estilos existentes) ... */
-
-.button-remove {
-    background-color: #dc3545; /* Vermelho */
-    color: white;
-    /* Herda outros estilos de 'button' se você tiver um seletor genérico */
-}
-.button-remove:hover {
-    background-color: #c82333;
+#qrReader video { 
+    width: 100% !important; 
+    height: 100% !important; 
+    object-fit: cover; 
 }
 
-/* Se você tem classes .button-mark e .button-unmark, elas permanecem */
-.button-mark {
-    background-color: #28a745; /* Verde */
+/* Sobreposição de Feedback */
+.scan-overlay { 
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+    display: flex; flex-direction: column; justify-content: center; align-items: center; 
+    background-color: rgba(0, 0, 0, 0.0); color: white; 
+    font-size: 1.5em; /* Reduzido para telas menores */
+    font-weight: bold; text-align: center; 
+    opacity: 0; 
+    transition: opacity 0.3s ease-in-out, background-color 0.3s ease-in-out; 
+    pointer-events: none; z-index: 10; 
+    padding: 10px; box-sizing: border-box;
 }
-.button-mark:hover {
-    background-color: #1e7e34;
+.scan-overlay.visible { opacity: 1; }
+.scan-overlay .overlay-icon { font-size: 2.5em; line-height: 1; } /* Ícone ajustado */
+.scan-overlay .overlay-message { font-size: 0.7em; margin-top: 8px; max-width: 95%; } /* Mensagem ajustada */
+.scan-overlay.success-bg { background-color: rgba(40, 167, 69, 0.75); } /* Mais opaco */
+.scan-overlay.error-bg { background-color: rgba(220, 53, 69, 0.75); }
+.scan-overlay.warning-bg { background-color: rgba(255, 193, 7, 0.75); }
+
+
+#scanResultText { 
+    margin-top: 10px; font-weight: bold; min-height: 1.5em; 
+    text-align: center; padding: 5px; border-radius: 5px; 
+    font-size: 1em; /* Tamanho ajustado */
 }
-.button-unmark { /* Pode ser usado para o botão de 'Marcar Não Entrou' */
-    background-color: #ffc107; /* Amarelo/Laranja */
-    color: #212529;
+#scanResultText.success { color: #155724; }
+#scanResultText.error { color: #721c24; }
+#scanResultText.warning { color: #856404; }
+
+
+.spinner { 
+    display: inline-block; width: 1em; height: 1em; 
+    border: 2px solid currentColor; border-right-color: transparent; 
+    border-radius: 50%; animation: spinner-border .75s linear infinite; 
+    vertical-align: text-bottom; margin-left: 5px; 
 }
-.button-unmark:hover {
-    background-color: #e0a800;
+@keyframes spinner-border { to { transform: rotate(360deg); } }
+
+
+.button-mark { background-color: #28a745; }
+.button-mark:hover { background-color: #1e7e34; }
+.button-unmark { background-color: #ffc107; color: #212529;}
+.button-unmark:hover { background-color: #e0a800; }
+.button-remove { background-color: #dc3545; }
+.button-remove:hover { background-color: #c82333; }
+#guestAddedInfo { font-weight: bold; margin-bottom: 10px; }
+
+
+/* Media Queries para telas maiores (Desktop) */
+@media (min-width: 768px) {
+    body {
+        padding: 20px; /* Restaura padding */
+        font-size: 16px; /* Restaura tamanho de fonte base se necessário */
+    }
+    .container {
+        margin: 20px auto; /* Restaura margem */
+        gap: 30px; /* Restaura gap */
+    }
+    .section {
+        padding: 20px; /* Restaura padding */
+    }
+    h1 {
+        font-size: 2.5em; /* Maior para desktop */
+        margin-bottom: 30px; /* Restaura margem */
+    }
+    h2 {
+        font-size: 1.8em; /* Maior para desktop */
+        padding-bottom: 10px; /* Restaura padding */
+    }
+
+    #addGuestForm {
+        flex-direction: row; /* Lado a lado em desktop */
+        align-items: center; /* Alinha verticalmente */
+    }
+    input[type="text"] {
+        margin-right: 10px; /* Espaço entre input e botão */
+        margin-bottom: 0;   /* Remove margem inferior */
+        /* width: auto; Não precisa de width 100% se flex-grow:1 está ativo */
+        flex-grow: 1; /* Input cresce para preencher espaço */
+    }
+    #addGuestForm button {
+        width: auto; /* Botão com largura automática */
+    }
+
+    th, td {
+        padding: 10px 12px; /* Restaura padding da tabela */
+        font-size: 1em; /* Restaura tamanho da fonte da tabela */
+    }
+    td img {
+        max-width: 50px; /* Restaura tamanho da imagem QR */
+        max-height: 50px;
+    }
+    td .button-mark, td .button-unmark, td .button-remove {
+        padding: 8px 12px; /* Restaura tamanho dos botões na tabela */
+        font-size: 0.9em;
+    }
+
+    #qrScannerWrapper {
+        width: 300px; /* Tamanho fixo em desktop */
+        height: 300px;
+        margin: 20px auto; /* Restaura margem */
+    }
+    .scan-overlay {
+        font-size: 2em; /* Restaura tamanho da fonte da sobreposição */
+    }
+    .scan-overlay .overlay-icon { font-size: 3em; }
+    .scan-overlay .overlay-message { font-size: 0.6em; }
+    #scanResultText {
+        font-size: 1.2em; /* Restaura tamanho */
+    }
 }

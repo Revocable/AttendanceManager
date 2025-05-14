@@ -1,9 +1,13 @@
 const API_BASE_URL = '';
 let html5QrCode = null;
-let beepAudio = null; // Para o som de beep
-let lastScannedHash = null; // Para o cooldown do scan
-let lastScanTime = 0; // Para o cooldown do scan
-const SCAN_COOLDOWN_MS = 3000; // 3 segundos de cooldown
+let beepAudio = null;
+const OVERLAY_TIMEOUT_MS = 2500; // Quanto tempo a sobreposição fica visível
+let overlayTimeoutId = null; // Para controlar o timeout da sobreposição
+
+// Variáveis para o cooldown lógico (sem feedback visual para o cooldown em si)
+let lastScannedHash = null;
+let lastScanTime = 0;
+const SCAN_COOLDOWN_MS = 3000; // 3 segundos de cooldown lógico
 
 document.addEventListener('DOMContentLoaded', () => {
     fetchGuests();
@@ -16,16 +20,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Inicializa leitor de QR
     const qrReaderElementId = "qrReader";
     if (document.getElementById(qrReaderElementId)) {
+        // verbose: true pode ajudar a depurar problemas da biblioteca html5-qrcode
         html5QrCode = new Html5Qrcode(qrReaderElementId, /* verbose= */ true);
         console.log("Instância Html5Qrcode criada.");
     } else {
-        console.error("Elemento 'qrReader' não encontrado.");
+        console.error("Elemento 'qrReader' não encontrado. Scanner não será funcional.");
     }
 
-    // Pega referência ao áudio
     beepAudio = document.getElementById('beepSound');
     if (beepAudio) {
         beepAudio.onerror = () => console.error("Erro ao carregar 'beep.mp3'. Verifique o caminho e o arquivo.");
@@ -42,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (guestAddedInfo) guestAddedInfo.textContent = '';
 });
 
+// --- Funções de Convidado ---
 async function addGuest() {
     const nameInput = document.getElementById('guestName');
     const name = nameInput.value.trim();
@@ -125,7 +129,7 @@ async function fetchGuests() {
 
             const removeButton = document.createElement('button');
             removeButton.textContent = 'Remover';
-            removeButton.className = 'button-remove'; // Para estilização
+            removeButton.className = 'button-remove';
             removeButton.style.marginLeft = '5px';
             removeButton.onclick = () => confirmDeleteGuest(guest.qr_hash, guest.name);
             actionsCell.appendChild(removeButton);
@@ -162,103 +166,167 @@ async function toggleGuestEntry(qrHash) {
         const response = await fetch(`${API_BASE_URL}/api/guests/${qrHash}/toggle_entry`, { method: 'PUT' });
         const result = await response.json();
         if (!response.ok) { alert(`Erro: ${result.error}`); return; }
-        console.log(result.message); // Ou um feedback mais sutil
+        console.log(result.message); 
         fetchGuests();
     } catch (error) { console.error('Erro ao alterar status:', error); }
 }
+// --- Fim das Funções de Convidado ---
 
-// --- Funções do Scanner de QR Code ---
+
+function showOverlayFeedback(type, icon, message) {
+    const overlay = document.getElementById('scanOverlayFeedback');
+    const textFeedback = document.getElementById('scanResultText'); // Para o texto abaixo do scanner
+
+    if (overlayTimeoutId) {
+        clearTimeout(overlayTimeoutId); // Limpa timeout anterior se houver
+    }
+
+    if (overlay) {
+        overlay.innerHTML = `<span class="overlay-icon">${icon}</span><span class="overlay-message">${message}</span>`;
+        overlay.className = 'scan-overlay visible'; // Remove classes de cor antigas, adiciona base e visible
+        if (type === 'success') overlay.classList.add('success-bg');
+        else if (type === 'error') overlay.classList.add('error-bg');
+        else if (type === 'warning') overlay.classList.add('warning-bg');
+        // Não adiciona fundo para 'processing' por padrão, apenas o spinner no ícone
+
+        if (type !== 'processing') { // Não aplicar timeout para "Processando"
+            overlayTimeoutId = setTimeout(() => {
+                overlay.classList.remove('visible');
+                // Limpa as classes de cor para a próxima vez
+                overlay.classList.remove('success-bg', 'error-bg', 'warning-bg');
+            }, OVERLAY_TIMEOUT_MS);
+        }
+    }
+
+    // Atualiza também o texto persistente abaixo do scanner
+    if(textFeedback) {
+        // Para 'processing', a mensagem de texto é mais simples. Para outros, usa a mensagem completa.
+        textFeedback.textContent = (type === 'processing') ? `Processando QR...` : message;
+        textFeedback.className = type; // Aplica a classe de cor (success, error, warning)
+    }
+}
+
+
 function onScanSuccess(decodedText, decodedResult) {
     const currentTime = Date.now();
 
-    // Implementação do cooldown para evitar scans repetidos do mesmo QR
+    // Cooldown LÓGICO: Se o mesmo QR for escaneado dentro do cooldown, ignora SILENCIOSAMENTE.
     if (decodedText === lastScannedHash && (currentTime - lastScanTime) < SCAN_COOLDOWN_MS) {
-        console.log(`[FRONTEND] QR Code (${decodedText.substring(0,10)}...) repetido dentro do cooldown. Ignorando.`);
-        const scanResultEl = document.getElementById('scanResult');
-        if(scanResultEl) {
-            scanResultEl.textContent = `QR já processado. Aguarde ${Math.ceil((SCAN_COOLDOWN_MS - (currentTime - lastScanTime))/1000)}s.`;
-            scanResultEl.style.color = 'orange';
-        }
-        return; // Ignora o scan
+        console.log(`[FRONTEND] QR (${decodedText.substring(0,10)}...) repetido DENTRO DO COOLDOWN LÓGICO. Ignorando.`);
+        return; // Ignora o scan, não mostra nada novo, não processa.
     }
 
-    console.log(`[FRONTEND] QR Code LIDO E DECODIFICADO NO BROWSER: ${decodedText}`);
-    const scanResultEl = document.getElementById('scanResult');
-    scanResultEl.textContent = `QR Lido: ${decodedText.substring(0,15)}... Processando...`;
-    scanResultEl.style.color = 'blue';
+    // Se não estiver em cooldown lógico, mostra "Processando..." na sobreposição e no texto.
+    console.log(`[FRONTEND] QR LIDO (não em cooldown): ${decodedText}`);
+    showOverlayFeedback('processing', '<span class="spinner"></span>', `Processando...`);
+    
+    // Atualiza lastScannedHash e lastScanTime AQUI, antes de enviar para o backend.
+    // Isso garante que, se o usuário escanear o mesmo QR rapidamente enquanto
+    // o primeiro ainda está sendo processado, o segundo scan será pego pelo cooldown.
+    lastScannedHash = decodedText;
+    lastScanTime = currentTime;
 
-    // Envia o hash para o backend e passa o tempo atual para o cooldown
-    processScannedQr(decodedText, currentTime);
+    processScannedQr(decodedText);
 }
 
-function onScanFailure(error) { /* console.warn(`[FRONTEND] Falha no scan do QR: ${error}`); */ }
+function onScanFailure(error) {
+    // Este callback é chamado frequentemente pela biblioteca.
+    // console.warn(`[FRONTEND] Falha no scan do QR (não necessariamente um erro): ${error}`);
+}
 
-async function processScannedQr(qrHash, scanTime) {
-    console.log(`[FRONTEND] Enviando hash '${qrHash}' para API`);
-    const scanResultEl = document.getElementById('scanResult');
+async function processScannedQr(qrHash) {
+    console.log(`[FRONTEND] Enviando hash '${qrHash}' para API /api/guests/${qrHash}/enter`);
+    // "Processando" já foi mostrado por onScanSuccess via showOverlayFeedback
+
     try {
         const response = await fetch(`${API_BASE_URL}/api/guests/${qrHash}/enter`, {
             method: 'POST'
         });
         const result = await response.json();
 
-        if (!response.ok) {
-             scanResultEl.textContent = `Servidor: ${result.error || 'QR inválido/não encontrado.'}`;
-             scanResultEl.style.color = 'red';
-             // Não atualiza lastScannedHash/Time se o backend deu erro
-        } else {
-            scanResultEl.textContent = `Servidor: ${result.message || (result.name + ' check-in OK!')}`;
-            scanResultEl.style.color = 'green';
+        if (!response.ok) { // Erro do servidor (4xx, 5xx)
+             showOverlayFeedback('error', '✗', result.error || 'QR inválido ou não encontrado.');
+        } else { // Sucesso do servidor (2xx)
+            const guestName = result.name || "Convidado";
+            let message = result.message || (guestName + ' check-in OK!');
 
-            // Atualiza as variáveis de cooldown APENAS SE o processamento foi um sucesso REAL
-            // (ou seja, não um erro ou uma mensagem de "já entrou" se quisermos permitir re-scan após toggle manual)
-            // Para "não escanear mais vezes" após o PRIMEIRO scan bem sucedido:
-            lastScannedHash = qrHash;
-            lastScanTime = scanTime; // Usa o tempo do scan original
-
-            // Tocar o som se foi uma nova entrada (is_new_entry é true)
-            if (result.is_new_entry === true && beepAudio) {
-                beepAudio.currentTime = 0; // Reinicia o áudio caso já esteja tocando
-                beepAudio.play().catch(e => console.error("Erro ao tocar beep:", e));
+            if (result.is_new_entry === true) {
+                showOverlayFeedback('success', '✓', message);
+                if (beepAudio) {
+                    beepAudio.currentTime = 0; // Reinicia o áudio
+                    beepAudio.play().catch(e => console.error("Erro ao tocar beep:", e));
+                }
+            } else {
+                // Já entrou antes (is_new_entry é false ou não existe, mas QR é válido)
+                showOverlayFeedback('warning', 'ⓘ', message);
             }
-            fetchGuests(); // Atualiza a lista
+            fetchGuests(); // Atualiza a lista de convidados
         }
-    } catch (error) {
+    } catch (error) { // Erro de rede ou outros erros do fetch
         console.error('[FRONTEND] Erro de rede ao enviar hash para API:', error);
-        scanResultEl.textContent = 'Erro de rede ao validar QR Code.';
-        scanResultEl.style.color = 'red';
-        // Não atualiza lastScannedHash/Time em caso de erro de rede
+        showOverlayFeedback('error', '✗', 'Erro de rede ao validar QR.');
     }
 }
 
 function startQrScanner() {
-    if (!html5QrCode) { alert("Erro: Leitor QR não inicializado."); return; }
+    if (!html5QrCode) { alert("Erro: Leitor QR não inicializado. Verifique o console."); return; }
 
-    const qrReaderEl = document.getElementById('qrReader');
+    const qrScannerWrapper = document.getElementById('qrScannerWrapper');
     const msgContainer = document.getElementById('qrReaderMessageContainer');
     const startBtn = document.getElementById('startScanButton');
     const stopBtn = document.getElementById('stopScanButton');
-    const scanResEl = document.getElementById('scanResult');
+    const textFeedback = document.getElementById('scanResultText'); // Para a mensagem de texto abaixo
 
     if (msgContainer) msgContainer.style.display = 'none';
-    if (qrReaderEl) qrReaderEl.style.display = 'block';
+    if (qrScannerWrapper) qrScannerWrapper.style.display = 'block'; // Mostra o wrapper do scanner
 
-    const config = { fps: 10, qrbox: (w,h) => ({width:Math.floor(Math.min(w,h)*0.7),height:Math.floor(Math.min(w,h)*0.7)}), rememberLastUsedCamera: true, supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA] };
+    // Configurações para o scanner
+    const config = { 
+        fps: 10, 
+        // qrbox define a área de scan. Ajuste se necessário.
+        qrbox: (viewfinderWidth, viewfinderHeight) => {
+            const minDimension = Math.min(viewfinderWidth, viewfinderHeight);
+            let qrBoxSize = Math.floor(minDimension * 0.8); // Tenta usar 80% do menor lado
+            if (qrBoxSize < 100) qrBoxSize = 100; // Tamanho mínimo
+            if (qrBoxSize > 280) qrBoxSize = 280; // Tamanho máximo para wrapper de 300px
+            return { width: qrBoxSize, height: qrBoxSize };
+        },
+        rememberLastUsedCamera: true, 
+        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA] 
+    };
     
-    if (html5QrCode.isScanning) { console.log("Scanner já ativo."); return; }
+    if (html5QrCode.isScanning) { 
+        console.log("Scanner já está ativo."); 
+        return; 
+    }
 
-    scanResEl.textContent = 'Iniciando câmera... Conceda permissão.'; scanResEl.style.color = 'orange';
-    html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure)
-    .then(() => {
-        console.log("Scanner iniciado.");
+    if (textFeedback) {
+        textFeedback.textContent = 'Iniciando câmera...';
+        textFeedback.className = 'processing'; // Reutiliza a classe para cor/estilo
+    }
+    
+    html5QrCode.start(
+        { facingMode: "environment" }, // Tenta usar a câmera traseira
+        config,
+        onScanSuccess,
+        onScanFailure
+    ).then(() => {
+        console.log("Scanner iniciado com sucesso.");
         if(startBtn) startBtn.style.display = 'none';
         if(stopBtn) stopBtn.style.display = 'inline-block';
-        if(scanResEl) { scanResEl.textContent = 'Câmera ativa. Aponte para QR Code.'; scanResEl.style.color = 'black'; }
+        if(textFeedback) { 
+            textFeedback.textContent = 'Câmera ativa. Aponte para um QR Code.';
+            textFeedback.className = ''; // Limpa classe de estado
+        }
     }).catch(err => {
-        console.error("Erro ao iniciar scanner:", err);
-        if(scanResEl) { scanResEl.textContent = `Erro câmera: ${err}. Verifique HTTPS e permissões.`; scanResEl.style.color = 'red'; }
+        console.error("Erro ao iniciar o scanner:", err);
+        if(textFeedback) { 
+            textFeedback.textContent = `Erro ao iniciar câmera: ${err}. Verifique HTTPS e permissões.`;
+            textFeedback.className = 'error';
+        }
+        // Reverte a UI em caso de falha ao iniciar
         if (msgContainer) msgContainer.style.display = 'block';
-        if (qrReaderEl) qrReaderEl.style.display = 'none';
+        if (qrScannerWrapper) qrScannerWrapper.style.display = 'none';
         if(startBtn) startBtn.style.display = 'inline-block';
         if(stopBtn) stopBtn.style.display = 'none';
     });
@@ -266,26 +334,52 @@ function startQrScanner() {
 
 async function stopQrScanner() {
     if (!html5QrCode) { return; }
-    const startBtn = document.getElementById('startScanButton'); const stopBtn = document.getElementById('stopScanButton');
-    const scanResEl = document.getElementById('scanResult'); const qrReaderEl = document.getElementById('qrReader');
+
+    const startBtn = document.getElementById('startScanButton'); 
+    const stopBtn = document.getElementById('stopScanButton');
+    const textFeedback = document.getElementById('scanResultText'); 
+    const qrScannerWrapper = document.getElementById('qrScannerWrapper');
     const msgContainer = document.getElementById('qrReaderMessageContainer');
+    const overlay = document.getElementById('scanOverlayFeedback');
 
     if (html5QrCode.isScanning) {
         try {
             await html5QrCode.stop();
-            console.log("Scanner parado.");
-            if(scanResEl) scanResEl.textContent = 'Scanner parado.';
+            console.log("Scanner parado com sucesso.");
+            if(textFeedback) {
+                textFeedback.textContent = 'Scanner parado.';
+                textFeedback.className = ''; // Limpa classes de estado
+            }
         } catch (err) {
-            console.error("Erro ao parar scanner:", err);
-            if(scanResEl) scanResEl.textContent = 'Erro ao parar scanner.';
+            console.error("Erro ao tentar parar o scanner:", err);
+            if(textFeedback) {
+                textFeedback.textContent = `Erro ao parar scanner.`;
+                textFeedback.className = 'error';
+            }
         } finally {
-            if(startBtn) startBtn.style.display = 'inline-block'; if(stopBtn) stopBtn.style.display = 'none';
-            if (qrReaderEl) qrReaderEl.style.display = 'none'; if (msgContainer) msgContainer.style.display = 'block';
-            if(scanResEl) scanResEl.style.color = 'black';
+            // Garante que a UI seja atualizada mesmo se stop() falhar
+            if(startBtn) startBtn.style.display = 'inline-block';
+            if(stopBtn) stopBtn.style.display = 'none';
+            if (qrScannerWrapper) qrScannerWrapper.style.display = 'none';
+            if (msgContainer) msgContainer.style.display = 'block';
+            if (overlay) { // Esconde e limpa a sobreposição
+                overlay.classList.remove('visible');
+                overlay.classList.remove('success-bg', 'error-bg', 'warning-bg', 'processing-bg');
+            }
         }
-    } else {
-        if(startBtn) startBtn.style.display = 'inline-block'; if(stopBtn) stopBtn.style.display = 'none';
-        if (qrReaderEl) qrReaderEl.style.display = 'none'; if (msgContainer) msgContainer.style.display = 'block';
-        if(scanResEl && !scanResEl.textContent.includes("Erro")) { scanResEl.textContent = 'Scanner não estava ativo.'; scanResEl.style.color = 'black'; }
+    } else { // Se não estava escaneando, apenas garante o estado correto da UI
+        console.log("Scanner não estava ativo, mas atualizando UI de parada.");
+        if(startBtn) startBtn.style.display = 'inline-block';
+        if(stopBtn) stopBtn.style.display = 'none';
+        if (qrScannerWrapper) qrScannerWrapper.style.display = 'none';
+        if (msgContainer) msgContainer.style.display = 'block';
+        if(textFeedback && !textFeedback.textContent.includes("Erro")) { 
+            textFeedback.textContent = 'Scanner não estava ativo.';
+            textFeedback.className = '';
+        }
+        if (overlay) {
+            overlay.classList.remove('visible');
+            overlay.classList.remove('success-bg', 'error-bg', 'warning-bg', 'processing-bg');
+        }
     }
 }

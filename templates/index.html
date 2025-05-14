@@ -26,24 +26,24 @@
         </div>
 
         <!-- Lista de Convidados -->
-        <div class="section guest-list-section">
-            <h2>Lista de Convidados</h2>
-            <button onclick="fetchGuests()">Atualizar Lista</button>
-            <table id="guestTable">
-                <thead>
-                    <tr>
-                        <th>Nome</th>
-                        <th>Hash (QR Data)</th>
-                        <th>QR Code</th>
-                        <th>Entrou?</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody id="guestList">
-                    <!-- Convidados serão listados aqui -->
-                </tbody>
-            </table>
-        </div>
+<div class="section guest-list-section">
+    <h2>Lista de Convidados</h2>
+    <button onclick="fetchGuests()">Atualizar Lista</button>
+    <div class="table-responsive-wrapper"> <!-- NOVO WRAPPER AQUI -->
+        <table id="guestTable">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Hash (QR Data)</th>
+                    <th>QR Code</th>
+                    <th>Entrou?</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="guestList"></tbody>
+        </table>
+    </div> <!-- FIM DO WRAPPER -->
+</div>
 
         <!-- Scanner de QR Code -->
         <div class="section scanner-section">
@@ -52,16 +52,19 @@
                 <p>Clique em "Iniciar Scanner" para ativar a câmera.</p>
                 <p><strong>Importante:</strong> O scanner requer conexão HTTPS e permissão de câmera.</p>
             </div>
-            <div id="qrReader" style="width: 300px; border: 1px solid #ccc; margin: 10px auto; display: none;"></div>
+            
+            <div id="qrScannerWrapper" style="position: relative; width: 300px; height: 300px; margin: 10px auto; border: 1px solid #ccc; display: none;">
+                <div id="qrReader" style="width: 100%; height: 100%;"></div>
+                <div id="scanOverlayFeedback" class="scan-overlay"></div>
+            </div>
+
             <button id="startScanButton" onclick="startQrScanner()">Iniciar Scanner</button>
             <button id="stopScanButton" onclick="stopQrScanner()" style="display:none;">Parar Scanner</button>
-            <p id="scanResult"></p>
+            <p id="scanResultText" style="text-align: center; margin-top: 10px; font-weight: bold;"></p>
         </div>
     </div>
 
-    <!-- Elemento de Áudio para o Beep -->
     <audio id="beepSound" src="{{ url_for('static', filename='beep.mp3') }}" preload="auto"></audio>
-
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
