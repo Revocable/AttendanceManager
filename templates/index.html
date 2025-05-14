@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciador de Festas</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body>
+    <h1>Gerenciador de Convidados da Festa</h1>
+
+    <div class="container">
+        <!-- Adicionar Convidado -->
+        <div class="section add-guest-section">
+            <h2>Adicionar Convidado</h2>
+            <form id="addGuestForm">
+                <input type="text" id="guestName" placeholder="Nome do Convidado" required>
+                <button type="submit">Adicionar e Gerar QR Code</button>
+            </form>
+            <div id="newQrCodeArea">
+                <p id="guestAddedInfo"></p>
+                <img id="newGuestQrImage" src="" alt="QR Code do Novo Convidado" style="display:none; max-width: 150px; margin-top: 10px;">
+                <a id="downloadQrLink" href="#" download style="display:none; margin-top: 5px; display: block;">Baixar QR Code</a>
+            </div>
+        </div>
+
+        <!-- Lista de Convidados -->
+        <div class="section guest-list-section">
+            <h2>Lista de Convidados</h2>
+            <button onclick="fetchGuests()">Atualizar Lista</button>
+            <table id="guestTable">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Hash (QR Data)</th>
+                        <th>QR Code</th>
+                        <th>Entrou?</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="guestList">
+                    <!-- Convidados serão listados aqui -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Scanner de QR Code -->
+        <div class="section scanner-section">
+            <h2>Check-in por QR Code</h2>
+            <div id="qrReaderMessageContainer">
+                <p>Clique em "Iniciar Scanner" para ativar a câmera.</p>
+                <p><strong>Importante:</strong> O scanner requer conexão HTTPS e permissão de câmera.</p>
+            </div>
+            <div id="qrReader" style="width: 300px; border: 1px solid #ccc; margin: 10px auto; display: none;"></div>
+            <button id="startScanButton" onclick="startQrScanner()">Iniciar Scanner</button>
+            <button id="stopScanButton" onclick="stopQrScanner()" style="display:none;">Parar Scanner</button>
+            <p id="scanResult"></p>
+        </div>
+    </div>
+
+    <!-- Elemento de Áudio para o Beep -->
+    <audio id="beepSound" src="{{ url_for('static', filename='beep.mp3') }}" preload="auto"></audio>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
