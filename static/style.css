@@ -1,286 +1,176 @@
-/* Estilos Base (Desktop First Approach) */
-body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-    margin: 0; 
-    padding: 10px; /* Reduzido padding para telas menores começarem bem */
-    background-color: #f0f2f5; 
-    color: #1c1e21; 
+/* Reset básico e box-sizing */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    /* height: 100%; Removido para permitir scroll natural na index.html */
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f0f2f5;
+    color: #1c1e21;
     line-height: 1.5;
-    font-size: 16px; /* Tamanho de fonte base */
+    font-size: 16px;
+    /* overflow-x: hidden; Evitar no body se possível, resolver overflows específicos */
 }
 
 .container { 
     max-width: 900px; 
-    margin: 10px auto; /* Margem reduzida para telas menores */
+    margin: 10px auto; 
+    padding: 0 10px; /* Padding horizontal no container */
     display: flex; 
     flex-direction: column; 
-    gap: 20px; /* Gap reduzido */
+    gap: 20px; 
 }
 
 .section { 
     background-color: #fff; 
-    padding: 15px; /* Padding reduzido */
+    padding: 15px; 
     border-radius: 8px; 
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.1); 
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+    width: 100%; /* Garante que a seção não cause overflow */
 }
 
 h1 { 
-    text-align: center; 
-    color: #007bff; 
-    margin-bottom: 20px; /* Margem reduzida */
-    font-size: 1.8em; /* Ajuste de tamanho */
+    text-align: center; color: #007bff; margin-bottom: 20px; font-size: 1.8em; 
 }
-
 h2 { 
-    color: #333; 
-    border-bottom: 1px solid #eee; 
-    padding-bottom: 8px; /* Padding reduzido */
-    margin-top: 0; 
-    margin-bottom: 15px; /* Adicionado espaço abaixo */
-    font-size: 1.4em; /* Ajuste de tamanho */
+    color: #333; border-bottom: 1px solid #eee; padding-bottom: 8px; 
+    margin-top: 0; margin-bottom: 15px; font-size: 1.4em; 
 }
 
 input[type="text"] { 
-    padding: 10px 12px; 
-    margin-right: 0; /* Removido para empilhamento */
-    margin-bottom: 10px; /* Adicionado para empilhamento */
-    border: 1px solid #dddfe2; 
-    border-radius: 6px; 
-    font-size: 1em; /* Relativo ao body */
-    width: 100%; /* Ocupa largura total */
-    box-sizing: border-box; /* Para incluir padding e border na largura */
+    padding: 10px 12px; margin-bottom: 10px; border: 1px solid #dddfe2; 
+    border-radius: 6px; font-size: 1em; width: 100%; 
 }
-
-#addGuestForm { 
-    display: flex; 
-    flex-direction: column; /* Empilha por padrão para mobile first */
-    align-items: stretch; /* Estica os itens */
-    margin-bottom: 15px; 
-}
-
-#addGuestForm button {
-    width: 100%; /* Botão ocupa largura total */
-    margin-right: 0; /* Remove margem direita */
-}
+#addGuestForm { display: flex; flex-direction: column; align-items: stretch; margin-bottom: 15px; }
+#addGuestForm button { width: 100%; margin-right: 0; }
 
 button, .button { 
-    padding: 12px 18px; /* Aumenta padding para toque */
-    background-color: #007bff; 
-    color: white; 
-    border: none; 
-    border-radius: 6px; 
-    cursor: pointer; 
-    font-size: 1em; /* Relativo ao body */
-    font-weight: bold; 
-    text-decoration: none; 
-    display: inline-block; 
-    transition: background-color 0.2s ease-in-out; 
-    margin-top: 5px; 
-    margin-right: 5px; 
-    box-sizing: border-box;
+    padding: 12px 18px; background-color: #007bff; color: white; 
+    border: none; border-radius: 6px; cursor: pointer; font-size: 1em; 
+    font-weight: bold; text-decoration: none; display: inline-block; 
+    transition: background-color 0.2s ease-in-out; margin-top: 5px; margin-right: 5px; 
 }
 button:last-child { margin-right: 0; }
 button:hover, .button:hover { background-color: #0056b3; }
 button:disabled { background-color: #ccc; cursor: not-allowed; }
 
-#newQrCodeArea { 
-    margin-top: 15px; padding: 10px; border: 1px dashed #ccc; 
-    border-radius: 6px; min-height: 50px; text-align: center; 
-}
-#newGuestQrImage { display: block; margin: 10px auto; border: 1px solid #eee; max-width: 120px; } /* Reduzido max-width */
+.scanner-page-button { background-color: #17a2b8; padding: 12px 25px; font-size: 1.1em; }
+.scanner-page-button:hover { background-color: #138496; }
+
+#newQrCodeArea { margin-top: 15px; padding: 10px; border: 1px dashed #ccc; border-radius: 6px; min-height: 50px; text-align: center; }
+#newGuestQrImage { display: block; margin: 10px auto; border: 1px solid #eee; max-width: 120px; }
 #downloadQrLink { margin-top: 10px; font-size: 0.9em; }
 
-/* Tabela Responsiva - wrapper para scroll horizontal */
-.table-responsive-wrapper {
-    width: 100%;
-    overflow-x: auto; /* Permite scroll horizontal se a tabela for muito larga */
-    -webkit-overflow-scrolling: touch; /* Melhora scroll em iOS */
-    margin-top: 15px;
-}
-table { 
-    width: 100%; 
-    min-width: 600px; /* Largura mínima para forçar scroll se necessário, ajuste conforme seu conteúdo */
-    border-collapse: collapse; 
-}
-th, td { 
-    border: 1px solid #ddd; padding: 8px 10px; /* Padding ajustado */
-    text-align: left; vertical-align: middle; font-size: 0.9em; /* Fonte menor na tabela */
-}
+.table-responsive-wrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 15px; }
+table { width: 100%; min-width: 600px; border-collapse: collapse; }
+th, td { border: 1px solid #ddd; padding: 8px 10px; text-align: left; vertical-align: middle; font-size: 0.9em; }
 th { background-color: #f8f9fa; font-weight: bold; }
-td img { max-width: 40px; max-height: 40px; /* Imagem QR menor */
-    object-fit: contain; border: 1px solid #eee; border-radius: 4px; 
-}
-/* Botões dentro da célula de ações da tabela */
-td .button-mark, td .button-unmark, td .button-remove {
-    padding: 6px 10px; /* Botões menores na tabela */
-    font-size: 0.85em;
-    margin-right: 3px; /* Espaçamento menor */
-    margin-top: 3px;
-    display: inline-block; /* Garante que fiquem na linha */
-    margin-bottom: 3px;
-}
+td img { max-width: 40px; max-height: 40px; object-fit: contain; border: 1px solid #eee; border-radius: 4px; }
+td .button-mark, td .button-unmark, td .button-remove { padding: 6px 10px; font-size: 0.85em; margin: 3px 3px 3px 0; display: inline-block;}
 
+/* --- Estilos do Scanner Otimizados --- */
+.scanner-section { text-align: center; }
+#qrReaderMessageContainer { margin-bottom: 15px; }
 #qrReaderMessageContainer p { font-size: 0.9em; color: #555; margin-bottom: 5px; }
 
-/* Scanner Wrapper e QR Reader */
-#qrScannerWrapper { 
+#qrScannerWrapper {
     position: relative;
-    width: 90vw; /* Usa viewport width */
-    max-width: 300px; /* Limita o tamanho máximo */
-    height: 90vw;   /* Mantém proporção quadrada */
-    max-height: 300px; /* Limita o tamanho máximo */
-    margin: 15px auto; /* Aumenta margem superior */
-    border: 2px solid #007bff; /* Borda mais destacada */
-    overflow: hidden; 
-    border-radius: 8px; 
+    width: 85vw;       /* Começa responsivo */
+    max-width: 320px;  /* Limite para não ficar enorme em telas largas */
+    min-width: 200px;  /* Mínimo para ser usável */
+    aspect-ratio: 1 / 1; /* Força proporção quadrada */
+    margin: 20px auto;
+    border: 3px solid #007bff;
+    border-radius: 8px;
+    overflow: hidden; /* Essencial para conter o vídeo */
+    background-color: #333; /* Fundo enquanto a câmera carrega */
+    display: none; /* Começa escondido */
 }
 #qrReader {
     width: 100%;
     height: 100%;
+    /* background-color: lightcoral; Para debug de tamanho */
 }
-#qrReader video { 
-    width: 100% !important; 
-    height: 100% !important; 
-    object-fit: cover; 
+/* Estilo crucial para o vídeo se ajustar corretamente */
+#qrReader video {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover; /* 'cover' preenche, 'contain' mostra tudo com barras */
+    display: block;    /* Remove espaço extra abaixo de elementos inline como video */
 }
 
-/* Sobreposição de Feedback */
 .scan-overlay { 
     position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
     display: flex; flex-direction: column; justify-content: center; align-items: center; 
     background-color: rgba(0, 0, 0, 0.0); color: white; 
-    font-size: 1.5em; /* Reduzido para telas menores */
-    font-weight: bold; text-align: center; 
-    opacity: 0; 
-    transition: opacity 0.3s ease-in-out, background-color 0.3s ease-in-out; 
-    pointer-events: none; z-index: 10; 
-    padding: 10px; box-sizing: border-box;
+    font-size: 1.8em; font-weight: bold; text-align: center; 
+    opacity: 0; transition: opacity 0.3s ease-in-out, background-color 0.3s ease-in-out; 
+    pointer-events: none; z-index: 10; padding: 10px;
 }
 .scan-overlay.visible { opacity: 1; }
-.scan-overlay .overlay-icon { font-size: 2.5em; line-height: 1; } /* Ícone ajustado */
-.scan-overlay .overlay-message { font-size: 0.7em; margin-top: 8px; max-width: 95%; } /* Mensagem ajustada */
-.scan-overlay.success-bg { background-color: rgba(40, 167, 69, 0.75); } /* Mais opaco */
+.scan-overlay .overlay-icon { font-size: 2.8em; line-height: 1; }
+.scan-overlay .overlay-message { font-size: 0.65em; margin-top: 8px; max-width: 95%; word-wrap: break-word; }
+.scan-overlay.success-bg { background-color: rgba(40, 167, 69, 0.75); }
 .scan-overlay.error-bg { background-color: rgba(220, 53, 69, 0.75); }
 .scan-overlay.warning-bg { background-color: rgba(255, 193, 7, 0.75); }
 
-#scanResultText { 
-    margin-top: 10px; font-weight: bold; min-height: 1.5em; 
-    text-align: center; padding: 5px; border-radius: 5px; 
-    font-size: 1em; /* Tamanho ajustado */
-}
-#scanResultText.success { color: #155724; }
-#scanResultText.error { color: #721c24; }
-#scanResultText.warning { color: #856404; }
+.scanner-controls { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; width: 100%; max-width: 280px; margin-left: auto; margin-right: auto;}
+.scanner-controls button { padding: 12px 20px; font-size: 1.1em; background-color: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; width: 100%;}
+.scanner-controls button:hover { background-color: #0056b3; }
+#stopScanButton { background-color: #6c757d; }
+#stopScanButton:hover { background-color: #545b62; }
 
-.spinner { 
-    display: inline-block; width: 1em; height: 1em; 
-    border: 2px solid currentColor; border-right-color: transparent; 
-    border-radius: 50%; animation: spinner-border .75s linear infinite; 
-    vertical-align: text-bottom; margin-left: 5px; 
-}
+#scanResultText { text-align: center; margin-top: 15px; font-weight: bold; min-height: 1.5em; font-size: 1em; padding: 8px; border-radius: 5px; }
+#scanResultText.processing { color: #495057; background-color: #e9ecef; border: 1px solid #ced4da; }
+#scanResultText.success { color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb;}
+#scanResultText.error { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb;}
+#scanResultText.warning { color: #856404; background-color: #fff3cd; border: 1px solid #ffeeba;}
+
+.spinner { display: inline-block; width: 1em; height: 1em; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spinner-border .75s linear infinite; vertical-align: text-bottom; margin-left: 5px; }
 @keyframes spinner-border { to { transform: rotate(360deg); } }
 
-.button-mark { background-color: #28a745; }
-.button-mark:hover { background-color: #1e7e34; }
-.button-unmark { background-color: #ffc107; color: #212529;}
-.button-unmark:hover { background-color: #e0a800; }
-.button-remove { background-color: #dc3545; }
-.button-remove:hover { background-color: #c82333; }
+.button-mark { background-color: #28a745; } .button-mark:hover { background-color: #1e7e34; }
+.button-unmark { background-color: #ffc107; color: #212529;} .button-unmark:hover { background-color: #e0a800; }
+.button-remove { background-color: #dc3545; } .button-remove:hover { background-color: #c82333; }
 #guestAddedInfo { font-weight: bold; margin-bottom: 10px; }
+
+/* Estilos para a seção de estatísticas */
+.stats-section {}
+.stats-overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 20px; text-align: left; }
+.stats-overview p { background-color: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #e9ecef; margin: 0; }
+.stats-overview strong { float: right; color: #007bff; }
+.chart-container {} /* Estilos inline no HTML */
+
+@media (max-width: 480px) {
+    .stats-overview { grid-template-columns: 1fr; }
+    .stats-overview strong { display: block; float: none; margin-top: 3px; }
+}
 
 /* Media Queries para telas maiores (Desktop) */
 @media (min-width: 768px) {
-    body {
-        padding: 20px; /* Restaura padding */
-        font-size: 16px; /* Restaura tamanho de fonte base se necessário */
-    }
-    .container {
-        margin: 20px auto; /* Restaura margem */
-        gap: 30px; /* Restaura gap */
-    }
-    .section {
-        padding: 20px; /* Restaura padding */
-    }
-    h1 {
-        font-size: 2.5em; /* Maior para desktop */
-        margin-bottom: 30px; /* Restaura margem */
-    }
-    h2 {
-        font-size: 1.8em; /* Maior para desktop */
-        padding-bottom: 10px; /* Restaura padding */
-    }
-    #addGuestForm {
-        flex-direction: row; /* Lado a lado em desktop */
-        align-items: center; /* Alinha verticalmente */
-    }
-    input[type="text"] {
-        margin-right: 10px; /* Espaço entre input e botão */
-        margin-bottom: 0;   /* Remove margem inferior */
-        flex-grow: 1; /* Input cresce para preencher espaço */
-    }
-    #addGuestForm button {
-        width: auto; /* Botão com largura automática */
-    }
-    th, td {
-        padding: 10px 12px; /* Restaura padding da tabela */
-        font-size: 1em; /* Restaura tamanho da fonte da tabela */
-    }
-    td img {
-        max-width: 50px; /* Restaura tamanho da imagem QR */
-        max-height: 50px;
-    }
-    td .button-mark, td .button-unmark, td .button-remove {
-        padding: 8px 12px; /* Restaura tamanho dos botões na tabela */
-        font-size: 0.9em;
-    }
-    #qrScannerWrapper {
-        width: 300px; /* Tamanho fixo em desktop */
-        height: 300px;
-        margin: 20px auto; /* Restaura margem */
-    }
-    .scan-overlay {
-        font-size: 2em; /* Restaura tamanho da fonte da sobreposição */
-    }
+    body { padding: 20px; font-size: 16px; }
+    .container { margin: 20px auto; gap: 30px; padding: 0; } /* Remove padding horizontal do container, pois max-width controla */
+    .section { padding: 20px; }
+    h1 { font-size: 2.5em; margin-bottom: 30px; }
+    h2 { font-size: 1.8em; padding-bottom: 10px; }
+    #addGuestForm { flex-direction: row; align-items: center; }
+    input[type="text"] { margin-right: 10px; margin-bottom: 0; flex-grow: 1; }
+    #addGuestForm button { width: auto; }
+    th, td { padding: 10px 12px; font-size: 1em; }
+    td img { max-width: 50px; max-height: 50px; }
+    td .button-mark, td .button-unmark, td .button-remove { padding: 8px 12px; font-size: 0.9em; margin-bottom: 0; }
+    #qrScannerWrapper { width: 300px; /* Tamanho fixo em desktop */ height: 300px; /* Remove aspect-ratio implícito por height fixo */ margin: 20px auto; }
+    .scan-overlay { font-size: 2em; }
     .scan-overlay .overlay-icon { font-size: 3em; }
     .scan-overlay .overlay-message { font-size: 0.6em; }
-    #scanResultText {
-        font-size: 1.2em; /* Restaura tamanho */
-    }
+    #scanResultText { font-size: 1.2em; }
+    .scanner-controls { flex-direction: row; justify-content: center; max-width: none; }
+    .scanner-controls button { width: auto; min-width: 130px; }
 }
 
 /* Estilos específicos para a página do scanner (opcional) */
-.scanner-only-container {
-    max-width: 600px; /* Pode ser um container mais estreito para foco no scanner */
-    padding-top: 30px; /* Mais espaço no topo */
-}
-
-.scanner-title {
-    font-size: 2em;
-    color: #007bff;
-    text-align: center;
-    margin-bottom: 25px;
-}
-
-.scanner-section {
-    padding: 20px;
-}
-
-.scanner-controls {
-    display: flex;
-    justify-content: center;
-    gap: 15px; /* Espaço entre os botões */
-    margin-top: 20px;
-}
-
-.scanner-controls button {
-    padding: 12px 25px; /* Botões um pouco maiores */
-    font-size: 1.1em;
-}
-
-.back-button {
-    background-color: #6c757d; /* Cor diferente para o botão de voltar */
-    font-size: 0.9em;
-}
-.back-button:hover {
-    background-color: #5a6268;
-}
+/* (Removido para usar os estilos responsivos gerais) */

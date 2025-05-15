@@ -2,21 +2,38 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Gerenciador de Festas</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 </head>
 <body>
     <h1>Gerenciador de Convidados da Festa</h1>
 
-    <!-- BOTÃO PARA IR PARA A PÁGINA DO SCANNER DEDICADA -->
     <div style="text-align: center; margin-bottom: 20px;">
-        <a href="{{ url_for('scanner_page') }}" class="button scanner-page-button">Abrir Página de Check-in (Scanner)</a>
+        <a href="{{ url_for('scanner_page') }}" class="button scanner-page-button">Abrir Página de Check-in</a>
     </div>
-    <!-- FIM DO BOTÃO -->
 
     <div class="container">
+        <!-- Seção de Estatísticas -->
+        <div class="section stats-section">
+            <h2>Estatísticas da Festa</h2>
+            <div class="stats-overview">
+                <p>Total de Convidados: <strong id="statsTotalInvited">-</strong></p>
+                <p>Entraram na Festa: <strong id="statsEnteredCount">-</strong></p>
+                <p>Ainda Não Entraram: <strong id="statsNotEnteredCount">-</strong></p>
+                <p>Comparecimento: <strong id="statsPercentageEntered">- %</strong></p>
+            </div>
+            <div class="chart-container" style="position: relative; height:auto; max-height:300px; width:100%; max-width:300px; margin: 20px auto;">
+                <canvas id="attendanceChart"></canvas>
+            </div>
+            <div style="text-align:center; margin-top: 10px;">
+                <button onclick="fetchStats()">Atualizar Estatísticas</button>
+            </div>
+        </div>
+
         <!-- Adicionar Convidado -->
         <div class="section add-guest-section">
             <h2>Adicionar Convidado</h2>
@@ -51,22 +68,20 @@
             </div>
         </div>
 
-        <!-- Scanner de QR Code (EXISTENTE NA INDEX.HTML - pode ser mantido para testes rápidos ou removido se preferir focar na página dedicada) -->
+        <!-- Scanner de QR Code na Index (Opcional) -->
         <div class="section scanner-section">
             <h2>Check-in Rápido (nesta página)</h2>
             <div id="qrReaderMessageContainer">
                 <p>Clique em "Iniciar Scanner" para ativar a câmera.</p>
-                <p><strong>Importante:</strong> O scanner requer conexão HTTPS e permissão de câmera.</p>
+                <p><strong>Importante:</strong> HTTPS e permissão de câmera são necessários.</p>
             </div>
-            
-            <div id="qrScannerWrapper" style="position: relative; width: 300px; height: 300px; margin: 10px auto; border: 1px solid #ccc; display: none;">
-                <div id="qrReader" style="width: 100%; height: 100%;"></div>
+            <div id="qrScannerWrapper">
+                <div id="qrReader"></div>
                 <div id="scanOverlayFeedback" class="scan-overlay"></div>
             </div>
-
             <button id="startScanButton" onclick="startQrScanner()">Iniciar Scanner</button>
             <button id="stopScanButton" onclick="stopQrScanner()" style="display:none;">Parar Scanner</button>
-            <p id="scanResultText" style="text-align: center; margin-top: 10px; font-weight: bold;"></p>
+            <p id="scanResultText"></p>
         </div>
     </div>
 
