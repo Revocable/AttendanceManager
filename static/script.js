@@ -1,5 +1,3 @@
-// --- Código JavaScript COMPLETO ---
-
 const API_BASE_URL = '';
 let html5QrCode = null;
 let beepAudio = null;
@@ -18,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (guestListElement || addGuestFormElement) { // Indica que estamos na index.html (ou uma página com essas features)
         if (typeof fetchGuests === "function") {
-            fetchGuests(); 
+            fetchGuests();
         }
         if (typeof fetchStats === "function" && statsTotalInvitedElement) { // Só busca stats se a seção existir
              fetchStats();
@@ -36,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const qrReaderElementId = "qrReader";
     const qrReaderElement = document.getElementById(qrReaderElementId);
     if (qrReaderElement) {
-        html5QrCode = new Html5Qrcode(qrReaderElementId, { verbose: true }); 
+        html5QrCode = new Html5Qrcode(qrReaderElementId, { verbose: true });
         console.log("Instância Html5Qrcode criada.");
     } else {
         // Só é um erro se a seção do scanner estiver visível e o leitor não for encontrado
@@ -92,7 +90,7 @@ async function addGuest() {
         if (document.getElementById('guestList')) fetchGuests();
         if (document.getElementById('statsTotalInvited') && typeof fetchStats === "function") fetchStats();
     } catch (error) {
-        console.error('Erro ao adicionar convidado:', error); 
+        console.error('Erro ao adicionar convidado:', error);
         if(guestAddedInfo) {guestAddedInfo.textContent = 'Erro de rede ao adicionar.'; guestAddedInfo.style.color = 'red';}
     }
 }
@@ -102,24 +100,42 @@ async function fetchGuests() {
     try {
         const response = await fetch(`${API_BASE_URL}/api/guests`);
         if (!response.ok) { console.error('Erro ao buscar convidados:', response.statusText); return; }
-        const guests = await response.json(); 
+        const guests = await response.json();
         tbody.innerHTML = '';
-        if (guests.length === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum convidado cadastrado.</td></tr>'; return; }
+        if (guests.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Nenhum convidado cadastrado.</td></tr>'; return; } // Modificado colspan para 6
         guests.forEach(guest => {
-            const row = tbody.insertRow(); row.insertCell().textContent = guest.name;
-            row.insertCell().textContent = guest.qr_hash ? guest.qr_hash.substring(0, 10) + '...' : 'N/A';
+            const row = tbody.insertRow();
+            row.insertCell().textContent = guest.name;
+            row.insertCell().textContent = guest.qr_hash ? guest.qr_hash.substring(0, 10) + '...' : 'Ainda não fez check-in';
+
             const qrCell = row.insertCell();
             if (guest.qr_image_url) {
                 const img = document.createElement('img'); img.src = `${guest.qr_image_url}?t=${new Date().getTime()}`;
                 img.alt = `QR ${guest.name}`; img.style.cssText = 'width:50px; height:50px; cursor:pointer; object-fit:contain; border:1px solid #eee;';
                 img.onclick = () => window.open(img.src, '_blank'); qrCell.appendChild(img);
-            } else { qrCell.textContent = 'N/A'; }
-            const enteredCell = row.insertCell(); enteredCell.textContent = guest.entered ? 'Sim' : 'Não'; enteredCell.style.color = guest.entered ? 'green' : 'red';
+            } else { qrCell.textContent = 'Ainda não fez check-in'; }
+
+            const enteredCell = row.insertCell();
+            enteredCell.textContent = guest.entered ? 'Sim' : 'Não';
+            enteredCell.style.color = guest.entered ? 'green' : 'red';
+
+            // Célula para Data de Check-in
+            const checkInTimeCell = row.insertCell(); // NOVA CÉLULA
+            checkInTimeCell.textContent = guest.check_in_time ? guest.check_in_time : 'Ainda não fez check-in';
+
             const actionsCell = row.insertCell();
-            const toggleButton = document.createElement('button'); toggleButton.textContent = guest.entered ? 'Marcar Não Entrou' : 'Marcar Entrou';
-            toggleButton.className = guest.entered ? 'button-unmark' : 'button-mark'; toggleButton.onclick = () => toggleGuestEntry(guest.qr_hash); actionsCell.appendChild(toggleButton);
-            const removeButton = document.createElement('button'); removeButton.textContent = 'Remover'; removeButton.className = 'button-remove';
-            removeButton.style.marginLeft = '5px'; removeButton.onclick = () => confirmDeleteGuest(guest.qr_hash, guest.name); actionsCell.appendChild(removeButton);
+            const toggleButton = document.createElement('button');
+            toggleButton.textContent = guest.entered ? 'Marcar Não Entrou' : 'Marcar Entrou';
+            toggleButton.className = guest.entered ? 'button-unmark' : 'button-mark';
+            toggleButton.onclick = () => toggleGuestEntry(guest.qr_hash);
+            actionsCell.appendChild(toggleButton);
+
+            const removeButton = document.createElement('button');
+            removeButton.textContent = 'Remover';
+            removeButton.className = 'button-remove';
+            removeButton.style.marginLeft = '5px';
+            removeButton.onclick = () => confirmDeleteGuest(guest.qr_hash, guest.name);
+            actionsCell.appendChild(removeButton);
         });
     } catch (error) { console.error('Erro ao buscar convidados:', error); }
 }
@@ -129,7 +145,7 @@ async function deleteGuest(qrHash) {
         const response = await fetch(`${API_BASE_URL}/api/guests/${qrHash}`, { method: 'DELETE' });
         const result = await response.json();
         if (!response.ok) { alert(`Erro ao remover: ${result.error || 'Erro.'}`); return; }
-        alert(result.message || 'Removido.'); 
+        alert(result.message || 'Removido.');
         if (document.getElementById('guestList')) fetchGuests();
         if (document.getElementById('statsTotalInvited') && typeof fetchStats === "function") fetchStats();
     } catch (error) { console.error('Erro de rede ao remover:', error); alert('Erro de rede.'); }
@@ -138,7 +154,7 @@ async function toggleGuestEntry(qrHash) {
     try {
         const response = await fetch(`${API_BASE_URL}/api/guests/${qrHash}/toggle_entry`, { method: 'PUT' });
         const result = await response.json(); if (!response.ok) { alert(`Erro: ${result.error}`); return; }
-        console.log(result.message); 
+        console.log(result.message);
         if (document.getElementById('guestList')) fetchGuests();
         if (document.getElementById('statsTotalInvited') && typeof fetchStats === "function") fetchStats();
     } catch (error) { console.error('Erro ao alterar status:', error); }
@@ -170,7 +186,7 @@ async function fetchStats() {
         document.getElementById('statsEnteredCount').textContent = stats.entered_count;
         document.getElementById('statsNotEnteredCount').textContent = stats.not_entered_count;
         document.getElementById('statsPercentageEntered').textContent = stats.percentage_entered + " %";
-        
+
         if (typeof updateAttendanceChart === "function") {
              updateAttendanceChart(stats.entered_count, stats.not_entered_count);
         }
@@ -233,15 +249,15 @@ function updateAttendanceChart(entered, notEntered) {
 // --- Funções do Scanner de QR Code ---
 function showOverlayFeedback(type, icon, message) {
     const overlay = document.getElementById('scanOverlayFeedback');
-    const textFeedback = document.getElementById('scanResultText'); 
+    const textFeedback = document.getElementById('scanResultText');
     if (overlayTimeoutId) { clearTimeout(overlayTimeoutId); }
     if (overlay) {
         overlay.innerHTML = `<span class="overlay-icon">${icon}</span><span class="overlay-message">${message}</span>`;
-        overlay.className = 'scan-overlay visible'; 
+        overlay.className = 'scan-overlay visible';
         if (type === 'success') overlay.classList.add('success-bg');
         else if (type === 'error') overlay.classList.add('error-bg');
-        else if (type === 'warning') overlay.classList.add('warning-bg'); 
-        if (type !== 'processing') { 
+        else if (type === 'warning') overlay.classList.add('warning-bg');
+        if (type !== 'processing') {
             overlayTimeoutId = setTimeout(() => {
                 overlay.classList.remove('visible', 'success-bg', 'error-bg', 'warning-bg');
             }, OVERLAY_TIMEOUT_MS);
@@ -249,14 +265,14 @@ function showOverlayFeedback(type, icon, message) {
     }
     if(textFeedback) {
         textFeedback.textContent = (type === 'processing') ? `Processando QR...` : message;
-        textFeedback.className = type; 
+        textFeedback.className = type;
     }
 }
 function onScanSuccess(decodedText, decodedResult) {
     const currentTime = Date.now();
     if (decodedText === lastScannedHash && (currentTime - lastScanTime) < SCAN_COOLDOWN_MS) {
         console.log(`[FRONTEND] QR (${decodedText.substring(0,10)}...) cooldown. Ignorando.`);
-        return; 
+        return;
     }
     console.log(`[FRONTEND] QR LIDO: ${decodedText}`);
     showOverlayFeedback('processing', '<span class="spinner"></span>', `Processando...`);
@@ -272,13 +288,13 @@ async function processScannedQr(qrHash) {
         if (!response.ok) {
              showOverlayFeedback('error', '✗', result.error || 'QR inválido/não encontrado.');
         } else {
-            const guestName = result.name || "Convidado";
-            let message = result.message || (guestName + ' check-in OK!');
+            // const guestName = result.name || "Convidado"; // O result.message já é formatado no backend
+            let message = result.message; // Ex: "Convidado X marcou presença às DD/MM/YYYY HH:MM:SS!"
             if (result.is_new_entry === true) {
                 showOverlayFeedback('success', '✓', message);
                 if (beepAudio) { beepAudio.currentTime = 0; beepAudio.play().catch(e => console.error("Erro ao tocar beep:", e)); }
-            } else {
-                showOverlayFeedback('warning', 'ⓘ', message);
+            } else { // Já tinha entrado
+                showOverlayFeedback('warning', 'ⓘ', message); // Ex: "Convidado X já entrou na festa às DD/MM/YYYY HH:MM:SS."
             }
             if (document.getElementById('guestList')) fetchGuests(); // Atualiza lista se estiver na index.html
             if (document.getElementById('statsTotalInvited') && typeof fetchStats === "function") fetchStats(); // Atualiza stats se estiver na index.html
@@ -297,27 +313,27 @@ function startQrScanner() {
     const textFeedback = document.getElementById('scanResultText');
 
     if (msgContainer) msgContainer.style.display = 'none';
-    if (qrScannerWrapper) qrScannerWrapper.style.display = 'block'; 
+    if (qrScannerWrapper) qrScannerWrapper.style.display = 'block';
 
     const videoConstraints = { facingMode: "environment" };
-    const configScanner = { 
-        fps: 15, 
+    const configScanner = {
+        fps: 15,
         qrbox: (viewfinderWidth, viewfinderHeight) => {
-            let edgePercentage = 0.70; 
+            let edgePercentage = 0.70;
             let qrboxEdgeSize = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * edgePercentage);
-            qrboxEdgeSize = Math.max(120, qrboxEdgeSize); 
-            qrboxEdgeSize = Math.min(260, qrboxEdgeSize); 
+            qrboxEdgeSize = Math.max(120, qrboxEdgeSize);
+            qrboxEdgeSize = Math.min(260, qrboxEdgeSize);
             console.log(`Viewfinder: ${viewfinderWidth}x${viewfinderHeight}, QRBox: ${qrboxEdgeSize}x${qrboxEdgeSize}`);
             return { width: qrboxEdgeSize, height: qrboxEdgeSize };
         },
-        rememberLastUsedCamera: true, 
+        rememberLastUsedCamera: true,
         supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
     };
-    
+
     if (html5QrCode.isScanning) { console.log("Scanner já ativo."); return; }
 
     if (textFeedback) { textFeedback.textContent = 'Iniciando câmera...'; textFeedback.className = 'processing';}
-    
+
     html5QrCode.start( videoConstraints, configScanner, onScanSuccess, onScanFailure)
     .then(() => {
         console.log("Scanner iniciado.");
@@ -340,24 +356,24 @@ async function stopQrScanner() {
         try { await html5QrCode.stop(); console.log("Scanner parado."); }
         catch (err) { console.error("Erro ao tentar parar o scanner:", err); }
     }
-    const startBtn = document.getElementById('startScanButton'); 
+    const startBtn = document.getElementById('startScanButton');
     const stopBtn = document.getElementById('stopScanButton');
-    const textFeedback = document.getElementById('scanResultText'); 
+    const textFeedback = document.getElementById('scanResultText');
     const qrScannerWrapper = document.getElementById('qrScannerWrapper');
     const msgContainer = document.getElementById('qrReaderMessageContainer');
     const overlay = document.getElementById('scanOverlayFeedback');
 
-    if(startBtn) startBtn.style.display = 'inline-block'; 
+    if(startBtn) startBtn.style.display = 'inline-block';
     if(stopBtn) stopBtn.style.display = 'none';
     if (qrScannerWrapper) qrScannerWrapper.style.display = 'none';
     if (msgContainer) msgContainer.style.display = 'block';
-    if (overlay) { 
+    if (overlay) {
         overlay.classList.remove('visible');
         overlay.classList.remove('success-bg', 'error-bg', 'warning-bg', 'processing-bg');
     }
     if(textFeedback) {
-        if (!textFeedback.className.includes('error')) { 
-            textFeedback.textContent = 'Scanner parado ou não estava ativo.'; 
+        if (!textFeedback.className.includes('error')) {
+            textFeedback.textContent = 'Scanner parado ou não estava ativo.';
             textFeedback.className = '';
         }
     }
