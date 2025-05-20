@@ -1,14 +1,19 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Gerenciador de Festas</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-    <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <!-- jsPDF e jsPDF-AutoTable (para exportar PDF pelo frontend, se preferir essa abordagem) -->
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script> -->
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script> -->
+
 </head>
+
 <body>
     <h1>Gerenciador de Convidados da Festa</h1>
 
@@ -26,7 +31,8 @@
                 <p>Ainda Não Entraram: <strong id="statsNotEnteredCount">-</strong></p>
                 <p>Comparecimento: <strong id="statsPercentageEntered">- %</strong></p>
             </div>
-            <div class="chart-container" style="position: relative; height:auto; max-height:300px; width:100%; max-width:300px; margin: 20px auto;">
+            <div class="chart-container"
+                style="position: relative; height:auto; max-height:300px; width:100%; max-width:300px; margin: 20px auto;">
                 <canvas id="attendanceChart"></canvas>
             </div>
             <div style="text-align:center; margin-top: 10px;">
@@ -43,15 +49,25 @@
             </form>
             <div id="newQrCodeArea">
                 <p id="guestAddedInfo"></p>
-                <img id="newGuestQrImage" src="" alt="QR Code do Novo Convidado" style="display:none; max-width: 150px; margin-top: 10px;">
-                <a id="downloadQrLink" href="#" download style="display:none; margin-top: 5px; display: block;">Baixar QR Code</a>
+                <img id="newGuestQrImage" src="" alt="QR Code do Novo Convidado"
+                    style="display:none; max-width: 150px; margin-top: 10px;">
+                <a id="downloadQrLink" href="#" download style="display:none; margin-top: 5px; display: block;">Baixar
+                    QR Code</a>
             </div>
         </div>
 
         <!-- Lista de Convidados -->
         <div class="section guest-list-section">
             <h2>Lista de Convidados</h2>
-            <button onclick="fetchGuests()">Atualizar Lista</button>
+            <div class="guest-list-controls">
+                <input type="text" id="searchInput" placeholder="Buscar por nome...">
+                <button onclick="fetchGuestsWithCurrentSearchTerm(true)">Atualizar Lista</button>
+            </div>
+             <!-- Botões de Exportação -->
+            <div class="export-buttons" style="margin-top: 15px; margin-bottom: 10px; text-align: right;">
+                <button onclick="exportGuests('csv')" class="button-export">Exportar para CSV</button>
+                <button onclick="exportGuests('pdf')" class="button-export" style="margin-left: 10px;">Exportar para PDF</button>
+            </div>
             <div class="table-responsive-wrapper">
                 <table id="guestTable">
                     <thead>
@@ -60,7 +76,7 @@
                             <th>Hash (QR Data)</th>
                             <th>QR Code</th>
                             <th>Entrou?</th>
-                            <th>Data Check-in</th> 
+                            <th>Data Check-in</th>
                             <th>Ações</th>
                         </tr>
                     </thead>
@@ -89,4 +105,5 @@
     <audio id="beepSound" src="{{ url_for('static', filename='beep.mp3') }}" preload="auto"></audio>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
+
 </html>

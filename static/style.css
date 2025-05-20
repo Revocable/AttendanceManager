@@ -7,52 +7,58 @@
 
 html, body {
     width: 100%;
-    /* height: 100%; Removido para permitir scroll natural na index.html */
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background-color: #f0f2f5;
     color: #1c1e21;
     line-height: 1.5;
     font-size: 16px;
-    /* overflow-x: hidden; Evitar no body se possível, resolver overflows específicos */
 }
 
-.container { 
-    max-width: 900px; 
-    margin: 10px auto; 
-    padding: 0 10px; /* Padding horizontal no container */
-    display: flex; 
-    flex-direction: column; 
-    gap: 20px; 
+.container {
+    max-width: 900px;
+    margin: 10px auto;
+    padding: 0 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
-.section { 
-    background-color: #fff; 
-    padding: 15px; 
-    border-radius: 8px; 
+.section {
+    background-color: #fff;
+    padding: 15px;
+    border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
-    width: 100%; /* Garante que a seção não cause overflow */
+    width: 100%;
 }
 
-h1 { 
-    text-align: center; color: #007bff; margin-bottom: 20px; font-size: 1.8em; 
+h1 {
+    text-align: center; color: #007bff; margin-bottom: 20px; font-size: 1.8em;
 }
-h2 { 
-    color: #333; border-bottom: 1px solid #eee; padding-bottom: 8px; 
-    margin-top: 0; margin-bottom: 15px; font-size: 1.4em; 
+h2 {
+    color: #333; border-bottom: 1px solid #eee; padding-bottom: 8px;
+    margin-top: 0; margin-bottom: 15px; font-size: 1.4em;
 }
 
-input[type="text"] { 
-    padding: 10px 12px; margin-bottom: 10px; border: 1px solid #dddfe2; 
-    border-radius: 6px; font-size: 1em; width: 100%; 
+input[type="text"] {
+    padding: 10px 12px;
+    border: 1px solid #dddfe2;
+    border-radius: 6px;
+    font-size: 1em;
+    width: 100%;
 }
+#addGuestForm input[type="text"] {
+    margin-bottom: 10px;
+}
+
+
 #addGuestForm { display: flex; flex-direction: column; align-items: stretch; margin-bottom: 15px; }
 #addGuestForm button { width: 100%; margin-right: 0; }
 
-button, .button { 
-    padding: 12px 18px; background-color: #007bff; color: white; 
-    border: none; border-radius: 6px; cursor: pointer; font-size: 1em; 
-    font-weight: bold; text-decoration: none; display: inline-block; 
-    transition: background-color 0.2s ease-in-out; margin-top: 5px; margin-right: 5px; 
+button, .button {
+    padding: 12px 18px; background-color: #007bff; color: white;
+    border: none; border-radius: 6px; cursor: pointer; font-size: 1em;
+    font-weight: bold; text-decoration: none; display: inline-block;
+    transition: background-color 0.2s ease-in-out; margin-top: 5px; margin-right: 5px;
 }
 button:last-child { margin-right: 0; }
 button:hover, .button:hover { background-color: #0056b3; }
@@ -65,50 +71,76 @@ button:disabled { background-color: #ccc; cursor: not-allowed; }
 #newGuestQrImage { display: block; margin: 10px auto; border: 1px solid #eee; max-width: 120px; }
 #downloadQrLink { margin-top: 10px; font-size: 0.9em; }
 
+.guest-list-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+.guest-list-controls #searchInput {
+    margin-bottom: 0;
+}
+.guest-list-controls button {
+    margin-top: 0;
+    width: 100%;
+}
+
+/* Estilos para os botões de exportação */
+.export-buttons {
+    /* Estilos inline no HTML já cuidam do alinhamento e margem por enquanto */
+    /* Você pode adicionar mais estilos aqui se precisar */
+}
+.button-export {
+    background-color: #5cb85c; /* Verde */
+    font-size: 0.9em;
+    padding: 8px 15px;
+}
+.button-export:hover {
+    background-color: #4cae4c;
+}
+
+
 .table-responsive-wrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 15px; }
-table { width: 100%; min-width: 600px; border-collapse: collapse; }
+table { width: 100%; min-width: 700px; border-collapse: collapse; }
 th, td { border: 1px solid #ddd; padding: 8px 10px; text-align: left; vertical-align: middle; font-size: 0.9em; }
 th { background-color: #f8f9fa; font-weight: bold; }
 td img { max-width: 40px; max-height: 40px; object-fit: contain; border: 1px solid #eee; border-radius: 4px; }
 td .button-mark, td .button-unmark, td .button-remove { padding: 6px 10px; font-size: 0.85em; margin: 3px 3px 3px 0; display: inline-block;}
 
-/* --- Estilos do Scanner Otimizados --- */
 .scanner-section { text-align: center; }
 #qrReaderMessageContainer { margin-bottom: 15px; }
 #qrReaderMessageContainer p { font-size: 0.9em; color: #555; margin-bottom: 5px; }
 
 #qrScannerWrapper {
     position: relative;
-    width: 85vw;       /* Começa responsivo */
-    max-width: 320px;  /* Limite para não ficar enorme em telas largas */
-    min-width: 200px;  /* Mínimo para ser usável */
-    aspect-ratio: 1 / 1; /* Força proporção quadrada */
+    width: 85vw;
+    max-width: 320px;
+    min-width: 200px;
+    aspect-ratio: 1 / 1;
     margin: 20px auto;
     border: 3px solid #007bff;
     border-radius: 8px;
-    overflow: hidden; /* Essencial para conter o vídeo */
-    background-color: #333; /* Fundo enquanto a câmera carrega */
-    display: none; /* Começa escondido */
+    overflow: hidden;
+    background-color: #333;
+    display: none;
 }
 #qrReader {
     width: 100%;
     height: 100%;
-    /* background-color: lightcoral; Para debug de tamanho */
 }
-/* Estilo crucial para o vídeo se ajustar corretamente */
 #qrReader video {
     width: 100% !important;
     height: 100% !important;
-    object-fit: cover; /* 'cover' preenche, 'contain' mostra tudo com barras */
-    display: block;    /* Remove espaço extra abaixo de elementos inline como video */
+    object-fit: cover;
+    display: block;
 }
 
-.scan-overlay { 
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-    display: flex; flex-direction: column; justify-content: center; align-items: center; 
-    background-color: rgba(0, 0, 0, 0.0); color: white; 
-    font-size: 1.8em; font-weight: bold; text-align: center; 
-    opacity: 0; transition: opacity 0.3s ease-in-out, background-color 0.3s ease-in-out; 
+.scan-overlay {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    background-color: rgba(0, 0, 0, 0.0); color: white;
+    font-size: 1.8em; font-weight: bold; text-align: center;
+    opacity: 0; transition: opacity 0.3s ease-in-out, background-color 0.3s ease-in-out;
     pointer-events: none; z-index: 10; padding: 10px;
 }
 .scan-overlay.visible { opacity: 1; }
@@ -138,32 +170,48 @@ td .button-mark, td .button-unmark, td .button-remove { padding: 6px 10px; font-
 .button-remove { background-color: #dc3545; } .button-remove:hover { background-color: #c82333; }
 #guestAddedInfo { font-weight: bold; margin-bottom: 10px; }
 
-/* Estilos para a seção de estatísticas */
 .stats-section {}
 .stats-overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 20px; text-align: left; }
 .stats-overview p { background-color: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #e9ecef; margin: 0; }
 .stats-overview strong { float: right; color: #007bff; }
-.chart-container {} /* Estilos inline no HTML */
+.chart-container {}
 
 @media (max-width: 480px) {
     .stats-overview { grid-template-columns: 1fr; }
     .stats-overview strong { display: block; float: none; margin-top: 3px; }
 }
 
-/* Media Queries para telas maiores (Desktop) */
 @media (min-width: 768px) {
     body { padding: 20px; font-size: 16px; }
-    .container { margin: 20px auto; gap: 30px; padding: 0; } /* Remove padding horizontal do container, pois max-width controla */
+    .container { margin: 20px auto; gap: 30px; padding: 0; }
     .section { padding: 20px; }
     h1 { font-size: 2.5em; margin-bottom: 30px; }
     h2 { font-size: 1.8em; padding-bottom: 10px; }
+
     #addGuestForm { flex-direction: row; align-items: center; }
-    input[type="text"] { margin-right: 10px; margin-bottom: 0; flex-grow: 1; }
+    #addGuestForm input[type="text"] { margin-right: 10px; margin-bottom: 0; flex-grow: 1; }
     #addGuestForm button { width: auto; }
+
+    .guest-list-controls {
+        flex-direction: row;
+        align-items: center;
+    }
+    .guest-list-controls #searchInput {
+        flex-grow: 1;
+        margin-right: 10px;
+        margin-bottom: 0;
+        width: auto;
+    }
+    .guest-list-controls button {
+        width: auto;
+        white-space: nowrap;
+        margin-top: 0;
+    }
+
     th, td { padding: 10px 12px; font-size: 1em; }
     td img { max-width: 50px; max-height: 50px; }
     td .button-mark, td .button-unmark, td .button-remove { padding: 8px 12px; font-size: 0.9em; margin-bottom: 0; }
-    #qrScannerWrapper { width: 300px; /* Tamanho fixo em desktop */ height: 300px; /* Remove aspect-ratio implícito por height fixo */ margin: 20px auto; }
+    #qrScannerWrapper { width: 300px; height: 300px; margin: 20px auto; }
     .scan-overlay { font-size: 2em; }
     .scan-overlay .overlay-icon { font-size: 3em; }
     .scan-overlay .overlay-message { font-size: 0.6em; }
@@ -171,6 +219,3 @@ td .button-mark, td .button-unmark, td .button-remove { padding: 6px 10px; font-
     .scanner-controls { flex-direction: row; justify-content: center; max-width: none; }
     .scanner-controls button { width: auto; min-width: 130px; }
 }
-
-/* Estilos específicos para a página do scanner (opcional) */
-/* (Removido para usar os estilos responsivos gerais) */

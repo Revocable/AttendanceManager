@@ -1,3 +1,5 @@
+// --- Código JavaScript COMPLETO ---
+
 const API_BASE_URL = '';
 let html5QrCode = null;
 let beepAudio = null;
@@ -6,22 +8,30 @@ let overlayTimeoutId = null;
 let lastScannedHash = null;
 let lastScanTime = 0;
 const SCAN_COOLDOWN_MS = 3000;
-let attendanceChartInstance = null; // Para o gráfico de pizza
+const SEARCH_DEBOUNCE_MS = 300;
+let attendanceChartInstance = null;
+
+function debounce(func, delay) {
+    let timeout;
+    return function(...args) {
+        const context = this;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(context, args), delay);
+    };
+}
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Verifica se elementos da página principal existem para carregar dados específicos
     const guestListElement = document.getElementById('guestList');
     const addGuestFormElement = document.getElementById('addGuestForm');
-    const statsTotalInvitedElement = document.getElementById('statsTotalInvited'); // Elemento chave da seção de stats
+    const statsTotalInvitedElement = document.getElementById('statsTotalInvited');
+    const searchInputElement = document.getElementById('searchInput');
 
-    if (guestListElement || addGuestFormElement) { // Indica que estamos na index.html (ou uma página com essas features)
+    if (guestListElement || addGuestFormElement) {
         if (typeof fetchGuests === "function") {
             fetchGuests();
         }
-        if (typeof fetchStats === "function" && statsTotalInvitedElement) { // Só busca stats se a seção existir
+        if (typeof fetchStats === "function" && statsTotalInvitedElement) {
              fetchStats();
-             // Opcional: Atualizar estatísticas periodicamente
-             // setInterval(fetchStats, 30000); // A cada 30 segundos
         }
     }
 
@@ -31,16 +41,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    if (searchInputElement) {
+        searchInputElement.addEventListener('input', debouncedHandleSearch);
+    }
+
     const qrReaderElementId = "qrReader";
     const qrReaderElement = document.getElementById(qrReaderElementId);
     if (qrReaderElement) {
-        html5QrCode = new Html5Qrcode(qrReaderElementId, { verbose: true });
+        html5QrCode = new Html5Qrcode(qrReaderElementId, { verbose: false });
         console.log("Instância Html5Qrcode criada.");
     } else {
-        // Só é um erro se a seção do scanner estiver visível e o leitor não for encontrado
         const scannerSection = document.querySelector('.section.scanner-section');
         if (scannerSection && getComputedStyle(scannerSection).display !== 'none') {
-             console.warn("Elemento 'qrReader' não encontrado, mas a seção do scanner está presente e visível.");
+             console.warn("Elemento 'qrReader' não encontrado.");
         }
     }
 
@@ -49,7 +62,6 @@ document.addEventListener('DOMContentLoaded', () => {
         beepAudio.onerror = () => console.error("Erro ao carregar 'beep.mp3'.");
     }
 
-    // Esconder elementos da index.html se existirem (para a área de "novo QR")
     const newGuestQrImage = document.getElementById('newGuestQrImage');
     if (newGuestQrImage) newGuestQrImage.style.display = 'none';
     const downloadQrLink = document.getElementById('downloadQrLink');
@@ -67,10 +79,13 @@ async function addGuest() {
     const guestAddedInfo = document.getElementById('guestAddedInfo');
     const newGuestQrImage = document.getElementById('newGuestQrImage');
     const downloadQrLink = document.getElementById('downloadQrLink');
+
     if(guestAddedInfo) guestAddedInfo.textContent = '';
     if(newGuestQrImage) {newGuestQrImage.style.display = 'none'; newGuestQrImage.src = '';}
     if(downloadQrLink) {downloadQrLink.style.display = 'none'; downloadQrLink.href = '#';}
+
     if (!name) { alert('Nome do convidado é obrigatório.'); return; }
+
     try {
         const response = await fetch(`${API_BASE_URL}/api/guests`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name })
@@ -87,41 +102,62 @@ async function addGuest() {
             if(downloadQrLink) {downloadQrLink.href = imageUrl; downloadQrLink.download = `qrcode_${result.name.replace(/\s+/g, '_')}.png`; downloadQrLink.style.display = 'block';}
         }
         nameInput.value = '';
-        if (document.getElementById('guestList')) fetchGuests();
+        if (document.getElementById('guestList')) fetchGuestsWithCurrentSearchTerm();
         if (document.getElementById('statsTotalInvited') && typeof fetchStats === "function") fetchStats();
     } catch (error) {
         console.error('Erro ao adicionar convidado:', error);
         if(guestAddedInfo) {guestAddedInfo.textContent = 'Erro de rede ao adicionar.'; guestAddedInfo.style.color = 'red';}
     }
 }
-async function fetchGuests() {
+
+async function fetchGuests(searchTerm = '') {
     const tbody = document.getElementById('guestList');
     if (!tbody) { console.warn("fetchGuests: #guestList não encontrado."); return; }
+
+    let apiUrl = `${API_BASE_URL}/api/guests`;
+    const currentSearchTerm = (typeof searchTerm === 'string') ? searchTerm.trim() : (document.getElementById('searchInput')?.value.trim() || '');
+
+    if (currentSearchTerm) {
+        apiUrl += `?search=${encodeURIComponent(currentSearchTerm)}`;
+    }
+    // console.log("Buscando convidados com URL:", apiUrl);
+
     try {
-        const response = await fetch(`${API_BASE_URL}/api/guests`);
-        if (!response.ok) { console.error('Erro ao buscar convidados:', response.statusText); return; }
+        const response = await fetch(apiUrl);
+        if (!response.ok) {
+            console.error('Erro ao buscar convidados:', response.statusText);
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Erro ao carregar lista. Tente novamente.</td></tr>`;
+            return;
+        }
         const guests = await response.json();
         tbody.innerHTML = '';
-        if (guests.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Nenhum convidado cadastrado.</td></tr>'; return; } // Modificado colspan para 6
+
+        if (guests.length === 0) {
+            const message = currentSearchTerm ?
+                            'Nenhum convidado encontrado com este critério.' :
+                            'Nenhum convidado cadastrado.';
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">${message}</td></tr>`;
+            return;
+        }
+
         guests.forEach(guest => {
             const row = tbody.insertRow();
             row.insertCell().textContent = guest.name;
-            row.insertCell().textContent = guest.qr_hash ? guest.qr_hash.substring(0, 10) + '...' : 'Ainda não fez check-in';
+            row.insertCell().textContent = guest.qr_hash ? guest.qr_hash.substring(0, 10) + '...' : 'N/A';
 
             const qrCell = row.insertCell();
             if (guest.qr_image_url) {
                 const img = document.createElement('img'); img.src = `${guest.qr_image_url}?t=${new Date().getTime()}`;
                 img.alt = `QR ${guest.name}`; img.style.cssText = 'width:50px; height:50px; cursor:pointer; object-fit:contain; border:1px solid #eee;';
                 img.onclick = () => window.open(img.src, '_blank'); qrCell.appendChild(img);
-            } else { qrCell.textContent = 'Ainda não fez check-in'; }
+            } else { qrCell.textContent = 'N/A'; }
 
             const enteredCell = row.insertCell();
             enteredCell.textContent = guest.entered ? 'Sim' : 'Não';
             enteredCell.style.color = guest.entered ? 'green' : 'red';
 
-            // Célula para Data de Check-in
-            const checkInTimeCell = row.insertCell(); // NOVA CÉLULA
-            checkInTimeCell.textContent = guest.check_in_time ? guest.check_in_time : 'Ainda não fez check-in';
+            const checkInTimeCell = row.insertCell();
+            checkInTimeCell.textContent = guest.check_in_time ? guest.check_in_time : 'N/A';
 
             const actionsCell = row.insertCell();
             const toggleButton = document.createElement('button');
@@ -137,37 +173,71 @@ async function fetchGuests() {
             removeButton.onclick = () => confirmDeleteGuest(guest.qr_hash, guest.name);
             actionsCell.appendChild(removeButton);
         });
-    } catch (error) { console.error('Erro ao buscar convidados:', error); }
+    } catch (error) {
+        console.error('Erro de rede ao buscar convidados:', error);
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Erro de rede. Verifique sua conexão.</td></tr>`;
+    }
 }
+
+function handleSearch() {
+    const searchTerm = document.getElementById('searchInput').value;
+    fetchGuests(searchTerm);
+}
+const debouncedHandleSearch = debounce(handleSearch, SEARCH_DEBOUNCE_MS);
+
+function fetchGuestsWithCurrentSearchTerm(manualRefresh = false) {
+    const searchTerm = document.getElementById('searchInput').value;
+    fetchGuests(searchTerm);
+    if (manualRefresh) {
+        // console.log("Lista atualizada manualmente com filtro:", searchTerm || "nenhum");
+    }
+}
+
 function confirmDeleteGuest(qrHash, guestName) { if (confirm(`Tem certeza que deseja remover "${guestName}"?`)) { deleteGuest(qrHash); } }
+
 async function deleteGuest(qrHash) {
     try {
         const response = await fetch(`${API_BASE_URL}/api/guests/${qrHash}`, { method: 'DELETE' });
         const result = await response.json();
         if (!response.ok) { alert(`Erro ao remover: ${result.error || 'Erro.'}`); return; }
         alert(result.message || 'Removido.');
-        if (document.getElementById('guestList')) fetchGuests();
+        fetchGuestsWithCurrentSearchTerm();
         if (document.getElementById('statsTotalInvited') && typeof fetchStats === "function") fetchStats();
     } catch (error) { console.error('Erro de rede ao remover:', error); alert('Erro de rede.'); }
 }
+
 async function toggleGuestEntry(qrHash) {
     try {
         const response = await fetch(`${API_BASE_URL}/api/guests/${qrHash}/toggle_entry`, { method: 'PUT' });
         const result = await response.json(); if (!response.ok) { alert(`Erro: ${result.error}`); return; }
         console.log(result.message);
-        if (document.getElementById('guestList')) fetchGuests();
+        fetchGuestsWithCurrentSearchTerm();
         if (document.getElementById('statsTotalInvited') && typeof fetchStats === "function") fetchStats();
     } catch (error) { console.error('Erro ao alterar status:', error); }
 }
 
+// --- Funções de Exportação ---
+function exportGuests(format) {
+    const searchTerm = document.getElementById('searchInput').value.trim();
+    let exportUrl = `${API_BASE_URL}/api/guests/export/${format}`;
+    
+    if (searchTerm) {
+        exportUrl += `?search=${encodeURIComponent(searchTerm)}`;
+    }
+    
+    // Abre a URL em uma nova aba (ou janela), o navegador cuidará do download
+    window.open(exportUrl, '_blank');
+}
+
+
 // --- Funções de Estatísticas ---
 async function fetchStats() {
     const statsTotalInvitedEl = document.getElementById('statsTotalInvited');
-    if (!statsTotalInvitedEl) { // Se o elemento principal das stats não existe, não faz nada
+    if (!statsTotalInvitedEl) {
         console.log("fetchStats: Elementos de estatísticas não encontrados na página.");
         return;
     }
-    console.log("fetchStats: Buscando estatísticas...");
+    // console.log("fetchStats: Buscando estatísticas...");
 
     try {
         const response = await fetch(`${API_BASE_URL}/api/stats`);
@@ -180,7 +250,7 @@ async function fetchStats() {
             return;
         }
         const stats = await response.json();
-        console.log("fetchStats: Estatísticas recebidas:", stats);
+        // console.log("fetchStats: Estatísticas recebidas:", stats);
 
         statsTotalInvitedEl.textContent = stats.total_invited;
         document.getElementById('statsEnteredCount').textContent = stats.entered_count;
@@ -205,8 +275,6 @@ function updateAttendanceChart(entered, notEntered) {
         console.warn("updateAttendanceChart: Canvas 'attendanceChart' não encontrado.");
         return;
     }
-    console.log("updateAttendanceChart: Atualizando gráfico com Entraram:", entered, "Não Entraram:", notEntered);
-
     const data = {
         labels: ['Entraram', 'Não Entraram'],
         datasets: [{
@@ -239,10 +307,8 @@ function updateAttendanceChart(entered, notEntered) {
     if (attendanceChartInstance) {
         attendanceChartInstance.data.datasets[0].data = [entered, notEntered];
         attendanceChartInstance.update();
-        console.log("updateAttendanceChart: Gráfico atualizado.");
     } else {
         attendanceChartInstance = new Chart(ctx, configChart);
-        console.log("updateAttendanceChart: Gráfico criado.");
     }
 }
 
@@ -271,33 +337,33 @@ function showOverlayFeedback(type, icon, message) {
 function onScanSuccess(decodedText, decodedResult) {
     const currentTime = Date.now();
     if (decodedText === lastScannedHash && (currentTime - lastScanTime) < SCAN_COOLDOWN_MS) {
-        console.log(`[FRONTEND] QR (${decodedText.substring(0,10)}...) cooldown. Ignorando.`);
+        // console.log(`[FRONTEND] QR (${decodedText.substring(0,10)}...) cooldown. Ignorando.`);
         return;
     }
-    console.log(`[FRONTEND] QR LIDO: ${decodedText}`);
+    // console.log(`[FRONTEND] QR LIDO: ${decodedText}`);
     showOverlayFeedback('processing', '<span class="spinner"></span>', `Processando...`);
     lastScannedHash = decodedText; lastScanTime = currentTime;
     processScannedQr(decodedText);
 }
 function onScanFailure(error) { /* console.warn(`[FRONTEND] Falha no scan: ${error}`); */ }
+
 async function processScannedQr(qrHash) {
-    console.log(`[FRONTEND] Enviando hash '${qrHash}' para API`);
+    // console.log(`[FRONTEND] Enviando hash '${qrHash}' para API`);
     try {
         const response = await fetch(`${API_BASE_URL}/api/guests/${qrHash}/enter`, { method: 'POST' });
         const result = await response.json();
         if (!response.ok) {
              showOverlayFeedback('error', '✗', result.error || 'QR inválido/não encontrado.');
         } else {
-            // const guestName = result.name || "Convidado"; // O result.message já é formatado no backend
-            let message = result.message; // Ex: "Convidado X marcou presença às DD/MM/YYYY HH:MM:SS!"
+            let message = result.message;
             if (result.is_new_entry === true) {
                 showOverlayFeedback('success', '✓', message);
                 if (beepAudio) { beepAudio.currentTime = 0; beepAudio.play().catch(e => console.error("Erro ao tocar beep:", e)); }
-            } else { // Já tinha entrado
-                showOverlayFeedback('warning', 'ⓘ', message); // Ex: "Convidado X já entrou na festa às DD/MM/YYYY HH:MM:SS."
+            } else {
+                showOverlayFeedback('warning', 'ⓘ', message);
             }
-            if (document.getElementById('guestList')) fetchGuests(); // Atualiza lista se estiver na index.html
-            if (document.getElementById('statsTotalInvited') && typeof fetchStats === "function") fetchStats(); // Atualiza stats se estiver na index.html
+            if (document.getElementById('guestList')) fetchGuestsWithCurrentSearchTerm();
+            if (document.getElementById('statsTotalInvited') && typeof fetchStats === "function") fetchStats();
         }
     } catch (error) {
         console.error('[FRONTEND] Erro de rede:', error);
@@ -317,13 +383,12 @@ function startQrScanner() {
 
     const videoConstraints = { facingMode: "environment" };
     const configScanner = {
-        fps: 15,
+        fps: 10,
         qrbox: (viewfinderWidth, viewfinderHeight) => {
-            let edgePercentage = 0.70;
+            let edgePercentage = 0.65;
             let qrboxEdgeSize = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * edgePercentage);
-            qrboxEdgeSize = Math.max(120, qrboxEdgeSize);
-            qrboxEdgeSize = Math.min(260, qrboxEdgeSize);
-            console.log(`Viewfinder: ${viewfinderWidth}x${viewfinderHeight}, QRBox: ${qrboxEdgeSize}x${qrboxEdgeSize}`);
+            qrboxEdgeSize = Math.max(150, qrboxEdgeSize);
+            qrboxEdgeSize = Math.min(300, qrboxEdgeSize);
             return { width: qrboxEdgeSize, height: qrboxEdgeSize };
         },
         rememberLastUsedCamera: true,
@@ -342,7 +407,11 @@ function startQrScanner() {
         if(textFeedback) { textFeedback.textContent = 'Câmera ativa. Aponte para QR Code.'; textFeedback.className = ''; }
     }).catch(err => {
         console.error("Erro ao iniciar scanner:", err);
-        if(textFeedback) { textFeedback.textContent = `Erro câmera: ${err}. Verifique HTTPS/permissões.`; textFeedback.className = 'error'; }
+        let errorMsg = `Erro câmera: ${err}. Verifique HTTPS/permissões.`;
+        if (String(err).includes("Requested camera not available")) {
+            errorMsg = "Câmera não encontrada ou não permitida. Verifique as permissões.";
+        }
+        if(textFeedback) { textFeedback.textContent = errorMsg; textFeedback.className = 'error'; }
         if (msgContainer) msgContainer.style.display = 'block';
         if (qrScannerWrapper) qrScannerWrapper.style.display = 'none';
         if(startBtn) startBtn.style.display = 'inline-block';
@@ -351,7 +420,7 @@ function startQrScanner() {
 }
 async function stopQrScanner() {
     if (!html5QrCode || !html5QrCode.isScanning) {
-        console.log("Tentativa de parar scanner que não está ativo ou inicializado.");
+        // console.log("Tentativa de parar scanner que não está ativo ou inicializado.");
     } else {
         try { await html5QrCode.stop(); console.log("Scanner parado."); }
         catch (err) { console.error("Erro ao tentar parar o scanner:", err); }
@@ -368,12 +437,11 @@ async function stopQrScanner() {
     if (qrScannerWrapper) qrScannerWrapper.style.display = 'none';
     if (msgContainer) msgContainer.style.display = 'block';
     if (overlay) {
-        overlay.classList.remove('visible');
-        overlay.classList.remove('success-bg', 'error-bg', 'warning-bg', 'processing-bg');
+        overlay.classList.remove('visible', 'success-bg', 'error-bg', 'warning-bg', 'processing-bg');
     }
     if(textFeedback) {
         if (!textFeedback.className.includes('error')) {
-            textFeedback.textContent = 'Scanner parado ou não estava ativo.';
+            textFeedback.textContent = 'Scanner parado.';
             textFeedback.className = '';
         }
     }
