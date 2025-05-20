@@ -8,10 +8,6 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-    <!-- jsPDF e jsPDF-AutoTable (para exportar PDF pelo frontend, se preferir essa abordagem) -->
-    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script> -->
-    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script> -->
-
 </head>
 
 <body>
@@ -63,7 +59,6 @@
                 <input type="text" id="searchInput" placeholder="Buscar por nome...">
                 <button onclick="fetchGuestsWithCurrentSearchTerm(true)">Atualizar Lista</button>
             </div>
-             <!-- Botões de Exportação -->
             <div class="export-buttons" style="margin-top: 15px; margin-bottom: 10px; text-align: right;">
                 <button onclick="exportGuests('csv')" class="button-export">Exportar para CSV</button>
                 <button onclick="exportGuests('pdf')" class="button-export" style="margin-left: 10px;">Exportar para PDF</button>

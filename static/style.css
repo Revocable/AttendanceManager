@@ -55,12 +55,19 @@ input[type="text"] {
 #addGuestForm button { width: 100%; margin-right: 0; }
 
 button, .button {
-    padding: 12px 18px; background-color: #007bff; color: white;
-    border: none; border-radius: 6px; cursor: pointer; font-size: 1em;
+    padding: 10px 15px; /* Ajuste no padding para consistência */
+    background-color: #007bff; color: white;
+    border: none; border-radius: 6px; cursor: pointer; font-size: 0.9em; /* Fonte um pouco menor para botões de ação */
     font-weight: bold; text-decoration: none; display: inline-block;
-    transition: background-color 0.2s ease-in-out; margin-top: 5px; margin-right: 5px;
+    transition: background-color 0.2s ease-in-out; margin-top: 5px;
+    line-height: 1.4; /* Melhorar alinhamento vertical do texto */
 }
-button:last-child { margin-right: 0; }
+/* Remover margem direita padrão para controlar especificamente */
+button, .button {
+    margin-right: 0;
+}
+
+
 button:hover, .button:hover { background-color: #0056b3; }
 button:disabled { background-color: #ccc; cursor: not-allowed; }
 
@@ -81,19 +88,23 @@ button:disabled { background-color: #ccc; cursor: not-allowed; }
     margin-bottom: 0;
 }
 .guest-list-controls button {
-    margin-top: 0;
+    margin-top: 0; /* Reset margin-top para botões dentro de .guest-list-controls */
     width: 100%;
 }
 
-/* Estilos para os botões de exportação */
 .export-buttons {
-    /* Estilos inline no HTML já cuidam do alinhamento e margem por enquanto */
-    /* Você pode adicionar mais estilos aqui se precisar */
+    margin-top: 15px;
+    margin-bottom: 10px;
+    text-align: right; /* Alinha os botões de exportação à direita */
+    display: flex; /* Para alinhar e espaçar botões de exportação */
+    justify-content: flex-end; /* Alinha à direita */
+    gap: 10px; /* Espaço entre os botões de exportação */
 }
 .button-export {
-    background-color: #5cb85c; /* Verde */
+    background-color: #5cb85c;
     font-size: 0.9em;
     padding: 8px 15px;
+    margin-top: 0; /* Reset margin-top para botões de exportação */
 }
 .button-export:hover {
     background-color: #4cae4c;
@@ -101,39 +112,61 @@ button:disabled { background-color: #ccc; cursor: not-allowed; }
 
 
 .table-responsive-wrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 15px; }
-table { width: 100%; min-width: 700px; border-collapse: collapse; }
+table { width: 100%; min-width: 750px; border-collapse: collapse; } /* Aumentar min-width se necessário */
 th, td { border: 1px solid #ddd; padding: 8px 10px; text-align: left; vertical-align: middle; font-size: 0.9em; }
 th { background-color: #f8f9fa; font-weight: bold; }
 td img { max-width: 40px; max-height: 40px; object-fit: contain; border: 1px solid #eee; border-radius: 4px; }
-td .button-mark, td .button-unmark, td .button-remove { padding: 6px 10px; font-size: 0.85em; margin: 3px 3px 3px 0; display: inline-block;}
+
+/* Célula de Ações e seus botões */
+td.actions-cell {
+    text-align: left; /* Ou center, se preferir os botões centralizados */
+    white-space: nowrap; /* Evita que botões quebrem linha prematuramente se couberem */
+}
+
+td.actions-cell .action-button-group { /* Grupo para botões Editar e Marcar */
+    display: inline-flex; /* Ou flex, se quiser que ocupem a largura */
+    gap: 5px; /* Espaço entre Editar e Marcar */
+    margin-bottom: 5px; /* Espaço abaixo deste grupo, antes do Remover */
+}
+
+td.actions-cell button {
+    padding: 6px 10px;
+    font-size: 0.85em;
+    margin-top: 0; /* Resetar margem de botões gerais */
+    margin-bottom: 0; /* Resetar margem de botões gerais */
+    /* width: auto; */ /* Para que os botões tenham larguras diferentes com base no texto */
+}
+
+.button-edit { background-color: #f0ad4e; }
+.button-edit:hover { background-color: #ec971f; }
+.button-mark { background-color: #28a745; }
+.button-mark:hover { background-color: #1e7e34; }
+.button-unmark { background-color: #ffc107; color: #212529;}
+.button-unmark:hover { background-color: #e0a800; }
+.button-remove {
+    background-color: #dc3545;
+    display: block; /* Faz o botão Remover ocupar a largura disponível ou sua própria linha */
+    width: calc(100% - 10px); /* Exemplo: Ocupar quase toda a largura menos um pouco de margem */
+    max-width: 150px; /* Limita a largura máxima do botão remover */
+    margin-left: auto; /* Centraliza se for block com max-width */
+    margin-right: auto; /* Centraliza se for block com max-width */
+    /* Ou, se quiser alinhado com os outros mas em nova linha: */
+    /* display: inline-block; width: auto; clear: both; margin-top: 5px; */
+}
+.button-remove:hover { background-color: #c82333; }
+
 
 .scanner-section { text-align: center; }
 #qrReaderMessageContainer { margin-bottom: 15px; }
 #qrReaderMessageContainer p { font-size: 0.9em; color: #555; margin-bottom: 5px; }
 
 #qrScannerWrapper {
-    position: relative;
-    width: 85vw;
-    max-width: 320px;
-    min-width: 200px;
-    aspect-ratio: 1 / 1;
-    margin: 20px auto;
-    border: 3px solid #007bff;
-    border-radius: 8px;
-    overflow: hidden;
-    background-color: #333;
-    display: none;
+    position: relative; width: 85vw; max-width: 320px; min-width: 200px;
+    aspect-ratio: 1 / 1; margin: 20px auto; border: 3px solid #007bff;
+    border-radius: 8px; overflow: hidden; background-color: #333; display: none;
 }
-#qrReader {
-    width: 100%;
-    height: 100%;
-}
-#qrReader video {
-    width: 100% !important;
-    height: 100% !important;
-    object-fit: cover;
-    display: block;
-}
+#qrReader { width: 100%; height: 100%; }
+#qrReader video { width: 100% !important; height: 100% !important; object-fit: cover; display: block; }
 
 .scan-overlay {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -151,7 +184,7 @@ td .button-mark, td .button-unmark, td .button-remove { padding: 6px 10px; font-
 .scan-overlay.warning-bg { background-color: rgba(255, 193, 7, 0.75); }
 
 .scanner-controls { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; width: 100%; max-width: 280px; margin-left: auto; margin-right: auto;}
-.scanner-controls button { padding: 12px 20px; font-size: 1.1em; background-color: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; width: 100%;}
+.scanner-controls button { padding: 12px 20px; font-size: 1.1em; background-color: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; width: 100%; margin-top:0;}
 .scanner-controls button:hover { background-color: #0056b3; }
 #stopScanButton { background-color: #6c757d; }
 #stopScanButton:hover { background-color: #545b62; }
@@ -165,9 +198,6 @@ td .button-mark, td .button-unmark, td .button-remove { padding: 6px 10px; font-
 .spinner { display: inline-block; width: 1em; height: 1em; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spinner-border .75s linear infinite; vertical-align: text-bottom; margin-left: 5px; }
 @keyframes spinner-border { to { transform: rotate(360deg); } }
 
-.button-mark { background-color: #28a745; } .button-mark:hover { background-color: #1e7e34; }
-.button-unmark { background-color: #ffc107; color: #212529;} .button-unmark:hover { background-color: #e0a800; }
-.button-remove { background-color: #dc3545; } .button-remove:hover { background-color: #c82333; }
 #guestAddedInfo { font-weight: bold; margin-bottom: 10px; }
 
 .stats-section {}
@@ -190,7 +220,7 @@ td .button-mark, td .button-unmark, td .button-remove { padding: 6px 10px; font-
 
     #addGuestForm { flex-direction: row; align-items: center; }
     #addGuestForm input[type="text"] { margin-right: 10px; margin-bottom: 0; flex-grow: 1; }
-    #addGuestForm button { width: auto; }
+    #addGuestForm button { width: auto; margin-top: 0;}
 
     .guest-list-controls {
         flex-direction: row;
@@ -205,17 +235,42 @@ td .button-mark, td .button-unmark, td .button-remove { padding: 6px 10px; font-
     .guest-list-controls button {
         width: auto;
         white-space: nowrap;
-        margin-top: 0;
+    }
+
+    .export-buttons {
+        /* Mantém como está para desktop, já deve funcionar bem */
     }
 
     th, td { padding: 10px 12px; font-size: 1em; }
     td img { max-width: 50px; max-height: 50px; }
-    td .button-mark, td .button-unmark, td .button-remove { padding: 8px 12px; font-size: 0.9em; margin-bottom: 0; }
+
+    /* Ações na tabela para Desktop */
+    td.actions-cell {
+        /* Permite que os botões fiquem lado a lado se houver espaço */
+    }
+    td.actions-cell .action-button-group {
+        margin-bottom: 0; /* Remove margem inferior se estiverem todos na mesma linha */
+        margin-right: 5px; /* Espaço entre o grupo e o botão Remover */
+    }
+    td.actions-cell button {
+        padding: 8px 12px;
+        font-size: 0.9em;
+        display: inline-block; /* Garante que fiquem na mesma linha */
+        width: auto; /* Largura baseada no conteúdo */
+    }
+     .button-remove { /* Estilo específico para o botão remover em desktop, se necessário */
+        display: inline-block; /* Mantém na mesma linha dos outros em desktop */
+        /* width: auto; */
+        margin-left: 0; /* Resetar margens de centralização de mobile */
+        margin-right: 0;
+    }
+
+
     #qrScannerWrapper { width: 300px; height: 300px; margin: 20px auto; }
     .scan-overlay { font-size: 2em; }
     .scan-overlay .overlay-icon { font-size: 3em; }
     .scan-overlay .overlay-message { font-size: 0.6em; }
     #scanResultText { font-size: 1.2em; }
     .scanner-controls { flex-direction: row; justify-content: center; max-width: none; }
-    .scanner-controls button { width: auto; min-width: 130px; }
+    .scanner-controls button { width: auto; min-width: 130px; margin-top:5px;}
 }

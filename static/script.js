@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const qrReaderElement = document.getElementById(qrReaderElementId);
     if (qrReaderElement) {
         html5QrCode = new Html5Qrcode(qrReaderElementId, { verbose: false });
-        console.log("Instância Html5Qrcode criada.");
+        // console.log("Instância Html5Qrcode criada.");
     } else {
         const scannerSection = document.querySelector('.section.scanner-section');
         if (scannerSection && getComputedStyle(scannerSection).display !== 'none') {
@@ -120,7 +120,6 @@ async function fetchGuests(searchTerm = '') {
     if (currentSearchTerm) {
         apiUrl += `?search=${encodeURIComponent(currentSearchTerm)}`;
     }
-    // console.log("Buscando convidados com URL:", apiUrl);
 
     try {
         const response = await fetch(apiUrl);
@@ -160,22 +159,63 @@ async function fetchGuests(searchTerm = '') {
             checkInTimeCell.textContent = guest.check_in_time ? guest.check_in_time : 'N/A';
 
             const actionsCell = row.insertCell();
+            actionsCell.classList.add('actions-cell'); // Adiciona classe para estilização CSS
+
+            // Div para agrupar botões Editar e Marcar
+            const topActionGroup = document.createElement('div');
+            topActionGroup.className = 'action-button-group';
+
+            const editButton = document.createElement('button');
+            editButton.textContent = 'Editar';
+            editButton.className = 'button-edit';
+            editButton.onclick = () => editGuestNamePrompt(guest.qr_hash, guest.name);
+            topActionGroup.appendChild(editButton);
+
             const toggleButton = document.createElement('button');
             toggleButton.textContent = guest.entered ? 'Marcar Não Entrou' : 'Marcar Entrou';
             toggleButton.className = guest.entered ? 'button-unmark' : 'button-mark';
+            // toggleButton.style.marginLeft = '5px'; // Removido, usar gap do CSS
             toggleButton.onclick = () => toggleGuestEntry(guest.qr_hash);
-            actionsCell.appendChild(toggleButton);
+            topActionGroup.appendChild(toggleButton);
+            
+            actionsCell.appendChild(topActionGroup);
 
             const removeButton = document.createElement('button');
             removeButton.textContent = 'Remover';
             removeButton.className = 'button-remove';
-            removeButton.style.marginLeft = '5px';
+            // removeButton.style.marginLeft = '5px'; // Removido, CSS cuidará do display block/espaçamento
             removeButton.onclick = () => confirmDeleteGuest(guest.qr_hash, guest.name);
             actionsCell.appendChild(removeButton);
         });
     } catch (error) {
         console.error('Erro de rede ao buscar convidados:', error);
         tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Erro de rede. Verifique sua conexão.</td></tr>`;
+    }
+}
+
+async function editGuestNamePrompt(qrHash, currentName) {
+    const newName = prompt("Digite o novo nome para o convidado:", currentName);
+    if (newName === null) { return; }
+    const trimmedNewName = newName.trim();
+    if (!trimmedNewName) { alert("O nome não pode ser vazio."); return; }
+    if (trimmedNewName === currentName) { return; }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/guests/${qrHash}/edit`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: trimmedNewName })
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            alert(`Erro ao editar: ${result.error || 'Erro desconhecido.'}`);
+        } else {
+            alert(result.message || 'Nome atualizado com sucesso!');
+            fetchGuestsWithCurrentSearchTerm();
+        }
+    } catch (error) {
+        console.error('Erro de rede ao editar convidado:', error);
+        alert('Erro de rede ao tentar editar o nome.');
     }
 }
 
@@ -188,9 +228,6 @@ const debouncedHandleSearch = debounce(handleSearch, SEARCH_DEBOUNCE_MS);
 function fetchGuestsWithCurrentSearchTerm(manualRefresh = false) {
     const searchTerm = document.getElementById('searchInput').value;
     fetchGuests(searchTerm);
-    if (manualRefresh) {
-        // console.log("Lista atualizada manualmente com filtro:", searchTerm || "nenhum");
-    }
 }
 
 function confirmDeleteGuest(qrHash, guestName) { if (confirm(`Tem certeza que deseja remover "${guestName}"?`)) { deleteGuest(qrHash); } }
@@ -210,39 +247,25 @@ async function toggleGuestEntry(qrHash) {
     try {
         const response = await fetch(`${API_BASE_URL}/api/guests/${qrHash}/toggle_entry`, { method: 'PUT' });
         const result = await response.json(); if (!response.ok) { alert(`Erro: ${result.error}`); return; }
-        console.log(result.message);
+        // console.log(result.message); // Opcional: logar a mensagem de sucesso
         fetchGuestsWithCurrentSearchTerm();
         if (document.getElementById('statsTotalInvited') && typeof fetchStats === "function") fetchStats();
     } catch (error) { console.error('Erro ao alterar status:', error); }
 }
 
-// --- Funções de Exportação ---
 function exportGuests(format) {
     const searchTerm = document.getElementById('searchInput').value.trim();
     let exportUrl = `${API_BASE_URL}/api/guests/export/${format}`;
-    
-    if (searchTerm) {
-        exportUrl += `?search=${encodeURIComponent(searchTerm)}`;
-    }
-    
-    // Abre a URL em uma nova aba (ou janela), o navegador cuidará do download
+    if (searchTerm) { exportUrl += `?search=${encodeURIComponent(searchTerm)}`; }
     window.open(exportUrl, '_blank');
 }
 
-
-// --- Funções de Estatísticas ---
 async function fetchStats() {
     const statsTotalInvitedEl = document.getElementById('statsTotalInvited');
-    if (!statsTotalInvitedEl) {
-        console.log("fetchStats: Elementos de estatísticas não encontrados na página.");
-        return;
-    }
-    // console.log("fetchStats: Buscando estatísticas...");
-
+    if (!statsTotalInvitedEl) { return; }
     try {
         const response = await fetch(`${API_BASE_URL}/api/stats`);
         if (!response.ok) {
-            console.error("Erro ao buscar estatísticas:", response.statusText);
             statsTotalInvitedEl.textContent = 'Erro';
             document.getElementById('statsEnteredCount').textContent = '-';
             document.getElementById('statsNotEnteredCount').textContent = '-';
@@ -250,31 +273,21 @@ async function fetchStats() {
             return;
         }
         const stats = await response.json();
-        // console.log("fetchStats: Estatísticas recebidas:", stats);
-
         statsTotalInvitedEl.textContent = stats.total_invited;
         document.getElementById('statsEnteredCount').textContent = stats.entered_count;
         document.getElementById('statsNotEnteredCount').textContent = stats.not_entered_count;
         document.getElementById('statsPercentageEntered').textContent = stats.percentage_entered + " %";
-
         if (typeof updateAttendanceChart === "function") {
              updateAttendanceChart(stats.entered_count, stats.not_entered_count);
         }
     } catch (error) {
-        console.error("Erro de rede ao buscar estatísticas:", error);
-        statsTotalInvitedEl.textContent = 'Erro de Rede';
-        document.getElementById('statsEnteredCount').textContent = '-';
-        document.getElementById('statsNotEnteredCount').textContent = '-';
-        document.getElementById('statsPercentageEntered').textContent = '- %';
+        statsTotalInvitedEl.textContent = 'Erro de Rede'; console.error("Erro de rede ao buscar estatísticas:", error);
     }
 }
 
 function updateAttendanceChart(entered, notEntered) {
     const ctx = document.getElementById('attendanceChart');
-    if (!ctx) {
-        console.warn("updateAttendanceChart: Canvas 'attendanceChart' não encontrado.");
-        return;
-    }
+    if (!ctx) { return; }
     const data = {
         labels: ['Entraram', 'Não Entraram'],
         datasets: [{
@@ -312,7 +325,6 @@ function updateAttendanceChart(entered, notEntered) {
     }
 }
 
-// --- Funções do Scanner de QR Code ---
 function showOverlayFeedback(type, icon, message) {
     const overlay = document.getElementById('scanOverlayFeedback');
     const textFeedback = document.getElementById('scanResultText');
@@ -336,11 +348,7 @@ function showOverlayFeedback(type, icon, message) {
 }
 function onScanSuccess(decodedText, decodedResult) {
     const currentTime = Date.now();
-    if (decodedText === lastScannedHash && (currentTime - lastScanTime) < SCAN_COOLDOWN_MS) {
-        // console.log(`[FRONTEND] QR (${decodedText.substring(0,10)}...) cooldown. Ignorando.`);
-        return;
-    }
-    // console.log(`[FRONTEND] QR LIDO: ${decodedText}`);
+    if (decodedText === lastScannedHash && (currentTime - lastScanTime) < SCAN_COOLDOWN_MS) { return; }
     showOverlayFeedback('processing', '<span class="spinner"></span>', `Processando...`);
     lastScannedHash = decodedText; lastScanTime = currentTime;
     processScannedQr(decodedText);
@@ -348,7 +356,6 @@ function onScanSuccess(decodedText, decodedResult) {
 function onScanFailure(error) { /* console.warn(`[FRONTEND] Falha no scan: ${error}`); */ }
 
 async function processScannedQr(qrHash) {
-    // console.log(`[FRONTEND] Enviando hash '${qrHash}' para API`);
     try {
         const response = await fetch(`${API_BASE_URL}/api/guests/${qrHash}/enter`, { method: 'POST' });
         const result = await response.json();
@@ -366,8 +373,7 @@ async function processScannedQr(qrHash) {
             if (document.getElementById('statsTotalInvited') && typeof fetchStats === "function") fetchStats();
         }
     } catch (error) {
-        console.error('[FRONTEND] Erro de rede:', error);
-        showOverlayFeedback('error', '✗', 'Erro de rede ao validar QR.');
+        showOverlayFeedback('error', '✗', 'Erro de rede ao validar QR.'); console.error('[FRONTEND] Erro de rede:', error);
     }
 }
 function startQrScanner() {
@@ -401,12 +407,11 @@ function startQrScanner() {
 
     html5QrCode.start( videoConstraints, configScanner, onScanSuccess, onScanFailure)
     .then(() => {
-        console.log("Scanner iniciado.");
         if(startBtn) startBtn.style.display = 'none';
         if(stopBtn) stopBtn.style.display = 'inline-block';
         if(textFeedback) { textFeedback.textContent = 'Câmera ativa. Aponte para QR Code.'; textFeedback.className = ''; }
+        console.log("Scanner iniciado.");
     }).catch(err => {
-        console.error("Erro ao iniciar scanner:", err);
         let errorMsg = `Erro câmera: ${err}. Verifique HTTPS/permissões.`;
         if (String(err).includes("Requested camera not available")) {
             errorMsg = "Câmera não encontrada ou não permitida. Verifique as permissões.";
@@ -416,12 +421,11 @@ function startQrScanner() {
         if (qrScannerWrapper) qrScannerWrapper.style.display = 'none';
         if(startBtn) startBtn.style.display = 'inline-block';
         if(stopBtn) stopBtn.style.display = 'none';
+        console.error("Erro ao iniciar scanner:", err);
     });
 }
 async function stopQrScanner() {
-    if (!html5QrCode || !html5QrCode.isScanning) {
-        // console.log("Tentativa de parar scanner que não está ativo ou inicializado.");
-    } else {
+    if (!html5QrCode || !html5QrCode.isScanning) {} else {
         try { await html5QrCode.stop(); console.log("Scanner parado."); }
         catch (err) { console.error("Erro ao tentar parar o scanner:", err); }
     }
