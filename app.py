@@ -3,7 +3,8 @@ import hashlib
 import qrcode
 from PIL import Image, ImageDraw, ImageFont as PILImageFont
 import uuid
-from flask import Flask, request, jsonify, render_template, url_for, Response
+# Adicionar send_from_directory
+from flask import Flask, request, jsonify, render_template, url_for, Response, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import pytz
@@ -19,7 +20,14 @@ import matplotlib.pyplot as plt
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'instance', 'party.db')
+# O caminho para a pasta 'instance' já é calculado pelo Flask como app.instance_path
+# Mas vamos definir o caminho completo para o arquivo do DB para clareza na rota de download
+DB_NAME = 'party.db'
+DB_FOLDER = os.path.join(basedir, 'instance')
+DB_FILE_PATH = os.path.join(DB_FOLDER, DB_NAME)
+
+
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + DB_FILE_PATH # Usar a variável
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -58,9 +66,13 @@ class Guest(db.Model):
             return self.check_in_time.astimezone(BRASILIA_TZ).strftime('%d/%m/%Y %H:%M:%S')
         return "N/A"
 
-instance_path = os.path.join(basedir, 'instance')
-if not os.path.exists(instance_path):
-    os.makedirs(instance_path)
+# A pasta 'instance' é criada automaticamente pelo Flask se não existir,
+# quando app.instance_path é acessado ou quando se usa SQLite com caminho relativo a 'instance'.
+# Mas para ter certeza, podemos verificar:
+if not os.path.exists(DB_FOLDER):
+    os.makedirs(DB_FOLDER)
+    app.logger.info(f"Pasta 'instance' verificada/criada em: {DB_FOLDER}")
+
 
 with app.app_context():
     db.create_all()
@@ -68,20 +80,17 @@ with app.app_context():
 # --- Funções Auxiliares ---
 def generate_qr_code_image(qr_data, guest_name, filename_base):
     """Gera a imagem do QR code com o nome do convidado e salva."""
-    qr_fn = f"{filename_base}.png" # O nome do arquivo será baseado no qr_hash
+    qr_fn = f"{filename_base}.png"
     qr_fp = os.path.join(QR_CODE_SAVE_PATH, qr_fn)
-
     try:
         qr_instance = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
         qr_instance.add_data(qr_data)
         qr_instance.make(fit=True)
         img_qr = qr_instance.make_image(fill_color="black", back_color="white").convert('RGB')
-
         padding_bottom_for_text = 60
         text_color = (0, 0, 0)
         background_color_canvas = (255, 255, 255)
         font_size_pil = 30
-        
         pil_font = PILImageFont.load_default()
         if os.path.exists(FONT_PATH):
             try:
@@ -90,29 +99,24 @@ def generate_qr_code_image(qr_data, guest_name, filename_base):
                 app.logger.warning(f"Pillow (geração QR): Fonte '{FONT_PATH}' não pôde ser carregada, usando fonte padrão.")
         else:
             app.logger.warning(f"Pillow (geração QR): Fonte '{FONT_PATH}' não encontrada, usando fonte padrão.")
-
         new_width = img_qr.width
         new_height = img_qr.height + padding_bottom_for_text
         img_canvas = Image.new('RGB', (new_width, new_height), background_color_canvas)
         img_canvas.paste(img_qr, (0, 0))
         draw = ImageDraw.Draw(img_canvas)
-
         try:
             text_bbox = draw.textbbox((0, 0), guest_name, font=pil_font)
             text_width = text_bbox[2] - text_bbox[0]
-        except AttributeError: # Fallback para versões mais antigas do Pillow
+        except AttributeError: 
             text_width, _ = draw.textsize(guest_name, font=pil_font)
-
         text_x = (new_width - text_width) / 2
-        text_y = img_qr.height + (padding_bottom_for_text - font_size_pil) / 2 - 5 # Ajuste fino vertical
+        text_y = img_qr.height + (padding_bottom_for_text - font_size_pil) / 2 - 5
         draw.text((text_x, text_y), guest_name, font=pil_font, fill=text_color)
-        
         img_canvas.save(qr_fp)
         app.logger.info(f"QR Code com nome para '{guest_name}' (hash: {qr_data}) salvo/atualizado em: {qr_fp}")
         return qr_fn
     except Exception as e:
         app.logger.error(f"Erro ao gerar/salvar QR com texto para '{guest_name}': {e}")
-        # Fallback para QR simples sem texto se a adição de texto falhar
         try:
             qrcode.make(qr_data).save(qr_fp)
             app.logger.info(f"QR Code simples (sem nome) para '{guest_name}' (hash: {qr_data}) salvo em: {qr_fp}")
@@ -121,7 +125,6 @@ def generate_qr_code_image(qr_data, guest_name, filename_base):
             app.logger.error(f"Erro crítico ao salvar QR para {guest_name}: {e_fallback}")
             return None
 
-
 # --- ROTAS DA APLICAÇÃO ---
 @app.route('/')
 def index(): return render_template('index.html')
@@ -129,6 +132,25 @@ def index(): return render_template('index.html')
 @app.route('/scanner')
 def scanner_page():
     return render_template('scanner.html')
+
+# NOVA ROTA PARA DOWNLOAD DO BANCO DE DADOS
+@app.route('/admin/download_db')
+def download_db():
+    # !! ALERTA DE SEGURANÇA !!
+    # Esta rota permite o download do arquivo do banco de dados.
+    # Em um ambiente de produção, esta rota DEVE ser protegida por autenticação
+    # e autorização robustas para evitar acesso não autorizado aos dados.
+    try:
+        # DB_FOLDER é o diretório 'instance'
+        # DB_NAME é 'party.db'
+        return send_from_directory(DB_FOLDER, DB_NAME, as_attachment=True)
+    except FileNotFoundError:
+        app.logger.error(f"Arquivo do banco de dados não encontrado em: {DB_FILE_PATH}")
+        return jsonify({"error": "Arquivo do banco de dados não encontrado."}), 404
+    except Exception as e:
+        app.logger.error(f"Erro ao tentar baixar o banco de dados: {e}")
+        return jsonify({"error": "Erro interno ao processar o download."}), 500
+
 
 def get_party_stats_data():
     total_invited = Guest.query.count()
@@ -154,20 +176,15 @@ def add_guest():
     name = data['name'].strip()
     if not name: return jsonify({'error': 'Nome vazio'}), 400
     if Guest.query.filter_by(name=name).first(): return jsonify({'error': f'Convidado com nome "{name}" já existe.'}), 409
-
     unique_id_for_qr = str(uuid.uuid4())
     qr_hash = hashlib.sha256(unique_id_for_qr.encode('utf-8')).hexdigest()
-
     while Guest.query.filter_by(qr_hash=qr_hash).first():
         app.logger.warning(f"Colisão de QR Hash detectada (extremamente raro!). Gerando novo para {name}.")
         unique_id_for_qr = str(uuid.uuid4())
         qr_hash = hashlib.sha256(unique_id_for_qr.encode('utf-8')).hexdigest()
-
-    # Usa a função auxiliar para gerar a imagem do QR Code
     qr_image_filename = generate_qr_code_image(qr_hash, name, qr_hash)
     if not qr_image_filename:
         return jsonify({'error': 'Falha crítica ao gerar QR'}), 500
-    
     new_guest = Guest(name=name, qr_hash=qr_hash, qr_image_filename=qr_image_filename)
     db.session.add(new_guest); db.session.commit()
     return jsonify({'id': new_guest.id, 'name': new_guest.name, 'qr_hash': new_guest.qr_hash,
@@ -178,54 +195,35 @@ def add_guest():
 def get_guests_api():
     search_term = request.args.get('search', None)
     query = Guest.query
-
     if search_term and search_term.strip():
         query = query.filter(Guest.name.ilike(f'%{search_term.strip()}%'))
-
     guests_list = query.order_by(Guest.name).all()
-
     return jsonify([{'id': g.id, 'name': g.name, 'qr_hash': g.qr_hash,
                      'entered': g.entered, 'qr_image_url': g.qr_image_url,
                      'check_in_time': g.get_check_in_time_str()}
                     for g in guests_list])
 
-# NOVA ROTA PARA EDITAR CONVIDADO
 @app.route('/api/guests/<qr_hash>/edit', methods=['PUT'])
 def edit_guest_name(qr_hash):
     guest = Guest.query.filter_by(qr_hash=qr_hash).first()
     if not guest:
         return jsonify({'error': 'Convidado não encontrado'}), 404
-
     data = request.get_json()
     if not data or 'name' not in data:
         return jsonify({'error': 'Novo nome é obrigatório'}), 400
-    
     new_name = data['name'].strip()
     if not new_name:
         return jsonify({'error': 'Novo nome não pode ser vazio'}), 400
-
-    # Verifica se o novo nome já existe para outro convidado (exceto o próprio)
     existing_guest_with_new_name = Guest.query.filter(Guest.name == new_name, Guest.qr_hash != qr_hash).first()
     if existing_guest_with_new_name:
         return jsonify({'error': f'Já existe um convidado com o nome "{new_name}"'}), 409
-
     old_name = guest.name
     guest.name = new_name
-
-    # Regerar a imagem do QR Code com o novo nome
-    # O qr_hash (dados do QR) permanece o mesmo, então usamos qr_hash como base para o nome do arquivo.
     new_qr_image_filename = generate_qr_code_image(guest.qr_hash, new_name, guest.qr_hash)
     if not new_qr_image_filename:
-        # Se a geração falhar, reverter a mudança de nome para manter a consistência?
-        # Ou apenas logar o erro e continuar com o nome do DB atualizado?
-        # Por ora, vamos logar e continuar, o QR antigo pode não ter o nome correto.
         app.logger.error(f"Falha ao regerar QR code para {new_name} após edição. O nome no DB foi atualizado.")
-        # guest.qr_image_filename não é alterado se a nova geração falhar
     else:
-        # Se a imagem anterior tinha um nome e era diferente da nova, podemos tentar remover a antiga.
-        # Mas como o nome do arquivo é baseado no hash, ele será sobrescrito.
         guest.qr_image_filename = new_qr_image_filename
-
     try:
         db.session.commit()
         app.logger.info(f"Convidado '{old_name}' atualizado para '{new_name}'.")
@@ -240,15 +238,12 @@ def edit_guest_name(qr_hash):
         app.logger.error(f"Erro ao salvar edição do convidado {old_name}: {e}")
         return jsonify({'error': 'Erro ao salvar alterações no banco de dados'}), 500
 
-
 @app.route('/api/guests/<qr_hash>/enter', methods=['POST'])
 def mark_entered(qr_hash):
     guest = Guest.query.filter_by(qr_hash=qr_hash).first()
     is_new_entry = False; message = ""
     if not guest: return jsonify({'error': 'Convidado não encontrado (QR inválido)'}), 404
-
     current_time_brasilia = datetime.now(BRASILIA_TZ)
-
     if guest.entered:
         message = f'{guest.name} já entrou no evento às {guest.get_check_in_time_str()}.'
     else:
@@ -265,17 +260,14 @@ def mark_entered(qr_hash):
 def toggle_entry_manually(qr_hash):
     guest = Guest.query.filter_by(qr_hash=qr_hash).first()
     if not guest: return jsonify({'error': 'Convidado não encontrado'}), 404
-
     current_time_brasilia = datetime.now(BRASILIA_TZ)
     guest.entered = not guest.entered
-
     if guest.entered:
         guest.check_in_time = current_time_brasilia
         action = f"entrou às {guest.get_check_in_time_str()}"
     else:
         guest.check_in_time = None
         action = "NÃO entrou"
-
     db.session.commit()
     return jsonify({'id': guest.id, 'name': guest.name, 'qr_hash': guest.qr_hash,
                     'entered': guest.entered, 'message': f'Status de {guest.name} alterado: {action}.',
@@ -293,7 +285,6 @@ def delete_guest(qr_hash):
     db.session.delete(guest); db.session.commit()
     return jsonify({'message': f'Convidado {guest.name} removido com sucesso'}), 200
 
-# --- ROTAS DE EXPORTAÇÃO --- (sem alterações, mantidas como antes)
 def get_all_guests_for_export():
     search_term = request.args.get('search', None)
     query = Guest.query
@@ -327,7 +318,6 @@ class PDF(FPDF):
         self.font_name = 'Montserrat'
         self.default_font = 'Helvetica'
         self.current_font_family = self.default_font
-
         if os.path.exists(self.montserrat_font_path):
             try:
                 self.add_font(self.font_name, '', self.montserrat_font_path, uni=True)
@@ -339,7 +329,6 @@ class PDF(FPDF):
                 app.logger.error(f"FPDF: Erro ao carregar fonte Montserrat: {e}. Usando Helvetica.")
         else:
             app.logger.warning(f"FPDF: Arquivo de fonte Montserrat não encontrado em {self.montserrat_font_path}. Usando Helvetica.")
-
     def header(self):
         self.set_font(self.current_font_family, 'B', 16)
         title = 'Relatório do evento'
@@ -347,182 +336,129 @@ class PDF(FPDF):
         self.set_x((self.w - title_w) / 2)
         self.cell(title_w, 10, title, border=0, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C')
         self.ln(5)
-
     def footer(self):
         self.set_y(-15)
         self.set_font(self.current_font_family, 'I', 8)
         self.cell(0, 10, f'Página {self.page_no()}/{{nb}}', border=0, new_x=XPos.RIGHT, new_y=YPos.TOP, align='C')
-
     def draw_stats_summary(self, stats_data):
         self.set_font(self.current_font_family, 'B', 11)
         title_stat_x = self.l_margin
         self.set_x(title_stat_x)
         self.cell(0, 10, "Estatísticas do evento", border=0, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='L')
         self.ln(1) 
-
         page_width = self.w - self.l_margin - self.r_margin
         col_width_stat = page_width / 4
         stat_box_height = 12 
         line_height_label = 4.5 
         line_height_value = 5.5 
         padding_top_box = (stat_box_height - (line_height_label + line_height_value)) / 2 
-
         fill_color_stat_box = (240, 240, 240)
         value_text_color = (0, 100, 200) 
         label_text_color = (0, 0, 0)
-
         current_x = self.l_margin
         base_y = self.get_y()
-
         stats_items = [
             ("Total de Convidados:", str(stats_data['total_invited'])),
             ("Entraram no evento:", str(stats_data['entered_count'])),
             ("Ainda Não Entraram:", str(stats_data['not_entered_count'])),
-            ("Comparecimento:", f"{stats_data['percentage_entered']:.2f}%")
-        ]
-
+            ("Comparecimento:", f"{stats_data['percentage_entered']:.2f}%")]
         for i, (label, value) in enumerate(stats_items):
             self.set_fill_color(*fill_color_stat_box)
             self.rect(current_x, base_y, col_width_stat, stat_box_height, 'F') 
             self.set_draw_color(200, 200, 200) 
             self.rect(current_x, base_y, col_width_stat, stat_box_height, 'D') 
-
             y_pos_label = base_y + padding_top_box
             self.set_xy(current_x, y_pos_label) 
             self.set_text_color(*label_text_color)
             self.set_font(self.current_font_family, '', 8.5) 
             self.cell(col_width_stat, line_height_label, label, border=0, align='C')
-
             y_pos_value = y_pos_label + line_height_label
             self.set_xy(current_x, y_pos_value) 
             self.set_text_color(*value_text_color)
             self.set_font(self.current_font_family, 'B', 10) 
             self.cell(col_width_stat, line_height_value, value, border=0, align='C')
-            
             self.set_text_color(*label_text_color) 
             current_x += col_width_stat
-        
         self.set_y(base_y + stat_box_height) 
         self.ln(5)
-
     def draw_pie_chart(self, stats_data, y_offset, chart_size_mm=70):
         labels = 'Entraram', 'Não Entraram'
         sizes = [stats_data['entered_count'], stats_data['not_entered_count']]
         colors = ['#4BC0C0', '#FF6384']
-        
         if sum(sizes) == 0:
             current_y = self.get_y()
-            # Ajuste para centralizar a mensagem de "sem dados"
-            text_width = self.get_string_width("Sem dados para o gráfico.") # Calcula a largura do texto
+            text_width = self.get_string_width("Sem dados para o gráfico.")
             self.set_xy((self.w - text_width) / 2 if text_width < self.w - self.l_margin - self.r_margin else self.l_margin, current_y + y_offset)
             self.set_font(self.current_font_family, '', 10)
-            self.cell(0, 10, "Sem dados para o gráfico.", new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C') # cell com width 0 para ocupar a linha
+            self.cell(0, 10, "Sem dados para o gráfico.", new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C')
             self.ln(5)
             return
-
         explode = (0,0)
         if stats_data['entered_count'] > 0 and stats_data['not_entered_count'] > 0 :
             if sizes[0] > sizes[1]: explode = (0.05, 0)
             elif sizes[1] > sizes[0]: explode = (0, 0.05)
-
-        # --- Alteração: Reverter DPI para o valor original (provavelmente 100) ---
         dpi_value = 100 
-        
         fig_size_inches = chart_size_mm / 25.4
         fig, ax = plt.subplots(figsize=(fig_size_inches, fig_size_inches), dpi=dpi_value)
-        
         font_to_use_mpl = 'Montserrat' if self.current_font_family == 'Montserrat' and os.path.exists(FONT_PATH) else 'sans-serif'
-        
         with plt.rc_context({'font.family': font_to_use_mpl}):
             wedges, texts, autotexts = ax.pie(
                 sizes, explode=explode, labels=None, colors=colors,
                 autopct='%1.1f%%', shadow=False, startangle=90,
                 pctdistance=0.80, 
-                # --- Alteração: Remover ajuste de linewidth com DPI ---
-                wedgeprops={'linewidth': 0.5, 'edgecolor': 'white'} 
-            )
-            
-            # --- Alteração: Remover ajuste de fontsize com DPI ---
+                wedgeprops={'linewidth': 0.5, 'edgecolor': 'white'} )
             autotext_fontsize = 8 
             for autotext in autotexts:
                 autotext.set_color('white')
                 autotext.set_fontsize(autotext_fontsize)
                 autotext.set_fontweight('bold')
-
             ax.axis('equal') 
-            
             legend_labels = [f'{label} ({size})' for label, size in zip(labels, sizes)]
-            # --- Alteração: Remover ajuste de fontsize com DPI ---
             legend_fontsize = 7 
-            legend_title_fontsize = 8 # Mantido como estava, ou pode ser ajustado se desejar
-            
+            legend_title_fontsize = 8 
             ax.legend(wedges, legend_labels,
                       loc="lower center", bbox_to_anchor=(0.5, 1.02), 
                       ncol=len(labels), fontsize=legend_fontsize, frameon=False)
-
         img_buffer = io.BytesIO()
-        # --- Alteração: Salvar com o DPI original ---
         plt.savefig(img_buffer, format='png', bbox_inches='tight', transparent=True, dpi=dpi_value)
         img_buffer.seek(0)
-        
         img_pil = Image.open(img_buffer)
-        # Não precisamos mais das dimensões em pixels da imagem PIL para esta abordagem,
-        # pois vamos inserir com chart_size_mm fixo e quadrado.
         plt.close(fig) 
-        
-        # Centralizar a imagem (assumindo que será renderizada quadrada no PDF)
         img_x = (self.w - chart_size_mm) / 2
         current_y = self.get_y()
-
         self.set_font(self.current_font_family, 'B', 9)
         title_graph_y = current_y + y_offset
         title_graph_str = "Distribuição de Comparecimento"
         title_graph_width = self.get_string_width(title_graph_str)
         self.set_xy((self.w - title_graph_width) / 2, title_graph_y)
         self.cell(title_graph_width, 5, title_graph_str, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C')
-        
         image_y_position = self.get_y() 
-
-        # Inserir a imagem com as dimensões fixas e quadradas
         self.image(img_buffer, x=img_x, y=image_y_position, w=chart_size_mm, h=chart_size_mm, type='PNG') 
-        # Nota: Se o Matplotlib com bbox_inches='tight' ainda produzir uma imagem não quadrada,
-        # forçar w e h iguais aqui pode causar o achatamento/esticamento.
-        # A versão anterior com cálculo de aspect_ratio era para evitar isso.
-        # Se o problema de achatamento persistir com DPI 100, a lógica de aspect_ratio deve ser reconsiderada.
-        
         self.set_y(image_y_position + chart_size_mm + 5)
-
     def chapter_body(self, guests_data_table):
         header_bg_color = (230, 230, 230)
         row_bg_color_even = (255, 255, 255)
         row_bg_color_odd = (248, 248, 248)
-
         self.set_font(self.current_font_family, 'B', 11)
         self.cell(0, 10, "Lista de Convidados", border=0, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C')
         self.ln(1)
-
         self.set_font(self.current_font_family, 'B', 9)
         self.set_fill_color(*header_bg_color)
-        
         col_widths = { "name": 100, "status": 30, "check_in": 40 }
         page_content_width = self.w - 2 * self.l_margin
         table_width = sum(col_widths.values())
-        
         start_x = self.l_margin
         if table_width < page_content_width:
             start_x = self.l_margin + (page_content_width - table_width) / 2
-
         self.set_x(start_x)
         self.cell(col_widths["name"], 8, 'Nome', border=1, new_x=XPos.RIGHT, new_y=YPos.TOP, align='C', fill=True)
         self.cell(col_widths["status"], 8, 'Entrou?', border=1, new_x=XPos.RIGHT, new_y=YPos.TOP, align='C', fill=True)
         self.cell(col_widths["check_in"], 8, 'Data Check-in', border=1, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C', fill=True)
-        
         self.set_font(self.current_font_family, '', 8.5)
         for i, guest_obj in enumerate(guests_data_table):
             self.set_x(start_x)
             current_fill_color = row_bg_color_odd if i % 2 else row_bg_color_even
             self.set_fill_color(*current_fill_color)
-
             guest_name_display = guest_obj.name
             max_name_width = col_widths["name"] - 4
             current_name_width = self.get_string_width(guest_name_display)
@@ -531,7 +467,6 @@ class PDF(FPDF):
                     guest_name_display = guest_name_display[:-1]
                 if len(guest_name_display) < len(guest_obj.name):
                     guest_name_display = guest_name_display + "..." if len(guest_name_display) > 0 else "..."
-            
             self.cell(col_widths["name"], 7, guest_name_display, border=1, new_x=XPos.RIGHT, new_y=YPos.TOP, align='L', fill=True)
             self.cell(col_widths["status"], 7, 'Sim' if guest_obj.entered else 'Não', border=1, new_x=XPos.RIGHT, new_y=YPos.TOP, align='C', fill=True)
             self.cell(col_widths["check_in"], 7, guest_obj.get_check_in_time_str(), border=1, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C', fill=True)
@@ -541,27 +476,21 @@ class PDF(FPDF):
 def export_guests_pdf():
     guests_for_table = get_all_guests_for_export()
     stats_for_chart_and_summary = get_party_stats_data()
-    
     pdf = PDF(orientation='P', unit='mm', format='A4')
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.alias_nb_pages()
     pdf.add_page()
-    
     pdf.draw_stats_summary(stats_for_chart_and_summary)
     pdf.draw_pie_chart(stats_for_chart_and_summary, y_offset=0, chart_size_mm=70)
-    
     if not guests_for_table and stats_for_chart_and_summary['total_invited'] == 0:
         pdf.set_font(pdf.current_font_family, '', 12)
         pdf.cell(0, 10, 'Nenhum dado para exibir.', border=0, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C')
     elif guests_for_table:
         pdf.chapter_body(guests_for_table)
-        
     timestamp = datetime.now(BRASILIA_TZ).strftime("%Y%m%d_%H%M%S")
     filename = f"relatorio_evento_{timestamp}.pdf"
-
     pdf_output_bytearray = pdf.output() 
     pdf_output_bytes = bytes(pdf_output_bytearray)
-
     return Response(pdf_output_bytes,
                     mimetype='application/pdf',
                     headers={'Content-Disposition': f'attachment;filename={filename}'})
