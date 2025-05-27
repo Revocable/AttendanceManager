@@ -269,6 +269,73 @@
                 height: 40px;
             }
         }
+
+        /* Mobile card improvements */
+        .mobile-guest-card {
+            backdrop-filter: blur(12px);
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            margin-bottom: 1rem;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .dark .mobile-guest-card {
+            backdrop-filter: blur(12px);
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .mobile-actions-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .mobile-action-btn {
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-align: center;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+        }
+
+        .mobile-qr-section {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 0.75rem 0;
+        }
+
+        .mobile-info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin: 0.75rem 0;
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 480px) {
+            .mobile-actions-grid {
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
+            }
+            
+            .mobile-action-btn {
+                padding: 0.75rem;
+                font-size: 0.875rem;
+            }
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900 min-h-screen transition-all duration-300">
@@ -284,7 +351,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <div class="flex items-center justify-between">
                 <div class="logo-container">
-                    <img src="{{ url_for('static', filename='logo.png') }}" alt="QRPass Logo" class="logo-image mr-4">
+                    <img src="/logo.png" alt="QRPass Logo" class="logo-image mr-4">
                     <div>
                         <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">QRPass</h1>
                         <p class="text-gray-600 dark:text-gray-300">Sistema de controle de acesso</p>
@@ -919,40 +986,56 @@
                             actionsCell.innerHTML = createActionButtons(guest);
                         }
 
-                        // Mobile Card
+                        // Mobile Card - FIXED LAYOUT
                         if (mobileContainer) {
                             const card = document.createElement('div');
-                            card.className = 'mobile-card rounded-xl p-4 mb-4 space-y-4 virtual-item';
+                            card.className = 'mobile-guest-card';
                             
                             card.innerHTML = `
-                                <div class="flex items-center justify-between">
-                                    <h3 class="font-semibold text-gray-900 dark:text-white">${guest.name}</h3>
+                                <div class="flex items-center justify-between mb-3">
+                                    <h3 class="font-semibold text-gray-900 dark:text-white text-lg">${guest.name}</h3>
                                     ${guest.entered ? 
                                         '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"><i class="fas fa-check mr-1"></i>Entrou</span>' :
                                         '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200"><i class="fas fa-times mr-1"></i>Não Entrou</span>'
                                     }
                                 </div>
                                 
-                                <div class="grid grid-cols-2 gap-4 text-sm">
+                                <div class="mobile-info-grid">
                                     <div>
-                                        <span class="text-gray-500 dark:text-gray-400">Hash:</span>
-                                        <div class="font-mono text-xs">${guest.qr_hash ? guest.qr_hash.substring(0, 15) + '...' : 'N/A'}</div>
+                                        <span class="text-gray-500 dark:text-gray-400 text-sm">Hash:</span>
+                                        <div class="font-mono text-xs text-gray-700 dark:text-gray-300">${guest.qr_hash ? guest.qr_hash.substring(0, 12) + '...' : 'N/A'}</div>
                                     </div>
                                     <div>
-                                        <span class="text-gray-500 dark:text-gray-400">Check-in:</span>
-                                        <div>${guest.check_in_time || 'N/A'}</div>
+                                        <span class="text-gray-500 dark:text-gray-400 text-sm">Check-in:</span>
+                                        <div class="text-xs text-gray-700 dark:text-gray-300">${guest.check_in_time || 'N/A'}</div>
                                     </div>
                                 </div>
                                 
-                                <div class="flex items-center justify-between">
+                                <div class="mobile-qr-section">
                                     <div class="flex-shrink-0">
                                         ${guest.qr_image_url ? 
                                             `<img src="${guest.qr_image_url}?t=${new Date().getTime()}" alt="QR ${guest.name}" class="w-16 h-16 cursor-pointer object-contain border border-gray-200 dark:border-gray-600 rounded-lg hover:shadow-md transition-shadow" onclick="window.open(this.src, '_blank')">` :
                                             '<div class="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center text-gray-400 text-xs">N/A</div>'
                                         }
                                     </div>
-                                    <div class="flex flex-col space-y-2 ml-4 flex-1">
-                                        ${createMobileActionButtons(guest)}
+                                    <div class="flex-1 ml-4">
+                                        <div class="mobile-actions-grid">
+                                            <button onclick="editGuestNamePrompt('${guest.qr_hash}', '${guest.name.replace(/'/g, "\\'")}')" 
+                                                    class="mobile-action-btn bg-yellow-500 text-white hover:bg-yellow-600">
+                                                <i class="fas fa-edit"></i>
+                                                <span>Editar</span>
+                                            </button>
+                                            <button onclick="toggleGuestEntry('${guest.qr_hash}')" 
+                                                    class="mobile-action-btn ${guest.entered ? 'bg-orange-500 hover:bg-orange-600' : 'bg-green-500 hover:bg-green-600'} text-white">
+                                                <i class="fas fa-${guest.entered ? 'user-minus' : 'user-check'}"></i>
+                                                <span>${guest.entered ? 'Saída' : 'Entrada'}</span>
+                                            </button>
+                                            <button onclick="confirmDeleteGuest('${guest.qr_hash}', '${guest.name.replace(/'/g, "\\'")}')" 
+                                                    class="mobile-action-btn bg-red-500 text-white hover:bg-red-600">
+                                                <i class="fas fa-trash"></i>
+                                                <span>Remover</span>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             `;
@@ -964,40 +1047,23 @@
             });
         }
 
-function createActionButtons(guest) {
-    return `
-        <div class="flex space-x-1">
-            <button onclick="editGuestNamePrompt('${guest.qr_hash}', '${guest.name}')" 
-                    class="bg-yellow-500 text-white p-1 rounded text-xs hover:bg-yellow-600 transition-colors" title="Editar">
-                <i class="fas fa-edit"></i>
-            </button>
-            <button onclick="toggleGuestEntry('${guest.qr_hash}')" 
-                    class="${guest.entered ? 'bg-orange-500 hover:bg-orange-600' : 'bg-green-500 hover:bg-green-600'} text-white p-1 rounded text-xs transition-colors" 
-                    title="${guest.entered ? 'Marcar Saída' : 'Marcar Entrada'}">
-                <i class="fas fa-${guest.entered ? 'user-minus' : 'user-check'}"></i>
-            </button>
-            <button onclick="confirmDeleteGuest('${guest.qr_hash}', '${guest.name}')" 
-                    class="bg-red-500 text-white p-1 rounded text-xs hover:bg-red-600 transition-colors" title="Remover">
-                <i class="fas fa-trash"></i>
-            </button>
-        </div>
-    `;
-}
-
-        function createMobileActionButtons(guest) {
+        function createActionButtons(guest) {
             return `
-                <button onclick="editGuestNamePrompt('${guest.qr_hash}', '${guest.name}')" 
-                        class="bg-yellow-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-yellow-600 transition-colors w-full">
-                    <i class="fas fa-edit mr-2"></i>Editar
-                </button>
-                <button onclick="toggleGuestEntry('${guest.qr_hash}')" 
-                        class="${guest.entered ? 'bg-orange-500 hover:bg-orange-600' : 'bg-green-500 hover:bg-green-600'} text-white px-3 py-2 rounded-lg text-sm transition-colors w-full">
-                    <i class="fas fa-${guest.entered ? 'user-minus' : 'user-check'} mr-2"></i>${guest.entered ? 'Marcar Saída' : 'Marcar Entrada'}
-                </button>
-                <button onclick="confirmDeleteGuest('${guest.qr_hash}', '${guest.name}')" 
-                        class="bg-red-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-600 transition-colors w-full">
-                    <i class="fas fa-trash mr-2"></i>Remover
-                </button>
+                <div class="flex space-x-1">
+                    <button onclick="editGuestNamePrompt('${guest.qr_hash}', '${guest.name}')" 
+                            class="bg-yellow-500 text-white p-1 rounded text-xs hover:bg-yellow-600 transition-colors" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button onclick="toggleGuestEntry('${guest.qr_hash}')" 
+                            class="${guest.entered ? 'bg-orange-500 hover:bg-orange-600' : 'bg-green-500 hover:bg-green-600'} text-white p-1 rounded text-xs transition-colors" 
+                            title="${guest.entered ? 'Marcar Saída' : 'Marcar Entrada'}">
+                        <i class="fas fa-${guest.entered ? 'user-minus' : 'user-check'}"></i>
+                    </button>
+                    <button onclick="confirmDeleteGuest('${guest.qr_hash}', '${guest.name}')" 
+                            class="bg-red-500 text-white p-1 rounded text-xs hover:bg-red-600 transition-colors" title="Remover">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
             `;
         }
 
