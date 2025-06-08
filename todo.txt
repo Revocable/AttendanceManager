@@ -1,0 +1,1 @@
+adicionar opção de compartilhar as permissões de editar uma festa para outro convidado de forma granular (pode adicionar, remover e editar ou so pode adicionar)
