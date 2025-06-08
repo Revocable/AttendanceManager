@@ -24,35 +24,27 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-# Carrega variáveis de ambiente do .env
 load_dotenv()
 
-# --- Configuração do App ---
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
 
-# Configurações do .env
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
-if not app.config['SECRET_KEY']:
-    raise ValueError("Nenhuma SECRET_KEY definida no arquivo .env")
+if not app.config['SECRET_KEY']: raise ValueError("SECRET_KEY não definida no .env")
 
 ABACATE_API_KEY = os.environ.get('ABACATE_API_KEY')
-if not ABACATE_API_KEY:
-    raise ValueError("Nenhuma ABACATE_API_KEY definida no arquivo .env")
+if not ABACATE_API_KEY: raise ValueError("ABACATE_API_KEY não definida no .env")
 
-# Configuração do Banco de Dados
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'instance', 'party.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
-# Configuração do Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 login_manager.login_message = "Por favor, faça login para acessar esta página."
 login_manager.login_message_category = "info"
 
-# --- Constantes e Configuração de Pastas ---
 QR_CODE_FOLDER_NAME = 'qr_codes'
 PARTY_LOGOS_FOLDER_NAME = 'party_logos'
 QR_CODE_SAVE_PATH = os.path.join(basedir, 'static', QR_CODE_FOLDER_NAME)
@@ -69,6 +61,12 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # --- Modelos do Banco de Dados ---
+
+party_collaborators = db.Table('party_collaborators',
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
+    db.Column('party_id', db.Integer, db.ForeignKey('party.id'), primary_key=True)
+)
+
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
@@ -77,10 +75,11 @@ class User(UserMixin, db.Model):
     tax_id = db.Column(db.String(20), unique=True, nullable=True)
     cellphone = db.Column(db.String(20), nullable=True)
     parties = db.relationship('Party', backref='owner', lazy=True, cascade="all, delete-orphan")
+    collaborations = db.relationship('Party', secondary=party_collaborators, lazy='subquery',
+        backref=db.backref('collaborators', lazy=True))
     is_vip = db.Column(db.Boolean, default=False, nullable=False)
     payment_charge_id = db.Column(db.String(120), nullable=True, unique=True)
     payment_status = db.Column(db.String(30), default='not_started', nullable=True)
-
     def set_password(self, password): self.password_hash = generate_password_hash(password)
     def check_password(self, password): return check_password_hash(self.password_hash, password)
 
@@ -95,6 +94,7 @@ class Party(db.Model):
     shareable_link_id = db.Column(db.String(16), unique=True, nullable=False)
     public_description = db.Column(db.Text, nullable=True)
     show_guest_count = db.Column(db.Boolean, nullable=False, default=True)
+    share_code = db.Column(db.String(8), unique=True, nullable=False)
 
 class Guest(db.Model):
     id = db.Column(db.Integer, primary_key=True); name = db.Column(db.String(100), nullable=False)
@@ -102,6 +102,8 @@ class Guest(db.Model):
     entered = db.Column(db.Boolean, default=False, nullable=False)
     qr_image_filename = db.Column(db.String(255), nullable=True); check_in_time = db.Column(db.DateTime, nullable=True)
     party_id = db.Column(db.Integer, db.ForeignKey('party.id'), nullable=False)
+    added_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    adder = db.relationship('User', backref='added_guests')
     __table_args__ = (db.UniqueConstraint('name', 'party_id', name='_name_party_uc'),)
     @property
     def qr_image_url(self): return url_for('static', filename=f'{QR_CODE_FOLDER_NAME}/{self.qr_image_filename}') if self.qr_image_filename else None
@@ -116,7 +118,6 @@ with app.app_context():
 def load_user(user_id):
     return db.session.get(User, int(user_id))
 
-# --- Funções Auxiliares ---
 def generate_qr_code_image(qr_data, guest_name, filename_base):
     qr_fn = f"{filename_base}.png"; qr_fp = os.path.join(QR_CODE_SAVE_PATH, qr_fn)
     try:
@@ -139,10 +140,9 @@ def generate_qr_code_image(qr_data, guest_name, filename_base):
         return qr_fn
     except Exception as e: app.logger.error(f"Erro ao gerar QR: {e}"); return None
 
-def check_party_ownership(party):
-    if party.user_id != current_user.id: abort(403)
+def check_collaboration_permission(party):
+    if party.user_id != current_user.id and current_user not in party.collaborators: abort(403)
 
-# --- ROTAS DE AUTENTICAÇÃO ---
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated: return redirect(url_for('dashboard'))
@@ -173,7 +173,6 @@ def signup():
 def logout():
     logout_user(); return redirect(url_for('landing'))
 
-# --- ROTAS PRINCIPAIS E DE GERENCIAMENTO ---
 @app.route('/')
 def landing():
     if current_user.is_authenticated: return redirect(url_for('dashboard'))
@@ -182,16 +181,15 @@ def landing():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    parties = Party.query.filter_by(user_id=current_user.id).order_by(Party.created_at.desc()).all()
-    can_create_party = current_user.is_vip or len(parties) < 1
-    return render_template('dashboard.html', parties=parties, can_create_party=can_create_party)
+    owned_parties = current_user.parties
+    collaborated_parties = current_user.collaborations
+    can_create_party = current_user.is_vip or len(owned_parties) < 1
+    return render_template('dashboard.html', owned_parties=owned_parties, collaborated_parties=collaborated_parties, can_create_party=can_create_party)
 
-def generate_unique_code(model, field, length=8):
-    chars = string.ascii_uppercase + string.digits
+def generate_unique_code(model, field, length=8, chars=string.ascii_uppercase + string.digits):
     while True:
         code = ''.join(random.choices(chars, k=length))
-        if not model.query.filter(getattr(model, field) == code).first():
-            return code
+        if not model.query.filter(getattr(model, field) == code).first(): return code
 
 @app.route('/party/create', methods=['POST'])
 @login_required
@@ -201,21 +199,26 @@ def create_party():
     party_name = request.form.get('party_name')
     if not party_name or not party_name.strip():
         flash('O nome da festa não pode ser vazio.', 'danger'); return redirect(url_for('dashboard'))
-    
-    party_code = generate_unique_code(Party, 'party_code', 6).upper().replace("_", "A").replace("-", "B")[:6]
+    party_code = generate_unique_code(Party, 'party_code', 6); share_code = generate_unique_code(Party, 'share_code', 8)
     shareable_link_id = secrets.token_urlsafe(12)
-
-    new_party = Party(
-        name=party_name, owner=current_user, party_code=party_code, shareable_link_id=shareable_link_id
-    )
+    new_party = Party(name=party_name, owner=current_user, party_code=party_code, share_code=share_code, shareable_link_id=shareable_link_id)
     db.session.add(new_party); db.session.commit()
     flash(f'Festa "{party_name}" criada!', 'success'); return redirect(url_for('party_manager', party_id=new_party.id))
+
+@app.route('/party/add_collaboration', methods=['POST'])
+@login_required
+def add_collaboration():
+    share_code = request.form.get('share_code'); party = Party.query.filter_by(share_code=share_code).first()
+    if not party: flash('Código de compartilhamento inválido.', 'danger')
+    elif party.owner == current_user: flash('Você não pode se adicionar como colaborador da sua própria festa.', 'warning')
+    elif current_user in party.collaborators: flash('Você já é um colaborador desta festa.', 'info')
+    else: party.collaborators.append(current_user); db.session.commit(); flash(f'Você agora é um colaborador da festa "{party.name}"!', 'success')
+    return redirect(url_for('dashboard'))
 
 @app.route('/party/<int:party_id>')
 @login_required
 def party_manager(party_id):
-    party = db.session.get(Party, party_id) or abort(404)
-    check_party_ownership(party)
+    party = db.session.get(Party, party_id) or abort(404); check_collaboration_permission(party)
     can_add_guest = current_user.is_vip or len(party.guests) < 50
     return render_template('party_manager.html', party=party, can_add_guest=can_add_guest)
 
@@ -223,7 +226,7 @@ def party_manager(party_id):
 @login_required
 def delete_party(party_id):
     party = db.session.get(Party, party_id) or abort(404)
-    check_party_ownership(party)
+    if party.user_id != current_user.id: flash("Apenas o dono da festa pode deletá-la.", "danger"); return redirect(url_for('dashboard'))
     if party.logo_filename:
         try: os.remove(os.path.join(PARTY_LOGOS_SAVE_PATH, party.logo_filename))
         except OSError: pass
@@ -234,12 +237,10 @@ def delete_party(party_id):
     db.session.delete(party); db.session.commit()
     flash(f'A festa "{party.name}" foi removida.', 'success'); return redirect(url_for('dashboard'))
 
-# --- ROTAS DE CUSTOMIZAÇÃO DA PÁGINA PÚBLICA ---
 @app.route('/party/<int:party_id>/upload_logo', methods=['POST'])
 @login_required
 def upload_logo(party_id):
-    party = db.session.get(Party, party_id) or abort(404)
-    check_party_ownership(party)
+    party = db.session.get(Party, party_id) or abort(404); check_collaboration_permission(party)
     if 'party_logo' not in request.files:
         flash('Nenhum arquivo selecionado.', 'danger'); return redirect(url_for('party_manager', party_id=party_id))
     file = request.files['party_logo']
@@ -249,40 +250,30 @@ def upload_logo(party_id):
         if party.logo_filename:
             try: os.remove(os.path.join(PARTY_LOGOS_SAVE_PATH, party.logo_filename))
             except OSError: pass
-        filename = secure_filename(file.filename)
-        unique_id = uuid.uuid4().hex
-        ext = filename.rsplit('.', 1)[1].lower()
+        filename = secure_filename(file.filename); unique_id = uuid.uuid4().hex; ext = filename.rsplit('.', 1)[1].lower()
         new_filename = f"{party_id}_{unique_id}.{ext}"
         file.save(os.path.join(PARTY_LOGOS_SAVE_PATH, new_filename))
-        party.logo_filename = new_filename
-        db.session.commit()
-        flash('Logo da festa atualizado com sucesso!', 'success')
-    else:
-        flash('Tipo de arquivo inválido. Use apenas PNG, JPG, JPEG ou GIF.', 'danger')
+        party.logo_filename = new_filename; db.session.commit()
+        flash('Logo da festa atualizado!', 'success')
+    else: flash('Tipo de arquivo inválido. Use apenas PNG, JPG, JPEG ou GIF.', 'danger')
     return redirect(url_for('party_manager', party_id=party_id))
 
 @app.route('/party/<int:party_id>/update_details', methods=['POST'])
 @login_required
 def update_party_details(party_id):
-    party = db.session.get(Party, party_id) or abort(404)
-    check_party_ownership(party)
-    description = request.form.get('public_description')
-    party.public_description = description
+    party = db.session.get(Party, party_id) or abort(404); check_collaboration_permission(party)
+    party.public_description = request.form.get('public_description')
     db.session.commit()
-    flash('Informações da página pública atualizadas!', 'success')
-    return redirect(url_for('party_manager', party_id=party_id))
+    flash('Informações da página pública atualizadas!', 'success'); return redirect(url_for('party_manager', party_id=party_id))
 
 @app.route('/party/<int:party_id>/toggle_guest_count', methods=['POST'])
 @login_required
 def toggle_guest_count(party_id):
-    party = db.session.get(Party, party_id) or abort(404)
-    check_party_ownership(party)
+    party = db.session.get(Party, party_id) or abort(404); check_collaboration_permission(party)
     party.show_guest_count = not party.show_guest_count
     db.session.commit()
-    flash('Visibilidade da contagem de convidados atualizada.', 'success')
-    return redirect(url_for('party_manager', party_id=party_id))
+    flash('Visibilidade da contagem de convidados atualizada.', 'success'); return redirect(url_for('party_manager', party_id=party_id))
 
-# --- ROTAS PÚBLICAS ---
 @app.route('/p/<shareable_link_id>')
 def public_party_page(shareable_link_id):
     party = Party.query.filter_by(shareable_link_id=shareable_link_id).first_or_404()
@@ -296,10 +287,8 @@ def public_scanner():
         party = Party.query.filter_by(party_code=party_code_input).first()
         if party:
             resp = make_response(render_template('scanner.html', party=party))
-            resp.set_cookie('party_code', party_code_input, max_age=30*24*60*60)
-            return resp
-        else:
-            flash('Código da festa inválido. Tente novamente.', 'danger')
+            resp.set_cookie('party_code', party_code_input, max_age=30*24*60*60); return resp
+        else: flash('Código da festa inválido.', 'danger')
     party_code_from_cookie = request.cookies.get('party_code')
     if party_code_from_cookie:
         party = Party.query.filter_by(party_code=party_code_from_cookie).first()
@@ -308,12 +297,9 @@ def public_scanner():
 
 @app.route('/scanner/forget')
 def forget_scanner():
-    resp = make_response(redirect(url_for('public_scanner')))
-    resp.set_cookie('party_code', '', expires=0)
-    flash('Você se desconectou do scanner.', 'info')
-    return resp
-    
-# --- ROTAS DE PAGAMENTO ---
+    resp = make_response(redirect(url_for('public_scanner'))); resp.set_cookie('party_code', '', expires=0)
+    flash('Você se desconectou do scanner.', 'info'); return resp
+
 @app.route('/upgrade')
 @login_required
 def upgrade():
@@ -331,10 +317,8 @@ def complete_profile():
         existing_user = User.query.filter(User.tax_id == tax_id, User.id != current_user.id).first()
         if existing_user:
             flash("Este CPF já está associado a outra conta.", 'danger'); return render_template('complete_profile.html')
-        current_user.tax_id = tax_id; current_user.cellphone = cellphone
-        db.session.commit()
-        flash("Perfil atualizado! Agora vamos para o pagamento.", 'success')
-        return redirect(url_for('create_payment'))
+        current_user.tax_id = tax_id; current_user.cellphone = cellphone; db.session.commit()
+        flash("Perfil atualizado! Agora vamos para o pagamento.", 'success'); return redirect(url_for('create_payment'))
     return render_template('complete_profile.html')
 
 @app.route('/payment/create', methods=['POST', 'GET'])
@@ -342,28 +326,22 @@ def complete_profile():
 def create_payment():
     if current_user.is_vip: return redirect(url_for('dashboard'))
     if not all([current_user.tax_id, current_user.cellphone]):
-        flash("Por favor, complete seu perfil com CPF e Telefone.", 'warning'); return redirect(url_for('complete_profile'))
-    url = "https://api.abacatepay.com/v1/pixQrCode/create"
-    headers = { "Authorization": f"Bearer {ABACATE_API_KEY}", "Content-Type": "application/json" }
-    payload = { "amount": 10000, "expiresIn": 3600, "description": f"Upgrade para conta VIP QRPass - Usuário: {current_user.username}",
+        flash("Por favor, complete seu perfil.", 'warning'); return redirect(url_for('complete_profile'))
+    url = "https://api.abacatepay.com/v1/pixQrCode/create"; headers = { "Authorization": f"Bearer {ABACATE_API_KEY}", "Content-Type": "application/json" }
+    payload = { "amount": 10000, "expiresIn": 3600, "description": f"Upgrade VIP QRPass - {current_user.username}",
         "customer": { "name": current_user.username, "email": current_user.email, "taxId": current_user.tax_id, "cellphone": current_user.cellphone }
     }
     try:
         response = requests.post(url, json=payload, headers=headers)
-        if response.status_code != 200: app.logger.error(f"Erro da API Abacate Pay: {response.status_code} - {response.text}")
+        if response.status_code != 200: app.logger.error(f"API Error: {response.status_code} - {response.text}")
         response.raise_for_status()
         response_data = response.json().get('data', {})
         pix_qr_code = response_data.get('brCodeBase64'); pix_emv = response_data.get('brCode'); pix_transaction_id = response_data.get('id')
         if not all([pix_qr_code, pix_emv, pix_transaction_id]): raise ValueError("Resposta da API de PIX incompleta.")
-        current_user.payment_charge_id = pix_transaction_id; current_user.payment_status = 'pending'
-        db.session.commit()
+        current_user.payment_charge_id = pix_transaction_id; current_user.payment_status = 'pending'; db.session.commit()
         return render_template('show_pix.html', pix_qr_code=pix_qr_code, pix_emv=pix_emv, pix_id=pix_transaction_id)
-    except requests.exceptions.RequestException as e:
-        app.logger.error(f"Erro de comunicação com Abacate Pay: {e}"); flash('Não foi possível gerar a cobrança PIX. Tente novamente.', 'danger')
-        return redirect(url_for('upgrade'))
-    except (ValueError, KeyError) as e:
-        app.logger.error(f"Erro ao processar resposta da API de PIX: {e}"); flash('Ocorreu um erro inesperado ao processar o pagamento.', 'danger')
-        return redirect(url_for('upgrade'))
+    except requests.exceptions.RequestException as e: app.logger.error(f"Erro de comunicação: {e}"); flash('Não foi possível gerar cobrança.', 'danger'); return redirect(url_for('upgrade'))
+    except (ValueError, KeyError) as e: app.logger.error(f"Erro ao processar resposta: {e}"); flash('Erro ao processar pagamento.', 'danger'); return redirect(url_for('upgrade'))
 
 @app.route('/payment/check_status/<pix_id>')
 @login_required
@@ -377,13 +355,12 @@ def check_payment_status(pix_id):
             user = db.session.get(User, current_user.id)
             if not user.is_vip: user.is_vip = True; user.payment_status = 'paid'; db.session.commit()
         return jsonify({'status': status})
-    except requests.exceptions.RequestException as e:
-        app.logger.error(f"Erro ao verificar status: {e}"); return jsonify({'status': 'error', 'message': 'Falha ao verificar status'}), 500
+    except requests.exceptions.RequestException as e: app.logger.error(f"Erro ao verificar status: {e}"); return jsonify({'status': 'error'}), 500
 
 @app.route('/webhooks/abacatepay', methods=['POST'])
 def abacatepay_webhook():
     payload = request.get_json(); app.logger.info(f"Webhook recebido: {payload}")
-    if not payload or 'event' not in payload or 'data' not in payload: return jsonify({'status': 'error', 'message': 'Payload inválido'}), 400
+    if not payload or 'event' not in payload or 'data' not in payload: return jsonify({'status': 'error'}), 400
     event_type = payload.get('event'); webhook_data = payload.get('data', {}); transaction_id = webhook_data.get('id')
     if event_type == 'pix_qr_code.paid' and transaction_id:
         user = User.query.filter_by(payment_charge_id=transaction_id).first()
@@ -394,7 +371,6 @@ def abacatepay_webhook():
         else: app.logger.warning(f"Usuário não encontrado para PIX ID: {transaction_id}")
     return jsonify({'status': 'received'}), 200
 
-# --- ROTAS DA API ---
 def get_party_stats_data(party_id):
     total_invited = Guest.query.filter_by(party_id=party_id).count()
     entered_count = Guest.query.filter_by(party_id=party_id, entered=True).count()
@@ -407,32 +383,42 @@ def get_party_stats_data(party_id):
 def get_stats(party_id):
     party = db.session.get(Party, party_id) or abort(404); stats = get_party_stats_data(party_id); return jsonify(stats)
 
-@app.route('/api/party/<int:party_id>/guests', methods=['POST'])
+# --- ROTA COMBINADA PARA GET E POST DE CONVIDADOS ---
+@app.route('/api/party/<int:party_id>/guests', methods=['GET', 'POST'])
 @login_required
-def add_guest(party_id):
-    party = db.session.get(Party, party_id) or abort(404); check_party_ownership(party)
-    if not current_user.is_vip and len(party.guests) >= 50: return jsonify({'error': 'Limite de 50 convidados atingido.'}), 403
-    data = request.get_json(); name = data['name'].strip()
-    if not name: return jsonify({'error': 'Nome vazio'}), 400
-    if Guest.query.filter_by(name=name, party_id=party_id).first(): return jsonify({'error': f'Convidado "{name}" já existe.'}), 409
-    unique_id_for_qr = str(uuid.uuid4()); qr_hash = hashlib.sha256(unique_id_for_qr.encode('utf-8')).hexdigest()
-    while Guest.query.filter_by(qr_hash=qr_hash).first():
-        unique_id_for_qr = str(uuid.uuid4()); qr_hash = hashlib.sha256(unique_id_for_qr.encode('utf-8')).hexdigest()
-    qr_image_filename = generate_qr_code_image(qr_hash, name, qr_hash)
-    if not qr_image_filename: return jsonify({'error': 'Falha ao gerar QR'}), 500
-    new_guest = Guest(name=name, qr_hash=qr_hash, qr_image_filename=qr_image_filename, party_id=party_id)
-    db.session.add(new_guest); db.session.commit()
-    return jsonify({'id': new_guest.id, 'name': new_guest.name, 'qr_hash': new_guest.qr_hash, 'entered': new_guest.entered, 'qr_image_url': new_guest.qr_image_url, 'check_in_time': new_guest.get_check_in_time_str() }), 201
+def handle_guests(party_id):
+    party = db.session.get(Party, party_id) or abort(404)
+    check_collaboration_permission(party)
 
-@app.route('/api/party/<int:party_id>/guests', methods=['GET'])
-@login_required
-def get_guests_api(party_id):
-    party = db.session.get(Party, party_id) or abort(404); check_party_ownership(party)
+    if request.method == 'POST':
+        if not current_user.is_vip and len(party.guests) >= 50:
+            return jsonify({'error': 'Limite de 50 convidados atingido.'}), 403
+        data = request.get_json()
+        name = data.get('name', '').strip()
+        if not name: return jsonify({'error': 'Nome é obrigatório'}), 400
+        if Guest.query.filter_by(name=name, party_id=party_id).first():
+            return jsonify({'error': f'Convidado "{name}" já existe.'}), 409
+        
+        qr_hash = generate_unique_code(Guest, 'qr_hash', 32, string.ascii_letters + string.digits)
+        qr_image_filename = generate_qr_code_image(qr_hash, name, qr_hash)
+        if not qr_image_filename: return jsonify({'error': 'Falha ao gerar QR Code.'}), 500
+        
+        new_guest = Guest(name=name, qr_hash=qr_hash, qr_image_filename=qr_image_filename, party_id=party_id, added_by_user_id=current_user.id)
+        db.session.add(new_guest); db.session.commit()
+        return jsonify({
+            'id': new_guest.id, 'name': new_guest.name, 'qr_hash': new_guest.qr_hash,
+            'entered': new_guest.entered, 'qr_image_url': new_guest.qr_image_url,
+            'check_in_time': new_guest.get_check_in_time_str(),
+            'added_by': new_guest.adder.username
+        }), 201
+
+    # Método GET
     search_term = request.args.get('search', None)
     query = Guest.query.filter_by(party_id=party_id)
-    if search_term and search_term.strip(): query = query.filter(Guest.name.ilike(f'%{search_term.strip()}%'))
+    if search_term and search_term.strip():
+        query = query.filter(Guest.name.ilike(f'%{search_term.strip()}%'))
     guests_list = query.order_by(Guest.name).all()
-    return jsonify([{'id': g.id, 'name': g.name, 'qr_hash': g.qr_hash, 'entered': g.entered, 'qr_image_url': g.qr_image_url, 'check_in_time': g.get_check_in_time_str()} for g in guests_list])
+    return jsonify([{'id': g.id, 'name': g.name, 'qr_hash': g.qr_hash, 'entered': g.entered, 'qr_image_url': g.qr_image_url, 'check_in_time': g.get_check_in_time_str(), 'added_by': g.adder.username} for g in guests_list])
 
 @app.route('/api/party/<int:party_id>/guests/<qr_hash>/enter', methods=['POST'])
 def mark_entered(party_id, qr_hash):
@@ -449,7 +435,8 @@ def mark_entered(party_id, qr_hash):
 @app.route('/api/party/<int:party_id>/guests/<qr_hash>/edit', methods=['PUT'])
 @login_required
 def edit_guest_name(party_id, qr_hash):
-    party = db.session.get(Party, party_id) or abort(404); check_party_ownership(party); guest = Guest.query.filter_by(qr_hash=qr_hash, party_id=party_id).first_or_404()
+    party = db.session.get(Party, party_id) or abort(404); check_collaboration_permission(party)
+    guest = Guest.query.filter_by(qr_hash=qr_hash, party_id=party_id).first_or_404()
     data = request.get_json(); new_name = data['name'].strip()
     if Guest.query.filter(Guest.name == new_name, Guest.party_id == party_id, Guest.qr_hash != qr_hash).first():
         return jsonify({'error': f'Já existe um convidado com o nome "{new_name}"'}), 409
@@ -461,7 +448,8 @@ def edit_guest_name(party_id, qr_hash):
 @app.route('/api/party/<int:party_id>/guests/<qr_hash>/toggle_entry', methods=['PUT'])
 @login_required
 def toggle_entry_manually(party_id, qr_hash):
-    party = db.session.get(Party, party_id) or abort(404); check_party_ownership(party); guest = Guest.query.filter_by(qr_hash=qr_hash, party_id=party_id).first_or_404()
+    party = db.session.get(Party, party_id) or abort(404); check_collaboration_permission(party)
+    guest = Guest.query.filter_by(qr_hash=qr_hash, party_id=party_id).first_or_404()
     current_time_brasilia = datetime.now(BRASILIA_TZ)
     guest.entered = not guest.entered
     if guest.entered: guest.check_in_time = current_time_brasilia; action = f"entrou"
@@ -472,7 +460,8 @@ def toggle_entry_manually(party_id, qr_hash):
 @app.route('/api/party/<int:party_id>/guests/<qr_hash>', methods=['DELETE'])
 @login_required
 def delete_guest(party_id, qr_hash):
-    party = db.session.get(Party, party_id) or abort(404); check_party_ownership(party); guest = Guest.query.filter_by(qr_hash=qr_hash, party_id=party_id).first_or_404()
+    party = db.session.get(Party, party_id) or abort(404); check_collaboration_permission(party)
+    guest = Guest.query.filter_by(qr_hash=qr_hash, party_id=party_id).first_or_404()
     if guest.qr_image_filename:
         qr_image_path = os.path.join(QR_CODE_SAVE_PATH, guest.qr_image_filename)
         if os.path.exists(qr_image_path): os.remove(qr_image_path)
@@ -521,7 +510,7 @@ class PDF(FPDF):
 @app.route('/api/party/<int:party_id>/export/csv')
 @login_required
 def export_guests_csv(party_id):
-    party = db.session.get(Party, party_id) or abort(404); check_party_ownership(party); guests_data = get_all_guests_for_export(party_id); si = io.StringIO(); cw = csv.writer(si)
+    party = db.session.get(Party, party_id) or abort(404); check_collaboration_permission(party); guests_data = get_all_guests_for_export(party_id); si = io.StringIO(); cw = csv.writer(si)
     cw.writerow(['Nome', 'Status Entrada', 'Data Check-in'])
     for guest_obj in guests_data: cw.writerow([guest_obj.name, 'Sim' if guest_obj.entered else 'Não', guest_obj.get_check_in_time_str()])
     return Response(si.getvalue(), mimetype="text/csv", headers={"Content-disposition": f"attachment; filename=lista_{party.name.replace(' ', '_')}.csv"})
@@ -529,7 +518,7 @@ def export_guests_csv(party_id):
 @app.route('/api/party/<int:party_id>/export/pdf')
 @login_required
 def export_guests_pdf(party_id):
-    party = db.session.get(Party, party_id) or abort(404); check_party_ownership(party)
+    party = db.session.get(Party, party_id) or abort(404); check_collaboration_permission(party)
     if not current_user.is_vip:
         flash('A exportação em PDF é um recurso VIP.', 'warning'); return redirect(url_for('upgrade'))
     guests_for_table = get_all_guests_for_export(party_id); stats_for_chart = get_party_stats_data(party_id); pdf = PDF(party_name=party.name)

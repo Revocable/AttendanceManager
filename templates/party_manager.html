@@ -16,77 +16,47 @@
 
 {% block content %}
 <style>
-    /* Estilos para transição e animação dos modais e toasts */
-    .modal, .toast-container {
-        transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
-    }
-    .modal-content, .toast {
-        transition: transform 0.3s ease-in-out;
-    }
-    .modal.show .modal-content, .toast.show {
-        transform: scale(1);
-    }
-    .modal .modal-content, .toast {
-        transform: scale(0.95);
-    }
+    .modal, .toast-container { transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out; }
+    .modal-content, .toast { transition: transform 0.3s ease-in-out; }
+    .modal.show .modal-content, .toast.show { transform: scale(1); }
+    .modal .modal-content, .toast { transform: scale(0.95); }
 </style>
 
 <body data-party-id="{{ party.id }}">
-
     <h1 class="text-3xl font-bold text-center text-gray-900 dark:text-white mb-6">Gerenciando a Festa: <span class="text-primary">{{ party.name }}</span></h1>
-
     <div class="grid grid-cols-1 xl:grid-cols-4 gap-8">
-        <!-- Coluna da Esquerda -->
         <div class="xl:col-span-1 space-y-8">
             <div class="glass-card rounded-2xl shadow-2xl p-6 hover-scale fade-in sticky top-24">
-                <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center"><i class="fas fa-chart-pie text-primary mr-3"></i>Estatísticas</h2>
-                    <button onclick="fetchStats()" class="glass-effect text-primary hover:text-secondary transition-colors p-2 rounded-lg hover:shadow-md"><i class="fas fa-sync-alt"></i></button>
-                </div>
-                <div class="grid grid-cols-1 gap-4 mb-6">
-                    <div class="glass-effect p-4 rounded-xl"><div class="text-2xl font-bold text-primary" id="statsTotalInvited">-</div><div class="text-sm text-gray-600 dark:text-gray-300">Total Convidados</div></div>
-                    <div class="glass-effect p-4 rounded-xl"><div class="text-2xl font-bold text-success" id="statsEnteredCount">-</div><div class="text-sm text-gray-600 dark:text-gray-300">Entraram</div></div>
-                    <div class="glass-effect p-4 rounded-xl"><div class="text-2xl font-bold text-danger" id="statsNotEnteredCount">-</div><div class="text-sm text-gray-600 dark:text-gray-300">Não Entraram</div></div>
-                    <div class="glass-effect p-4 rounded-xl"><div class="text-2xl font-bold text-purple-600" id="statsPercentageEntered">-%</div><div class="text-sm text-gray-600 dark:text-gray-300">Comparecimento</div></div>
-                </div>
+                <div class="flex items-center justify-between mb-6"><h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center"><i class="fas fa-chart-pie text-primary mr-3"></i>Estatísticas</h2><button onclick="fetchStats()" class="glass-effect text-primary hover:text-secondary transition-colors p-2 rounded-lg hover:shadow-md"><i class="fas fa-sync-alt"></i></button></div>
+                <div class="grid grid-cols-1 gap-4 mb-6"><div class="glass-effect p-4 rounded-xl"><div class="text-2xl font-bold text-primary" id="statsTotalInvited">-</div><div class="text-sm text-gray-600 dark:text-gray-300">Total Convidados</div></div><div class="glass-effect p-4 rounded-xl"><div class="text-2xl font-bold text-success" id="statsEnteredCount">-</div><div class="text-sm text-gray-600 dark:text-gray-300">Entraram</div></div><div class="glass-effect p-4 rounded-xl"><div class="text-2xl font-bold text-danger" id="statsNotEnteredCount">-</div><div class="text-sm text-gray-600 dark:text-gray-300">Não Entraram</div></div><div class="glass-effect p-4 rounded-xl"><div class="text-2xl font-bold text-purple-600" id="statsPercentageEntered">-%</div><div class="text-sm text-gray-600 dark:text-gray-300">Comparecimento</div></div></div>
                 <div class="relative h-64 glass-effect rounded-xl p-4"><canvas id="attendanceChart"></canvas></div>
             </div>
         </div>
-
-        <!-- Coluna da Direita -->
         <div class="xl:col-span-3 space-y-8">
             <div class="glass-card rounded-2xl shadow-2xl p-6 hover-scale fade-in">
                 <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center"><i class="fas fa-user-plus text-success mr-3"></i>Adicionar Convidado</h2>
-                {% if can_add_guest %}
-                <form id="addGuestForm" class="space-y-4">
-                    <div class="flex flex-col sm:flex-row gap-4">
-                        <div class="flex-1"><input type="text" id="guestName" placeholder="Nome do Convidado" required class="w-full px-4 py-3 glass-effect rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"></div>
-                        <button type="submit" class="bg-gradient-to-r from-success to-green-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale flex items-center justify-center space-x-2"><i class="fas fa-plus"></i><span>Adicionar</span></button>
-                    </div>
-                </form>
-                <div id="newQrCodeArea" class="mt-6 p-4 glass-effect rounded-xl text-center" style="display:none;">
-                    <p id="guestAddedInfo" class="font-semibold mb-4"></p>
-                    <img id="newGuestQrImage" src="" alt="QR Code" class="mx-auto mb-4 rounded-lg shadow-md" style="display:none; max-width: 150px;">
-                    <a id="downloadQrLink" href="#" download class="inline-flex items-center space-x-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-secondary transition-colors" style="display:none;"><i class="fas fa-download"></i><span>Baixar QR Code</span></a>
-                </div>
-                {% else %}
-                <div class="bg-yellow-100 dark:bg-yellow-900/50 border-l-4 border-yellow-500 text-yellow-700 dark:text-yellow-300 p-4 rounded-r-lg" role="alert"><p class="font-bold">Limite de 50 Convidados Atingido</p><p>Para adicionar mais convidados, <a href="{{ url_for('upgrade') }}" class="font-bold underline hover:text-yellow-500">faça o upgrade para VIP</a>.</p></div>
-                {% endif %}
+                {% if can_add_guest %}<form id="addGuestForm" class="space-y-4"><div class="flex flex-col sm:flex-row gap-4"><div class="flex-1"><input type="text" id="guestName" placeholder="Nome do Convidado" required class="w-full px-4 py-3 glass-effect rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"></div><button type="submit" class="bg-gradient-to-r from-success to-green-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale flex items-center justify-center space-x-2"><i class="fas fa-plus"></i><span>Adicionar</span></button></div></form><div id="newQrCodeArea" class="mt-6 p-4 glass-effect rounded-xl text-center" style="display:none;"><p id="guestAddedInfo" class="font-semibold mb-4"></p><img id="newGuestQrImage" src="" alt="QR Code" class="mx-auto mb-4 rounded-lg shadow-md" style="display:none; max-width: 150px;"><a id="downloadQrLink" href="#" download class="inline-flex items-center space-x-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-secondary transition-colors" style="display:none;"><i class="fas fa-download"></i><span>Baixar QR Code</span></a></div>
+                {% else %}<div class="bg-yellow-100 dark:bg-yellow-900/50 border-l-4 border-yellow-500 text-yellow-700 dark:text-yellow-300 p-4 rounded-r-lg" role="alert"><p class="font-bold">Limite de 50 Convidados Atingido</p><p>Para adicionar mais convidados, <a href="{{ url_for('upgrade') }}" class="font-bold underline hover:text-yellow-500">faça o upgrade para VIP</a>.</p></div>{% endif %}
             </div>
-
             <div class="glass-card rounded-2xl shadow-2xl p-6 hover-scale fade-in">
-                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6">
-                    <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center mb-4 lg:mb-0"><i class="fas fa-users text-primary mr-3"></i>Lista de Convidados<span id="guestCount" class="ml-2 text-sm bg-primary text-white px-2 py-1 rounded-full">0</span></h2>
-                    <div class="flex flex-col sm:flex-row gap-3"><button onclick="exportGuests('csv')" class="bg-success text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center space-x-2"><i class="fas fa-file-csv"></i><span>CSV</span></button><button onclick="exportGuests('pdf')" class="bg-danger text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center space-x-2"><i class="fas fa-file-pdf"></i><span>PDF</span></button></div>
-                </div>
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6"><h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center mb-4 lg:mb-0"><i class="fas fa-users text-primary mr-3"></i>Lista de Convidados<span id="guestCount" class="ml-2 text-sm bg-primary text-white px-2 py-1 rounded-full">0</span></h2><div class="flex flex-col sm:flex-row gap-3"><button onclick="exportGuests('csv')" class="bg-success text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center space-x-2"><i class="fas fa-file-csv"></i><span>CSV</span></button><button onclick="exportGuests('pdf')" class="bg-danger text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center space-x-2"><i class="fas fa-file-pdf"></i><span>PDF</span></button></div></div>
                 <div class="flex flex-col sm:flex-row gap-4 mb-6"><div class="flex-1 relative"><i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i><input type="text" id="searchInput" placeholder="Buscar por nome..." class="w-full pl-10 pr-4 py-3 glass-effect rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"></div></div>
-                <div class="hidden lg:block glass-effect rounded-xl overflow-hidden"><div class="max-h-[500px] overflow-y-auto"><table class="w-full table-fixed min-w-[800px]"><thead class="bg-gray-50 dark:bg-gray-800/50 sticky top-0 z-10"><tr><th class="px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 30%">Nome</th><th class="px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 10%">QR Code</th><th class="px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 15%">Status</th><th class="px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 25%">Check-in</th><th class="px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 20%">Ações</th></tr></thead><tbody id="guestList" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody></table></div></div>
+                <div class="hidden lg:block glass-effect rounded-xl overflow-hidden"><div class="max-h-[500px] overflow-y-auto"><table class="w-full table-fixed min-w-[800px]"><thead class="bg-gray-50 dark:bg-gray-800/50 sticky top-0 z-10"><tr><th class="px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 25%">Nome</th><th class="px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 10%">QR Code</th><th class="px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 15%">Status</th><th class="px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 15%">Check-in</th><th class="px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 15%">Adicionado Por</th><th class="px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 20%">Ações</th></tr></thead><tbody id="guestList" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody></table></div></div>
                 <div class="lg:hidden max-h-[500px] overflow-y-auto space-y-4" id="guestCardsList"></div>
             </div>
-            
             <div class="glass-card rounded-2xl shadow-2xl p-6 hover-scale fade-in">
-                <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center"><i class="fas fa-share-alt text-purple-500 mr-3"></i>Página Pública da Festa</h2>
-                <div class="space-y-2"><label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Link Compartilhável:</label><div class="relative"><input type="text" id="shareableLink" value="{{ url_for('public_party_page', shareable_link_id=party.shareable_link_id, _external=True) }}" readonly class="w-full text-xs px-2 py-2 bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 break-all"><button onclick="copyToClipboard('#shareableLink', '#copyBtnIcon')" class="absolute right-1 top-1/2 -translate-y-1/2 bg-primary text-white p-2 rounded-md hover:bg-secondary transition-colors text-xs"><i id="copyBtnIcon" class="fas fa-copy"></i></button></div><a href="{{ url_for('public_party_page', shareable_link_id=party.shareable_link_id) }}" target="_blank" class="text-xs text-primary hover:underline">Abrir link em nova aba</a></div>
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center"><i class="fas fa-share-alt text-purple-500 mr-3"></i>Opções da Festa</h2>
+                <!-- Código de compartilhamento visível apenas para o dono -->
+                {% if party.owner == current_user %}
+                <div class="space-y-2 mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Código para Colaboradores:</label>
+                    <div class="relative">
+                        <input type="text" id="shareCode" value="{{ party.share_code }}" readonly class="w-full text-lg font-mono tracking-widest px-2 py-2 bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 break-all">
+                        <button onclick="copyToClipboard('#shareCode', '#copyShareBtnIcon')" class="absolute right-1 top-1/2 -translate-y-1/2 bg-purple-500 text-white p-2 rounded-md hover:bg-purple-600 transition-colors text-xs"><i id="copyShareBtnIcon" class="fas fa-copy"></i></button>
+                    </div>
+                </div>
+                {% endif %}
+                <div class="space-y-2"><label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Link da Página Pública:</label><div class="relative"><input type="text" id="shareableLink" value="{{ url_for('public_party_page', shareable_link_id=party.shareable_link_id, _external=True) }}" readonly class="w-full text-xs px-2 py-2 bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 break-all"><button onclick="copyToClipboard('#shareableLink', '#copyBtnIcon')" class="absolute right-1 top-1/2 -translate-y-1/2 bg-primary text-white p-2 rounded-md hover:bg-secondary transition-colors text-xs"><i id="copyBtnIcon" class="fas fa-copy"></i></button></div><a href="{{ url_for('public_party_page', shareable_link_id=party.shareable_link_id) }}" target="_blank" class="text-xs text-primary hover:underline">Abrir link em nova aba</a></div>
                 <form action="{{ url_for('upload_logo', party_id=party.id) }}" method="POST" enctype="multipart/form-data" class="mt-4 border-t pt-4"><label for="party_logo" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Logo da Festa:</label>{% if party.logo_filename %}<img src="{{ url_for('static', filename='party_logos/' + party.logo_filename) }}?v={{ range(1, 1000) | random }}" alt="Logo atual" class="w-20 h-20 rounded-full object-cover my-2 border">{% endif %}<input type="file" name="party_logo" id="party_logo" class="text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-primary hover:file:bg-blue-100"><button type="submit" class="mt-2 w-full text-xs bg-primary text-white py-1 px-3 rounded-lg hover:bg-secondary">Enviar Logo</button></form>
                 <form action="{{ url_for('update_party_details', party_id=party.id) }}" method="POST" class="mt-4 border-t pt-4"><label for="public_description" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Descrição Pública:</label><textarea name="public_description" id="public_description" rows="4" class="mt-1 w-full text-sm glass-effect rounded-lg p-2 focus:ring-primary focus:border-primary">{{ party.public_description or '' }}</textarea><button type="submit" class="mt-2 w-full text-xs bg-primary text-white py-1 px-3 rounded-lg hover:bg-secondary">Salvar Descrição</button></form>
                 <form action="{{ url_for('toggle_guest_count', party_id=party.id) }}" method="POST" class="mt-4 border-t pt-4"><label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Contagem de Convidados na Página:</label><div class="flex items-center space-x-3 mt-1"><span class="text-sm font-bold {{ 'text-green-500' if party.show_guest_count else 'text-red-500' }}">{% if party.show_guest_count %} Visível {% else %} Oculto {% endif %}</span><button type="submit" class="text-xs bg-gray-500 text-white py-1 px-3 rounded-lg hover:bg-gray-600">{% if party.show_guest_count %} Ocultar {% else %} Mostrar {% endif %}</button></div></form>
@@ -94,34 +64,8 @@
         </div>
     </div>
 
-    <!-- Modal de Confirmação (para deletar) -->
-    <div id="confirmationModal" class="modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 hidden opacity-0 visibility-hidden">
-        <div class="modal-content glass-card rounded-2xl shadow-2xl p-6 w-full max-w-md text-center">
-            <h3 id="modalTitle" class="text-xl font-bold text-gray-900 dark:text-white mb-4"></h3>
-            <p id="modalMessage" class="text-gray-600 dark:text-gray-400 mb-6"></p>
-            <div class="flex justify-center gap-4">
-                <button id="modalCancelBtn" class="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 px-6 py-2 rounded-lg font-semibold hover:opacity-80 transition-opacity">Cancelar</button>
-                <button id="modalConfirmBtn" class="bg-danger text-white px-6 py-2 rounded-lg font-bold hover:opacity-80 transition-opacity">Confirmar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de Edição (para editar nome) -->
-    <div id="editModal" class="modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 hidden opacity-0 visibility-hidden">
-        <div class="modal-content glass-card rounded-2xl shadow-2xl p-6 w-full max-w-md">
-            <h3 id="editModalTitle" class="text-xl font-bold text-gray-900 dark:text-white mb-4">Editar Nome do Convidado</h3>
-            <div>
-                <label for="editModalInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Novo nome:</label>
-                <input type="text" id="editModalInput" class="mt-1 w-full px-4 py-3 glass-effect rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">
-            </div>
-            <div class="flex justify-end gap-4 mt-6">
-                <button id="editModalCancelBtn" class="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 px-6 py-2 rounded-lg font-semibold hover:opacity-80 transition-opacity">Cancelar</button>
-                <button id="editModalConfirmBtn" class="bg-primary text-white px-6 py-2 rounded-lg font-bold hover:opacity-80 transition-opacity">Salvar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Container para Notificações "Toast" -->
+    <div id="confirmationModal" class="modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 hidden opacity-0 visibility-hidden"><div class="modal-content glass-card rounded-2xl shadow-2xl p-6 w-full max-w-md text-center"><h3 id="modalTitle" class="text-xl font-bold text-gray-900 dark:text-white mb-4"></h3><p id="modalMessage" class="text-gray-600 dark:text-gray-400 mb-6"></p><div class="flex justify-center gap-4"><button id="modalCancelBtn" class="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 px-6 py-2 rounded-lg font-semibold hover:opacity-80 transition-opacity">Cancelar</button><button id="modalConfirmBtn" class="bg-danger text-white px-6 py-2 rounded-lg font-bold hover:opacity-80 transition-opacity">Confirmar</button></div></div></div>
+    <div id="editModal" class="modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 hidden opacity-0 visibility-hidden"><div class="modal-content glass-card rounded-2xl shadow-2xl p-6 w-full max-w-md"><h3 id="editModalTitle" class="text-xl font-bold text-gray-900 dark:text-white mb-4">Editar Nome do Convidado</h3><div><label for="editModalInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Novo nome:</label><input type="text" id="editModalInput" class="mt-1 w-full px-4 py-3 glass-effect rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent"></div><div class="flex justify-end gap-4 mt-6"><button id="editModalCancelBtn" class="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 px-6 py-2 rounded-lg font-semibold hover:opacity-80 transition-opacity">Cancelar</button><button id="editModalConfirmBtn" class="bg-primary text-white px-6 py-2 rounded-lg font-bold hover:opacity-80 transition-opacity">Salvar</button></div></div></div>
     <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-3 w-full max-w-xs"></div>
     
 </body>
@@ -129,200 +73,84 @@
 
 {% block scripts %}
 <script type="text/javascript">
-    function copyToClipboard(elementSelector, iconSelector) {
-        const element = document.querySelector(elementSelector);
-        navigator.clipboard.writeText(element.value).then(() => {
-            const icon = document.querySelector(iconSelector);
-            icon.classList.remove('fa-copy'); icon.classList.add('fa-check');
-            setTimeout(() => { icon.classList.remove('fa-check'); icon.classList.add('fa-copy'); }, 2000);
-        }).catch(err => console.error('Erro ao copiar: ', err));
-    }
-
-    const partyId = document.body.getAttribute('data-party-id');
-    const API_URL = `/api/party/${partyId}`;
-    let allGuests = [];
-    let attendanceChartInstance = null;
-    const SEARCH_DEBOUNCE_MS = 300;
-    const canAddGuest = "{{ can_add_guest | tojson | safe }}";
-
+    function copyToClipboard(elementSelector, iconSelector) { navigator.clipboard.writeText(document.querySelector(elementSelector).value).then(() => { const icon = document.querySelector(iconSelector); icon.classList.remove('fa-copy'); icon.classList.add('fa-check'); setTimeout(() => { icon.classList.remove('fa-check'); icon.classList.add('fa-copy'); }, 2000); }).catch(err => console.error('Erro ao copiar: ', err)); }
+    const partyId = document.body.getAttribute('data-party-id'); const API_URL = `/api/party/${partyId}`; let allGuests = []; let attendanceChartInstance = null; const SEARCH_DEBOUNCE_MS = 300; const canAddGuest = "{{ can_add_guest | tojson | safe }}";
     function debounce(func, delay) { let timeout; return function(...args) { clearTimeout(timeout); timeout = setTimeout(() => func.apply(this, args), delay); }; }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        fetchData();
-        const addGuestForm = document.getElementById('addGuestForm');
-        if (addGuestForm) { addGuestForm.addEventListener('submit', (e) => { e.preventDefault(); addGuest(); }); }
-        document.getElementById('searchInput').addEventListener('input', debounce(handleSearch, SEARCH_DEBOUNCE_MS));
-    });
-
+    document.addEventListener('DOMContentLoaded', () => { fetchData(); const addGuestForm = document.getElementById('addGuestForm'); if (addGuestForm) { addGuestForm.addEventListener('submit', (e) => { e.preventDefault(); addGuest(); }); } document.getElementById('searchInput').addEventListener('input', debounce(handleSearch, SEARCH_DEBOUNCE_MS)); });
+    
     function showToast(message, type = 'info') {
-        const container = document.getElementById('toastContainer');
-        const toast = document.createElement('div');
-        const colors = { success: 'bg-green-500', error: 'bg-red-500', info: 'bg-blue-500' };
+        const container = document.getElementById('toastContainer'); const toast = document.createElement('div'); const colors = { success: 'bg-green-500', error: 'bg-red-500', info: 'bg-blue-500' };
         toast.className = `toast ${colors[type]} text-white font-semibold py-3 px-4 rounded-lg shadow-lg transform transition-all duration-300 opacity-0 -translate-y-2`;
-        toast.textContent = message;
-        container.appendChild(toast);
+        toast.textContent = message; container.appendChild(toast);
         requestAnimationFrame(() => { toast.classList.remove('opacity-0', '-translate-y-2'); });
-        setTimeout(() => {
-            toast.classList.add('opacity-0', 'translate-y-2');
-            toast.addEventListener('transitionend', () => toast.remove());
-        }, 3000);
+        setTimeout(() => { toast.classList.add('opacity-0', 'translate-y-2'); toast.addEventListener('transitionend', () => toast.remove()); }, 3000);
     }
 
-    const confirmationModal = document.getElementById('confirmationModal');
     function showConfirmationModal({ title, message, confirmText, onConfirm }) {
-        confirmationModal.querySelector('#modalTitle').textContent = title;
-        confirmationModal.querySelector('#modalMessage').textContent = message;
-        const confirmBtn = confirmationModal.querySelector('#modalConfirmBtn');
-        confirmBtn.textContent = confirmText;
-
-        const show = () => { confirmationModal.classList.remove('hidden'); requestAnimationFrame(() => confirmationModal.classList.remove('opacity-0', 'visibility-hidden')); };
-        const hide = () => { confirmationModal.classList.add('opacity-0', 'visibility-hidden'); setTimeout(() => confirmationModal.classList.add('hidden'), 300); };
-        
+        const modal = document.getElementById('confirmationModal');
+        modal.querySelector('#modalTitle').textContent = title; modal.querySelector('#modalMessage').textContent = message;
+        const confirmBtn = modal.querySelector('#modalConfirmBtn'); confirmBtn.textContent = confirmText;
+        const show = () => { modal.classList.remove('hidden'); requestAnimationFrame(() => modal.classList.remove('opacity-0', 'visibility-hidden')); };
+        const hide = () => { modal.classList.add('opacity-0', 'visibility-hidden'); setTimeout(() => modal.classList.add('hidden'), 300); };
         const confirmHandler = () => { onConfirm(); hide(); };
         const cancelHandler = () => hide();
-        
-        confirmBtn.onclick = confirmHandler;
-        confirmationModal.querySelector('#modalCancelBtn').onclick = cancelHandler;
-        confirmationModal.onclick = (e) => { if (e.target === confirmationModal) cancelHandler(); };
-        
-        show();
+        confirmBtn.onclick = confirmHandler; modal.querySelector('#modalCancelBtn').onclick = cancelHandler;
+        modal.onclick = (e) => { if (e.target === modal) cancelHandler(); }; show();
     }
 
-    const editModal = document.getElementById('editModal');
     function showEditModal({ currentName, onConfirm }) {
-        const input = editModal.querySelector('#editModalInput');
-        input.value = currentName;
-
-        const show = () => { editModal.classList.remove('hidden'); requestAnimationFrame(() => editModal.classList.remove('opacity-0', 'visibility-hidden')); };
-        const hide = () => { editModal.classList.add('opacity-0', 'visibility-hidden'); setTimeout(() => editModal.classList.add('hidden'), 300); };
-
+        const modal = document.getElementById('editModal'); const input = modal.querySelector('#editModalInput'); input.value = currentName;
+        const show = () => { modal.classList.remove('hidden'); requestAnimationFrame(() => modal.classList.remove('opacity-0', 'visibility-hidden')); };
+        const hide = () => { modal.classList.add('opacity-0', 'visibility-hidden'); setTimeout(() => modal.classList.add('hidden'), 300); };
         const confirmHandler = () => {
             const newName = input.value.trim();
             if (newName && newName !== currentName) { onConfirm(newName); hide(); }
             else if (!newName) { showToast('O nome não pode ser vazio.', 'error'); }
             else { hide(); }
         };
-
-        editModal.querySelector('#editModalConfirmBtn').onclick = confirmHandler;
-        editModal.querySelector('#editModalCancelBtn').onclick = hide;
-        editModal.onclick = (e) => { if (e.target === editModal) hide(); };
+        modal.querySelector('#editModalConfirmBtn').onclick = confirmHandler; modal.querySelector('#editModalCancelBtn').onclick = hide;
+        modal.onclick = (e) => { if (e.target === modal) hide(); };
         input.onkeydown = (e) => { if (e.key === 'Enter') confirmHandler(); };
-
-        show();
-        input.focus();
+        show(); input.focus();
     }
     
-    // --- LÓGICA PRINCIPAL ---
-
-    async function fetchData() {
-        await fetchGuests();
-        await fetchStats();
-    }
+    async function fetchData() { await fetchGuests(); await fetchStats(); }
 
     async function addGuest() {
         if (!canAddGuest) { showToast('Limite de convidados atingido.', 'error'); return; }
         const name = document.getElementById('guestName').value.trim();
         if (!name) { showToast('Nome do convidado é obrigatório.', 'error'); return; }
-        const qrCodeArea = document.getElementById('newQrCodeArea');
-        const guestAddedInfo = document.getElementById('guestAddedInfo');
-        qrCodeArea.style.display = 'block';
-        guestAddedInfo.textContent = 'Adicionando...';
-        guestAddedInfo.className = 'font-semibold mb-4 text-blue-600 dark:text-blue-400';
+        const qrCodeArea = document.getElementById('newQrCodeArea'); const guestAddedInfo = document.getElementById('guestAddedInfo');
+        qrCodeArea.style.display = 'block'; guestAddedInfo.textContent = 'Adicionando...'; guestAddedInfo.className = 'font-semibold mb-4 text-blue-600 dark:text-blue-400';
         try {
             const response = await fetch(`${API_URL}/guests`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.error);
+            const result = await response.json(); if (!response.ok) throw new Error(result.error);
             showToast(`Convidado "${result.name}" adicionado!`, 'success');
-            qrCodeArea.style.display = 'none';
-            document.getElementById('guestName').value = '';
+            qrCodeArea.style.display = 'none'; document.getElementById('guestName').value = '';
             fetchData();
-        } catch (error) {
-            showToast(error.message, 'error');
-            guestAddedInfo.textContent = `Erro: ${error.message}`;
-            guestAddedInfo.className = 'font-semibold mb-4 text-red-600 dark:text-red-400';
-        }
+        } catch (error) { showToast(error.message, 'error'); guestAddedInfo.textContent = `Erro: ${error.message}`; guestAddedInfo.className = 'font-semibold mb-4 text-red-600 dark:text-red-400'; }
     }
 
-    async function fetchGuests() {
-        try {
-            const response = await fetch(`${API_URL}/guests`);
-            if (!response.ok) throw new Error('Falha ao buscar convidados');
-            allGuests = await response.json();
-            handleSearch();
-        } catch (error) {
-            document.getElementById('guestList').innerHTML = `<tr><td colspan="5" class="text-center p-4">Erro ao carregar lista.</td></tr>`;
-        }
-    }
+    async function fetchGuests() { try { const response = await fetch(`${API_URL}/guests`); if (!response.ok) throw new Error('Falha'); allGuests = await response.json(); handleSearch(); } catch (error) { document.getElementById('guestList').innerHTML = `<tr><td colspan="6" class="text-center p-4">Erro ao carregar lista.</td></tr>`; } }
+    function handleSearch() { const searchTerm = document.getElementById('searchInput').value.toLowerCase(); const filteredGuests = allGuests.filter(guest => guest.name.toLowerCase().includes(searchTerm)); renderGuests(filteredGuests); document.getElementById('guestCount').textContent = filteredGuests.length; }
 
-    function handleSearch() {
-        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-        const filteredGuests = allGuests.filter(guest => guest.name.toLowerCase().includes(searchTerm));
-        renderGuests(filteredGuests);
-        document.getElementById('guestCount').textContent = filteredGuests.length;
-    }
+    async function editGuest(qrHash, newName) { try { const response = await fetch(`${API_URL}/guests/${qrHash}/edit`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName }) }); const result = await response.json(); if (!response.ok) throw new Error(result.error); showToast(result.message, 'success'); fetchData(); } catch (error) { showToast(error.message, 'error'); } }
+    function confirmDeleteGuest(qrHash, guestName) { showConfirmationModal({ title: 'Confirmar Remoção', message: `Tem certeza que deseja remover "${guestName}"?`, confirmText: 'Deletar', onConfirm: () => { deleteGuest(qrHash); } }); }
+    async function deleteGuest(qrHash) { try { const response = await fetch(`${API_URL}/guests/${qrHash}`, { method: 'DELETE' }); const result = await response.json(); if (!response.ok) throw new Error(result.error); showToast(result.message, 'success'); fetchData(); } catch (error) { showToast(error.message, 'error'); } }
     
-    // CORREÇÃO: Função de deleção que chama o modal
-    function confirmDeleteGuest(qrHash, guestName) {
-        showConfirmationModal({
-            title: 'Confirmar Remoção',
-            message: `Tem certeza que deseja remover "${guestName}"? Esta ação não pode ser desfeita.`,
-            confirmText: 'Deletar',
-            onConfirm: () => {
-                deleteGuest(qrHash);
-            }
-        });
-    }
-
-    // CORREÇÃO: Função de edição que chama o modal
-    function promptForNewName(qrHash, currentName) {
-        showEditModal({
-            currentName: currentName,
-            onConfirm: (newName) => {
-                editGuest(qrHash, newName);
-            }
-        });
-    }
-
-    async function editGuest(qrHash, newName) {
-        try {
-            const response = await fetch(`${API_URL}/guests/${qrHash}/edit`, {
-                method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName })
-            });
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.error || 'Erro desconhecido');
-            showToast(result.message || 'Nome atualizado!', 'success');
-            fetchData(); // CORREÇÃO: Atualiza a lista após sucesso
-        } catch (error) {
-            showToast(error.message, 'error');
-        }
-    }
-
-    async function deleteGuest(qrHash) {
-        try {
-            const response = await fetch(`${API_URL}/guests/${qrHash}`, { method: 'DELETE' });
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.error || 'Erro desconhecido');
-            showToast(result.message || 'Convidado removido.', 'success');
-            fetchData(); // CORREÇÃO: Atualiza a lista após sucesso
-        } catch (error) {
-            showToast(error.message, 'error');
-        }
-    }
-
     function renderGuests(guests) {
-        const tableBody = document.getElementById('guestList');
-        const cardsContainer = document.getElementById('guestCardsList');
+        const tableBody = document.getElementById('guestList'); const cardsContainer = document.getElementById('guestCardsList');
         tableBody.innerHTML = ''; cardsContainer.innerHTML = '';
-        if (guests.length === 0) { const message = '<div class="text-center py-8 text-gray-500">Nenhum convidado.</div>'; tableBody.innerHTML = `<tr><td colspan="5">${message}</td></tr>`; cardsContainer.innerHTML = message; return; }
+        if (guests.length === 0) { const message = '<div class="text-center py-8 text-gray-500">Nenhum convidado.</div>'; tableBody.innerHTML = `<tr><td colspan="6">${message}</td></tr>`; cardsContainer.innerHTML = message; return; }
         guests.forEach(guest => {
             const statusBadge = guest.entered ? '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"><i class="fas fa-check mr-1"></i>Entrou</span>' : '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200"><i class="fas fa-times mr-1"></i>Não Entrou</span>';
             const actionsHtml = `<div class="flex space-x-2">
-                <button onclick="promptForNewName('${guest.qr_hash}', '${guest.name.replace(/'/g, "\\'")}')" class="bg-yellow-500 text-white p-2 rounded-md text-xs hover:bg-yellow-600 transition-colors" title="Editar"><i class="fas fa-edit"></i></button>
+                <button onclick="showEditModal({ currentName: '${guest.name.replace(/'/g, "\\'")}', onConfirm: (newName) => editGuest('${guest.qr_hash}', newName) })" class="bg-yellow-500 text-white p-2 rounded-md text-xs hover:bg-yellow-600 transition-colors" title="Editar"><i class="fas fa-edit"></i></button>
                 <button onclick="toggleGuestEntry('${guest.qr_hash}')" class="${guest.entered ? 'bg-orange-500 hover:bg-orange-600' : 'bg-green-500 hover:bg-green-600'} text-white p-2 rounded-md text-xs transition-colors" title="${guest.entered ? 'Marcar Saída' : 'Marcar Entrada'}"><i class="fas fa-${guest.entered ? 'user-minus' : 'user-check'}"></i></button>
                 <button onclick="confirmDeleteGuest('${guest.qr_hash}', '${guest.name.replace(/'/g, "\\'")}')" class="bg-red-500 text-white p-2 rounded-md text-xs hover:bg-red-600 transition-colors" title="Remover"><i class="fas fa-trash"></i></button>
             </div>`;
-            const row = `<tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"><td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white truncate">${guest.name}</td><td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">${guest.qr_image_url ? `<img src="${guest.qr_image_url}?t=${new Date().getTime()}" alt="QR" class="w-8 h-8 mx-auto cursor-pointer" onclick="window.open(this.src, '_blank')">` : 'N/A'}</td><td class="px-4 py-3 text-sm">${statusBadge}</td><td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">${guest.check_in_time || 'N/A'}</td><td class="px-4 py-3 text-sm font-medium">${actionsHtml}</td></tr>`; tableBody.innerHTML += row;
-            const card = `<div class="glass-effect rounded-xl p-4"><div class="flex justify-between items-start"><h3 class="font-bold text-lg text-gray-900 dark:text-white">${guest.name}</h3>${statusBadge}</div><p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Check-in: ${guest.check_in_time || 'N/A'}</p><div class="mt-4 flex justify-between items-center">${guest.qr_image_url ? `<img src="${guest.qr_image_url}?t=${new Date().getTime()}" alt="QR" class="w-12 h-12 cursor-pointer" onclick="window.open(this.src, '_blank')">` : '<div class="w-12 h-12 flex items-center justify-center text-xs bg-gray-200 dark:bg-gray-700 rounded">N/A</div>'}${actionsHtml}</div></div>`; cardsContainer.innerHTML += card;
+            const row = `<tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"><td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white truncate" title="${guest.name}">${guest.name}</td><td class="px-4 py-3 text-sm text-center">${guest.qr_image_url ? `<img src="${guest.qr_image_url}?t=${new Date().getTime()}" alt="QR" class="w-8 h-8 mx-auto cursor-pointer" onclick="window.open(this.src, '_blank')">` : 'N/A'}</td><td class="px-4 py-3 text-sm">${statusBadge}</td><td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">${guest.check_in_time || 'N/A'}</td><td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">${guest.added_by || 'N/A'}</td><td class="px-4 py-3 text-sm font-medium">${actionsHtml}</td></tr>`; tableBody.innerHTML += row;
+            const card = `<div class="glass-effect rounded-xl p-4"><div class="flex justify-between items-start"><h3 class="font-bold text-lg text-gray-900 dark:text-white">${guest.name}</h3>${statusBadge}</div><p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Check-in: ${guest.check_in_time || 'N/A'}</p><p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Adicionado por: ${guest.added_by || 'N/A'}</p><div class="mt-4 flex justify-between items-center">${guest.qr_image_url ? `<img src="${guest.qr_image_url}?t=${new Date().getTime()}" alt="QR" class="w-12 h-12 cursor-pointer" onclick="window.open(this.src, '_blank')">` : '<div class="w-12 h-12 flex items-center justify-center text-xs bg-gray-200 dark:bg-gray-700 rounded">N/A</div>'}${actionsHtml}</div></div>`; cardsContainer.innerHTML += card;
         });
     }
 
