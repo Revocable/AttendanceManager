@@ -1,0 +1,51 @@
+{% extends "layout.html" %}
+{% block title %}QRPass - Bem-vindo{% endblock %}
+{% block header_actions %}
+    <!-- MUDANÇA: Novo botão para o scanner -->
+    <a href="{{ url_for('public_scanner') }}" class="glass-effect text-primary dark:text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale text-sm sm:text-base flex items-center space-x-2">
+        <i class="fas fa-qrcode"></i>
+        <span>Escanear Ingresso</span>
+    </a>
+    <a href="{{ url_for('login') }}" class="bg-gradient-to-r from-primary to-secondary text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale text-sm sm:text-base">Entrar</a>
+{% endblock %}
+{% block content %}
+<div class="text-center py-16 sm:py-24">
+    <h2 class="text-4xl sm:text-6xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+        A maneira mais <span class="text-primary">inteligente</span> de gerenciar seus eventos.
+    </h2>
+    <p class="mt-6 max-w-2xl mx-auto text-lg sm:text-xl text-gray-600 dark:text-gray-300">
+        Crie listas de convidados, gere QR Codes únicos e controle o acesso em tempo real com estatísticas detalhadas. Tudo em um só lugar.
+    </p>
+    <div class="mt-10">
+        <a href="{{ url_for('signup') }}" class="bg-gradient-to-r from-primary to-secondary text-white px-8 py-4 rounded-xl font-bold text-lg hover:shadow-2xl transition-all duration-200 hover-scale transform hover:-translate-y-1">
+            Comece Agora - É Grátis!
+        </a>
+    </div>
+</div>
+
+<div class="py-16">
+    <h3 class="text-center text-3xl font-bold text-gray-900 dark:text-white mb-12">Funcionalidades Principais</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div class="glass-card rounded-2xl p-8 text-center hover-scale fade-in">
+            <div class="text-4xl text-primary mb-4"><i class="fas fa-users"></i></div>
+            <h4 class="text-xl font-bold mb-2 text-gray-900 dark:text-white">Gestão de Convidados</h4>
+            <p class="text-gray-600 dark:text-gray-400">Adicione, edite e remova convidados de forma simples e rápida.</p>
+        </div>
+        <div class="glass-card rounded-2xl p-8 text-center hover-scale fade-in" style="animation-delay: 0.1s;">
+            <div class="text-4xl text-success mb-4"><i class="fas fa-qrcode"></i></div>
+            <h4 class="text-xl font-bold mb-2 text-gray-900 dark:text-white">QR Codes Seguros</h4>
+            <p class="text-gray-600 dark:text-gray-400">Cada convidado recebe um QR Code único para um check-in rápido e seguro.</p>
+        </div>
+        <div class="glass-card rounded-2xl p-8 text-center hover-scale fade-in" style="animation-delay: 0.2s;">
+            <div class="text-4xl text-warning mb-4"><i class="fas fa-chart-pie"></i></div>
+            <h4 class="text-xl font-bold mb-2 text-gray-900 dark:text-white">Estatísticas em Tempo Real</h4>
+            <p class="text-gray-600 dark:text-gray-400">Acompanhe o comparecimento e veja gráficos detalhados do seu evento.</p>
+        </div>
+        <div class="glass-card rounded-2xl p-8 text-center hover-scale fade-in" style="animation-delay: 0.3s;">
+            <div class="text-4xl text-danger mb-4"><i class="fas fa-file-pdf"></i></div>
+            <h4 class="text-xl font-bold mb-2 text-gray-900 dark:text-white">Exportação de Dados</h4>
+            <p class="text-gray-600 dark:text-gray-400">Exporte a lista de convidados e relatórios completos em PDF ou CSV.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

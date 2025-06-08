@@ -1,0 +1,403 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ party.name }} - Gerenciador de Festa{% endblock %}
+
+{% block header_actions %}
+    <a href="{{ url_for('dashboard') }}" class="glass-effect text-primary dark:text-white px-4 py-2 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale flex items-center space-x-2">
+        <i class="fas fa-arrow-left"></i>
+        <span>Dashboard</span>
+    </a>
+    <a href="{{ url_for('public_scanner') }}" class="bg-gradient-to-r from-primary to-secondary text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale flex items-center space-x-2">
+        <i class="fas fa-qrcode"></i>
+        <span class="hidden sm:inline">Abrir Scanner</span>
+        <span class="sm:hidden">Scanner</span>
+    </a>
+{% endblock %}
+
+{% block content %}
+<body data-party-id="{{ party.id }}">
+
+    <h1 class="text-3xl font-bold text-center text-gray-900 dark:text-white mb-6">Gerenciando a Festa: <span class="text-primary">{{ party.name }}</span></h1>
+
+    <div class="grid grid-cols-1 xl:grid-cols-4 gap-8">
+        <div class="xl:col-span-1">
+            <div class="glass-card rounded-2xl shadow-2xl p-6 hover-scale fade-in sticky top-24">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center"><i class="fas fa-chart-pie text-primary mr-3"></i>Estatísticas</h2>
+                    <button onclick="fetchStats()" class="glass-effect text-primary hover:text-secondary transition-colors p-2 rounded-lg hover:shadow-md"><i class="fas fa-sync-alt"></i></button>
+                </div>
+                <div class="grid grid-cols-1 gap-4 mb-6">
+                    <div class="glass-effect p-4 rounded-xl"><div class="text-2xl font-bold text-primary" id="statsTotalInvited">-</div><div class="text-sm text-gray-600 dark:text-gray-300">Total Convidados</div></div>
+                    <div class="glass-effect p-4 rounded-xl"><div class="text-2xl font-bold text-success" id="statsEnteredCount">-</div><div class="text-sm text-gray-600 dark:text-gray-300">Entraram</div></div>
+                    <div class="glass-effect p-4 rounded-xl"><div class="text-2xl font-bold text-danger" id="statsNotEnteredCount">-</div><div class="text-sm text-gray-600 dark:text-gray-300">Não Entraram</div></div>
+                    <div class="glass-effect p-4 rounded-xl"><div class="text-2xl font-bold text-purple-600" id="statsPercentageEntered">-%</div><div class="text-sm text-gray-600 dark:text-gray-300">Comparecimento</div></div>
+                </div>
+                <div class="relative h-64 glass-effect rounded-xl p-4"><canvas id="attendanceChart"></canvas></div>
+            </div>
+        </div>
+
+        <div class="xl:col-span-3 space-y-8">
+            <div class="glass-card rounded-2xl shadow-2xl p-6 hover-scale fade-in">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center"><i class="fas fa-user-plus text-success mr-3"></i>Adicionar Convidado</h2>
+                {% if can_add_guest %}
+                <form id="addGuestForm" class="space-y-4">
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <div class="flex-1">
+                            <input type="text" id="guestName" placeholder="Nome do Convidado" required class="w-full px-4 py-3 glass-effect rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
+                        </div>
+                        <button type="submit" class="bg-gradient-to-r from-success to-green-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale flex items-center justify-center space-x-2">
+                            <i class="fas fa-plus"></i><span>Adicionar</span>
+                        </button>
+                    </div>
+                </form>
+                <div id="newQrCodeArea" class="mt-6 p-4 glass-effect rounded-xl text-center" style="display:none;">
+                    <p id="guestAddedInfo" class="font-semibold mb-4"></p>
+                    <img id="newGuestQrImage" src="" alt="QR Code" class="mx-auto mb-4 rounded-lg shadow-md" style="display:none; max-width: 150px;">
+                    <a id="downloadQrLink" href="#" download class="inline-flex items-center space-x-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-secondary transition-colors" style="display:none;"><i class="fas fa-download"></i><span>Baixar QR Code</span></a>
+                </div>
+                {% else %}
+                <div class="bg-yellow-100 dark:bg-yellow-900/50 border-l-4 border-yellow-500 text-yellow-700 dark:text-yellow-300 p-4 rounded-r-lg" role="alert">
+                    <p class="font-bold">Limite de 50 Convidados Atingido</p>
+                    <p>Para adicionar mais convidados, <a href="{{ url_for('upgrade') }}" class="font-bold underline hover:text-yellow-500">faça o upgrade para VIP</a>.</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="glass-card rounded-2xl shadow-2xl p-6 hover-scale fade-in">
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6">
+                    <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center mb-4 lg:mb-0">
+                        <i class="fas fa-users text-primary mr-3"></i>Lista de Convidados
+                        <span id="guestCount" class="ml-2 text-sm bg-primary text-white px-2 py-1 rounded-full">0</span>
+                    </h2>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <button onclick="exportGuests('csv')" class="bg-success text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center space-x-2"><i class="fas fa-file-csv"></i><span>CSV</span></button>
+                        <button onclick="exportGuests('pdf')" class="bg-danger text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center space-x-2"><i class="fas fa-file-pdf"></i><span>PDF</span></button>
+                    </div>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-4 mb-6">
+                    <div class="flex-1 relative">
+                        <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" id="searchInput" placeholder="Buscar por nome..." class="w-full pl-10 pr-4 py-3 glass-effect rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
+                    </div>
+                </div>
+                <div class="hidden lg:block glass-effect rounded-xl overflow-hidden">
+                    <div class="max-h-[500px] overflow-y-auto">
+                        <table class="w-full table-fixed min-w-[800px]">
+                            <thead class="bg-gray-50 dark:bg-gray-800/50 sticky top-0 z-10">
+                                <tr>
+                                    <th class="px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 30%">Nome</th>
+                                    <th class="px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 10%">QR Code</th>
+                                    <th class="px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 15%">Status</th>
+                                    <th class="px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 25%">Check-in</th>
+                                    <th class="px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 20%">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="guestList" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="lg:hidden max-h-[500px] overflow-y-auto space-y-4" id="guestCardsList"></div>
+            </div>
+
+            <div class="glass-card rounded-2xl shadow-2xl p-6 hover-scale fade-in">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center"><i class="fas fa-share-alt text-purple-500 mr-3"></i>Página Pública da Festa</h2>
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Link Compartilhável:</label>
+                    <div class="relative">
+                        <input type="text" id="shareableLink" value="{{ url_for('public_party_page', shareable_link_id=party.shareable_link_id, _external=True) }}" readonly class="w-full text-xs px-2 py-2 bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 break-all">
+                        <button onclick="copyToClipboard('#shareableLink', '#copyBtnIcon')" class="absolute right-1 top-1/2 -translate-y-1/2 bg-primary text-white p-2 rounded-md hover:bg-secondary transition-colors text-xs"><i id="copyBtnIcon" class="fas fa-copy"></i></button>
+                    </div>
+                     <a href="{{ url_for('public_party_page', shareable_link_id=party.shareable_link_id) }}" target="_blank" class="text-xs text-primary hover:underline">Abrir link em nova aba</a>
+                </div>
+                <form action="{{ url_for('upload_logo', party_id=party.id) }}" method="POST" enctype="multipart/form-data" class="mt-4 border-t pt-4">
+                    <label for="party_logo" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Logo da Festa:</label>
+                    {% if party.logo_filename %}
+                    <img src="{{ url_for('static', filename='party_logos/' + party.logo_filename) }}?v={{ range(1, 1000) | random }}" alt="Logo atual" class="w-20 h-20 rounded-full object-cover my-2 border">
+                    {% endif %}
+                    <input type="file" name="party_logo" id="party_logo" class="text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-primary hover:file:bg-blue-100">
+                    <button type="submit" class="mt-2 w-full text-xs bg-primary text-white py-1 px-3 rounded-lg hover:bg-secondary">Enviar Logo</button>
+                </form>
+                <form action="{{ url_for('update_party_details', party_id=party.id) }}" method="POST" class="mt-4 border-t pt-4">
+                    <label for="public_description" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Descrição Pública:</label>
+                    <textarea name="public_description" id="public_description" rows="4" class="mt-1 w-full text-sm glass-effect rounded-lg p-2 focus:ring-primary focus:border-primary">{{ party.public_description or '' }}</textarea>
+                    <button type="submit" class="mt-2 w-full text-xs bg-primary text-white py-1 px-3 rounded-lg hover:bg-secondary">Salvar Descrição</button>
+                </form>
+                <form action="{{ url_for('toggle_guest_count', party_id=party.id) }}" method="POST" class="mt-4 border-t pt-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Contagem de Confirmados na Página:</label>
+                    <div class="flex items-center space-x-3 mt-1">
+                        <span class="text-sm font-bold {{ 'text-green-500' if party.show_guest_count else 'text-red-500' }}">
+                            {% if party.show_guest_count %} Visível {% else %} Oculto {% endif %}
+                        </span>
+                        <button type="submit" class="text-xs bg-gray-500 text-white py-1 px-3 rounded-lg hover:bg-gray-600">
+                            {% if party.show_guest_count %} Ocultar {% else %} Mostrar {% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+{% endblock %}
+{% block scripts %}
+<script>
+    function copyToClipboard(elementSelector, iconSelector) {
+        const element = document.querySelector(elementSelector);
+        navigator.clipboard.writeText(element.value).then(() => {
+            const icon = document.querySelector(iconSelector);
+            icon.classList.remove('fa-copy');
+            icon.classList.add('fa-check');
+            setTimeout(() => {
+                icon.classList.remove('fa-check');
+                icon.classList.add('fa-copy');
+            }, 2000);
+        }).catch(err => console.error('Erro ao copiar: ', err));
+    }
+
+    const partyId = document.body.getAttribute('data-party-id');
+    const API_URL = `/api/party/${partyId}`;
+    let allGuests = [];
+    let attendanceChartInstance = null;
+    const SEARCH_DEBOUNCE_MS = 300;
+    const canAddGuest = {{ can_add_guest | tojson }};
+
+    function debounce(func, delay) {
+        let timeout;
+        return function(...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), delay);
+        };
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        fetchData();
+        const addGuestForm = document.getElementById('addGuestForm');
+        if (addGuestForm) {
+            addGuestForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                addGuest();
+            });
+        }
+        document.getElementById('searchInput').addEventListener('input', debounce(handleSearch, SEARCH_DEBOUNCE_MS));
+    });
+
+    async function fetchData() {
+        await fetchGuests();
+        await fetchStats();
+    }
+
+    async function addGuest() {
+        if (!canAddGuest) {
+            alert('Limite de convidados atingido.');
+            return;
+        }
+        const nameInput = document.getElementById('guestName');
+        const name = nameInput.value.trim();
+        if (!name) {
+            alert('Nome do convidado é obrigatório.');
+            return;
+        }
+        const qrCodeArea = document.getElementById('newQrCodeArea');
+        const guestAddedInfo = document.getElementById('guestAddedInfo');
+        const newGuestQrImage = document.getElementById('newGuestQrImage');
+        const downloadQrLink = document.getElementById('downloadQrLink');
+        qrCodeArea.style.display = 'block';
+        guestAddedInfo.textContent = 'Adicionando...';
+        guestAddedInfo.className = 'font-semibold mb-4 text-blue-600 dark:text-blue-400';
+        try {
+            const response = await fetch(`${API_URL}/guests`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            const result = await response.json();
+            if (!response.ok) {
+                guestAddedInfo.textContent = `Erro: ${result.error || 'Falha.'}`;
+                guestAddedInfo.className = 'font-semibold mb-4 text-red-600 dark:text-red-400';
+                return;
+            }
+            guestAddedInfo.textContent = `Convidado "${result.name}" adicionado!`;
+            guestAddedInfo.className = 'font-semibold mb-4 text-green-600 dark:text-green-400';
+            if (result.qr_image_url) {
+                const imageUrl = `${result.qr_image_url}?t=${new Date().getTime()}`;
+                newGuestQrImage.src = imageUrl;
+                newGuestQrImage.style.display = 'block';
+                downloadQrLink.href = imageUrl;
+                downloadQrLink.download = `qrcode_${result.name.replace(/\s+/g, '_')}.png`;
+                downloadQrLink.style.display = 'inline-flex';
+            }
+            nameInput.value = '';
+            fetchData();
+        } catch (error) {
+            guestAddedInfo.textContent = 'Erro de rede.';
+            guestAddedInfo.className = 'font-semibold mb-4 text-red-600 dark:text-red-400';
+        }
+    }
+
+    async function fetchGuests() {
+        try {
+            const response = await fetch(`${API_URL}/guests`);
+            if (!response.ok) throw new Error('Falha ao buscar convidados');
+            allGuests = await response.json();
+            handleSearch();
+        } catch (error) {
+            document.getElementById('guestList').innerHTML = `<tr><td colspan="5" class="text-center p-4">Erro ao carregar lista.</td></tr>`;
+        }
+    }
+
+    function handleSearch() {
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        const filteredGuests = allGuests.filter(guest => guest.name.toLowerCase().includes(searchTerm));
+        renderGuests(filteredGuests);
+        document.getElementById('guestCount').textContent = filteredGuests.length;
+    }
+
+    function renderGuests(guests) {
+        const tableBody = document.getElementById('guestList');
+        const cardsContainer = document.getElementById('guestCardsList');
+        tableBody.innerHTML = '';
+        cardsContainer.innerHTML = '';
+        if (guests.length === 0) {
+            const message = '<div class="text-center py-8 text-gray-500">Nenhum convidado.</div>';
+            tableBody.innerHTML = `<tr><td colspan="5">${message}</td></tr>`;
+            cardsContainer.innerHTML = message;
+            return;
+        }
+        guests.forEach(guest => {
+            const statusBadge = guest.entered
+                ? '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"><i class="fas fa-check mr-1"></i>Entrou</span>'
+                : '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200"><i class="fas fa-times mr-1"></i>Não Entrou</span>';
+            const actionsHtml = `<div class="flex space-x-2">
+                <button onclick="editGuestNamePrompt('${guest.qr_hash}', '${guest.name.replace(/'/g, "\\'")}")" class="bg-yellow-500 text-white p-2 rounded-md text-xs hover:bg-yellow-600 transition-colors" title="Editar"><i class="fas fa-edit"></i></button>
+                <button onclick="toggleGuestEntry('${guest.qr_hash}')" class="${guest.entered ? 'bg-orange-500 hover:bg-orange-600' : 'bg-green-500 hover:bg-green-600'} text-white p-2 rounded-md text-xs transition-colors" title="${guest.entered ? 'Marcar Saída' : 'Marcar Entrada'}"><i class="fas fa-${guest.entered ? 'user-minus' : 'user-check'}"></i></button>
+                <button onclick="confirmDeleteGuest('${guest.qr_hash}', '${guest.name.replace(/'/g, "\\'")}")" class="bg-red-500 text-white p-2 rounded-md text-xs hover:bg-red-600 transition-colors" title="Remover"><i class="fas fa-trash"></i></button>
+            </div>`;
+            const row = `<tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white truncate">${guest.name}</td>
+                <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">${guest.qr_image_url ? `<img src="${guest.qr_image_url}?t=${new Date().getTime()}" alt="QR" class="w-8 h-8 mx-auto cursor-pointer" onclick="window.open(this.src, '_blank')">` : 'N/A'}</td>
+                <td class="px-4 py-3 text-sm">${statusBadge}</td>
+                <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">${guest.check_in_time || 'N/A'}</td>
+                <td class="px-4 py-3 text-sm font-medium">${actionsHtml}</td>
+            </tr>`;
+            tableBody.innerHTML += row;
+            const card = `<div class="glass-effect rounded-xl p-4">
+                <div class="flex justify-between items-start">
+                    <h3 class="font-bold text-lg text-gray-900 dark:text-white">${guest.name}</h3>${statusBadge}
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Check-in: ${guest.check_in_time || 'N/A'}</p>
+                <div class="mt-4 flex justify-between items-center">
+                    ${guest.qr_image_url ? `<img src="${guest.qr_image_url}?t=${new Date().getTime()}" alt="QR" class="w-12 h-12 cursor-pointer" onclick="window.open(this.src, '_blank')">` : '<div class="w-12 h-12 flex items-center justify-center text-xs bg-gray-200 dark:bg-gray-700 rounded">N/A</div>'}
+                    ${actionsHtml}
+                </div>
+            </div>`;
+            cardsContainer.innerHTML += card;
+        });
+    }
+
+    async function editGuestNamePrompt(qrHash, currentName) {
+        const newName = prompt("Digite o novo nome:", currentName);
+        if (newName === null || !newName.trim() || newName.trim() === currentName) return;
+        try {
+            const response = await fetch(`${API_URL}/guests/${qrHash}/edit`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: newName.trim() })
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error);
+            fetchData();
+        } catch (error) {
+            alert(`Erro: ${error.message}`);
+        }
+    }
+
+    function confirmDeleteGuest(qrHash, guestName) {
+        if (confirm(`Tem certeza que deseja remover "${guestName}"?`)) {
+            deleteGuest(qrHash);
+        }
+    }
+
+    async function deleteGuest(qrHash) {
+        try {
+            const response = await fetch(`${API_URL}/guests/${qrHash}`, { method: 'DELETE' });
+            if (!response.ok) throw new Error((await response.json()).error);
+            fetchData();
+        } catch (error) {
+            alert(`Erro: ${error.message}`);
+        }
+    }
+
+    async function toggleGuestEntry(qrHash) {
+        try {
+            await fetch(`${API_URL}/guests/${qrHash}/toggle_entry`, { method: 'PUT' });
+            fetchData();
+        } catch (error) {}
+    }
+
+    function exportGuests(format) {
+        const searchTerm = document.getElementById('searchInput').value.trim();
+        let exportUrl = `${API_URL}/export/${format}`;
+        if (searchTerm) {
+            exportUrl += `?search=${encodeURIComponent(searchTerm)}`;
+        }
+        window.location.href = exportUrl;
+    }
+
+    async function fetchStats() {
+        try {
+            const response = await fetch(`/api/party/${partyId}/stats`);
+            if (!response.ok) throw new Error('Falha ao buscar estatísticas');
+            const stats = await response.json();
+            document.getElementById('statsTotalInvited').textContent = stats.total_invited;
+            document.getElementById('statsEnteredCount').textContent = stats.entered_count;
+            document.getElementById('statsNotEnteredCount').textContent = stats.not_entered_count;
+            document.getElementById('statsPercentageEntered').textContent = stats.percentage_entered.toFixed(2) + "%";
+            updateAttendanceChart(stats.entered_count, stats.not_entered_count);
+        } catch (error) {}
+    }
+
+    function updateAttendanceChart(entered, notEntered) {
+        const ctx = document.getElementById('attendanceChart');
+        if (!ctx) return;
+        const isDark = document.documentElement.classList.contains('dark');
+        const data = {
+            labels: ['Entraram', 'Não Entraram'],
+            datasets: [{
+                data: [entered, notEntered],
+                backgroundColor: ['#10b981', '#ef4444'],
+                borderColor: [isDark ? '#0f172a' : '#fff'],
+                borderWidth: 2,
+                hoverOffset: 4
+            }]
+        };
+        const config = {
+            type: 'doughnut',
+            data: data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: isDark ? '#e5e7eb' : '#374151',
+                            usePointStyle: true
+                        },
+                    },
+                    title: {
+                        display: false
+                    }
+                }
+            }
+        };
+        if (attendanceChartInstance) {
+            attendanceChartInstance.data.datasets[0].data = [entered, notEntered];
+            attendanceChartInstance.options.plugins.legend.labels.color = isDark ? '#e5e7eb' : '#374151';
+            attendanceChartInstance.options.borderColor = isDark ? '#0f172a' : '#fff';
+            attendanceChartInstance.update();
+        } else {
+            attendanceChartInstance = new Chart(ctx, config);
+        }
+    }
+</script>
+{% endblock %}

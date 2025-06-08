@@ -1,0 +1,66 @@
+{% extends "layout.html" %}
+{% block title %}Dashboard - QRPass{% endblock %}
+{% block header_actions %}
+    <span class="text-gray-700 dark:text-gray-300 hidden sm:inline">Olá, {{ current_user.username }}!</span>
+    <a href="{{ url_for('logout') }}" class="glass-effect text-danger px-4 py-2 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale flex items-center space-x-2"><i class="fas fa-sign-out-alt"></i><span>Sair</span></a>
+{% endblock %}
+{% block content %}
+<div class="fade-in">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Seu Dashboard</h1>
+        {% if current_user.is_vip %}
+            <span class="bg-yellow-400 text-yellow-900 text-sm font-bold px-3 py-1 rounded-full flex items-center"><i class="fas fa-crown mr-2"></i>CONTA VIP</span>
+        {% else %}
+             <a href="{{ url_for('upgrade') }}" class="bg-yellow-400 text-yellow-900 text-sm font-bold px-4 py-2 rounded-full flex items-center hover:bg-yellow-500 transition-colors"><i class="fas fa-crown mr-2"></i>Tornar-se VIP</a>
+        {% endif %}
+    </div>
+    <div class="glass-card rounded-2xl shadow-2xl p-6 mb-8">
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Criar Nova Festa</h2>
+        {% if can_create_party %}
+        <form action="{{ url_for('create_party') }}" method="POST" class="flex flex-col sm:flex-row gap-4">
+            <input type="text" name="party_name" placeholder="Nome da sua nova festa" required class="flex-grow w-full px-4 py-3 glass-effect rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
+            <button type="submit" class="bg-gradient-to-r from-primary to-secondary text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale flex items-center justify-center space-x-2"><i class="fas fa-plus"></i><span>Criar Festa</span></button>
+        </form>
+        {% else %}
+        <div class="bg-yellow-100 dark:bg-yellow-900/50 border-l-4 border-yellow-500 text-yellow-700 dark:text-yellow-300 p-4 rounded-r-lg" role="alert">
+            <p class="font-bold">Limite Atingido</p>
+            <p>Você já criou sua festa gratuita. Para criar mais, <a href="{{ url_for('upgrade') }}" class="font-bold underline hover:text-yellow-500">faça o upgrade para VIP</a>.</p>
+        </div>
+        {% endif %}
+    </div>
+    <div class="glass-card rounded-2xl shadow-2xl p-6">
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">Suas Festas</h2>
+        {% if parties %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for party in parties %}
+            <div class="glass-effect rounded-xl p-6 flex flex-col justify-between hover-scale shadow-lg">
+                <div>
+                    <h3 class="text-xl font-bold text-gray-900 dark:text-white truncate">{{ party.name }}</h3>
+                    <div class="mt-2"><span class="text-sm text-gray-500 dark:text-gray-400">Código do Scanner:</span><span class="ml-2 font-mono text-lg bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded">{{ party.party_code }}</span></div>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">{{ party.guests|length }} convidados</p>
+                </div>
+                <div class="mt-6 grid grid-cols-2 gap-2">
+                    <a href="{{ url_for('party_manager', party_id=party.id) }}" class="text-center w-full bg-primary text-white px-4 py-2 rounded-lg font-semibold hover:bg-secondary transition-colors text-sm"><i class="fas fa-cog mr-1"></i>Gerenciar</a>
+                    <a href="{{ url_for('public_scanner') }}" class="text-center w-full bg-success text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-600 transition-colors text-sm"><i class="fas fa-qrcode mr-1"></i>Scanner</a>
+                    <!-- MUDANÇA: Novo botão para a página pública -->
+                    <a href="{{ url_for('public_party_page', shareable_link_id=party.shareable_link_id) }}" target="_blank" class="col-span-2 text-center w-full bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-700 transition-colors text-sm">
+                        <i class="fas fa-eye mr-1"></i>Ver Página Pública
+                    </a>
+                </div>
+                <div class="mt-4 text-right">
+                    <form action="{{ url_for('delete_party', party_id=party.id) }}" method="POST" onsubmit="return confirm('Tem certeza que deseja apagar a festa \'{{ party.name }}\' e todos os seus dados? Esta ação não pode ser desfeita.');">
+                        <button type="submit" class="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-400 font-semibold"><i class="fas fa-trash-alt mr-1"></i>Apagar Festa</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-12 glass-effect rounded-xl">
+            <p class="text-gray-600 dark:text-gray-400">Você ainda não criou nenhuma festa.</p>
+            <p class="text-gray-500 dark:text-gray-500 mt-2">Use o formulário acima para começar!</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

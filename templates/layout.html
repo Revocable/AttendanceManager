@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{% block title %}QRPass - Sistema de Controle de Acesso{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#1e40af',
+                        success: '#10b981',
+                        warning: '#f59e0b',
+                        danger: '#ef4444',
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 6s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass-effect {
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .dark .glass-effect {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glass-card {
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .dark .glass-card {
+            background: rgba(17, 24, 39, 0.7); /* Um pouco mais opaco para legibilidade */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glass-header {
+            backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+            background: rgba(255, 255, 255, 0.8);
+        }
+        .dark .glass-header {
+            background: rgba(0, 0, 0, 0.5);
+        }
+        .hover-scale { transition: transform 0.2s ease; }
+        .hover-scale:hover { transform: scale(1.02); }
+        .logo-image { height: 48px; width: auto; transition: filter 0.3s ease; }
+        .dark .logo-image { filter: brightness(0) invert(1); }
+        .light .logo-image { filter: none; }
+        @media (max-width: 640px) { .logo-image { height: 40px; } }
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900 min-h-screen transition-all duration-300 text-gray-800 dark:text-gray-200">
+    <!-- Animated Background -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+        <div class="absolute -top-40 -right-40 w-80 h-80 bg-purple-300 dark:bg-purple-600 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-50 animate-pulse-slow"></div>
+        <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-300 dark:bg-blue-600 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-50 animate-pulse-slow animation-delay-2000"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-300 dark:bg-indigo-600 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-50 animate-pulse-slow animation-delay-4000"></div>
+    </div>
+
+    <!-- Header -->
+    <header class="glass-header sticky top-0 z-50 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex items-center justify-between">
+                <a href="{{ url_for('landing') }}" class="flex items-center space-x-3">
+                    <img src="{{ url_for('static', filename='logo.png') }}" alt="QRPass Logo" class="logo-image">
+                    <div>
+                        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">QRPass</h1>
+                    </div>
+                </a>
+                <div class="flex items-center space-x-2 sm:space-x-4">
+                    {% block header_actions %}
+                        <!-- Ações do cabeçalho específicas da página virão aqui -->
+                    {% endblock %}
+                    <button id="darkModeToggle" class="glass-effect text-gray-700 dark:text-gray-300 p-3 rounded-xl hover:shadow-lg transition-all duration-200 hover-scale">
+                        <i class="fas fa-moon dark:hidden text-lg"></i>
+                        <i class="fas fa-sun hidden dark:inline text-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="mb-4 p-4 rounded-lg text-white font-semibold
+                    {% if category == 'danger' %} bg-red-500/80
+                    {% elif category == 'success' %} bg-green-500/80
+                    {% else %} bg-blue-500/80
+                    {% endif %}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}
+            <!-- Conteúdo da página virá aqui -->
+        {% endblock %}
+    </main>
+
+    <script>
+        const html = document.documentElement;
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        
+        const applyTheme = (isDark) => {
+            const logo = document.querySelector('.logo-image');
+            if (isDark) {
+                html.classList.add('dark');
+                if(logo) logo.classList.add('dark');
+            } else {
+                html.classList.remove('dark');
+                if(logo) logo.classList.remove('dark');
+            }
+        };
+
+        const toggleDarkMode = () => {
+            const isDark = !html.classList.contains('dark');
+            localStorage.setItem('darkMode', isDark);
+            applyTheme(isDark);
+        };
+
+        darkModeToggle.addEventListener('click', toggleDarkMode);
+        
+        // Initialize theme
+        applyTheme(localStorage.getItem('darkMode') === 'true');
+    </script>
+    
+    {% block scripts %}
+        <!-- Scripts específicos da página virão aqui -->
+    {% endblock %}
+
+</body>
+</html>

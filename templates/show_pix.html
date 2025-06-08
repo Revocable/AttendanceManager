@@ -1,0 +1,85 @@
+{% extends "layout.html" %}
+
+{% block title %}Pagar com PIX - QRPass{% endblock %}
+
+{% block content %}
+<div class="glass-card rounded-2xl shadow-2xl p-8 max-w-lg mx-auto text-center fade-in">
+    <h2 id="payment-title" class="text-2xl font-bold text-gray-900 dark:text-white">Finalize seu Pagamento</h2>
+    <p id="payment-subtitle" class="text-gray-600 dark:text-gray-400 mt-2">Use o aplicativo do seu banco para pagar com o QR Code ou o código "Copia e Cola".</p>
+
+    <div class="my-8">
+        <img src="{{ pix_qr_code }}" alt="PIX QR Code" class="mx-auto border-4 border-white rounded-lg shadow-lg w-64 h-64">
+    </div>
+
+    <div class="space-y-4">
+        <label for="pix-emv" class="block text-sm font-medium text-gray-700 dark:text-gray-300">PIX Copia e Cola:</label>
+        <div class="relative">
+            <input type="text" id="pix-emv" value="{{ pix_emv }}" readonly
+                   class="w-full px-4 py-3 bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 break-all">
+            <button onclick="copyPixCode()" id="copyButton" class="absolute right-2 top-1/2 -translate-y-1/2 bg-primary text-white p-2 rounded-md hover:bg-secondary transition-colors">
+                <i class="fas fa-copy"></i>
+            </button>
+        </div>
+    </div>
+    
+    <div id="payment-info" class="mt-8 text-sm text-gray-500 dark:text-gray-400">
+        <i class="fas fa-spinner fa-spin mr-2"></i>
+        Aguardando confirmação do pagamento... Esta página será atualizada automaticamente.
+    </div>
+    
+    <div class="mt-4">
+         <a href="{{ url_for('dashboard') }}" class="text-primary hover:underline">Voltar ao Dashboard</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function copyPixCode() {
+        const pixInput = document.getElementById('pix-emv');
+        pixInput.select();
+        pixInput.setSelectionRange(0, 99999);
+        try {
+            document.execCommand('copy');
+            const copyButton = document.getElementById('copyButton');
+            copyButton.innerHTML = '<i class="fas fa-check"></i>';
+            setTimeout(() => { copyButton.innerHTML = '<i class="fas fa-copy"></i>'; }, 2000);
+        } catch (err) {
+            alert('Não foi possível copiar o código. Por favor, copie manualmente.');
+        }
+    }
+
+    const pixId = "{{ pix_id }}";
+    const intervalId = setInterval(() => {
+        fetch(`/payment/check_status/${pixId}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Falha na verificação de status');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'PAID') {
+                    clearInterval(intervalId);
+                    
+                    document.getElementById('payment-title').textContent = 'Pagamento Confirmado!';
+                    document.getElementById('payment-title').classList.add('text-success');
+                    
+                    const subtitle = document.getElementById('payment-subtitle');
+                    subtitle.innerHTML = 'Você agora é um usuário VIP! <br> Redirecionando para o seu dashboard...';
+
+                    const info = document.getElementById('payment-info');
+                    info.innerHTML = '<i class="fas fa-check-circle text-success mr-2"></i> Sucesso!';
+
+                    setTimeout(() => {
+                        window.location.href = "{{ url_for('dashboard') }}";
+                    }, 3000); // Redireciona após 3 segundos
+                }
+            })
+            .catch(err => {
+                console.error("Erro ao verificar status do pagamento:", err);
+                // Opcional: parar de verificar após muitos erros
+            });
+    }, 4000); // Verifica a cada 4 segundos
+</script>
+{% endblock %}

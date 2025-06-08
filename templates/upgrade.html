@@ -1,0 +1,61 @@
+{% extends "layout.html" %}
+
+{% block title %}Upgrade para VIP - QRPass{% endblock %}
+
+{% block header_actions %}
+    <a href="{{ url_for('dashboard') }}" class="glass-effect text-primary dark:text-white px-4 py-2 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale flex items-center space-x-2">
+        <i class="fas fa-arrow-left"></i>
+        <span>Dashboard</span>
+    </a>
+{% endblock %}
+
+{% block content %}
+<div class="glass-card rounded-2xl shadow-2xl p-8 max-w-2xl mx-auto text-center fade-in">
+    <div class="text-5xl text-yellow-400 mb-4">
+        <i class="fas fa-crown"></i>
+    </div>
+    <h2 class="text-3xl font-bold text-gray-900 dark:text-white">Torne-se um Usuário VIP!</h2>
+    <p class="text-gray-600 dark:text-gray-400 mt-4">
+        Desbloqueie todos os recursos do QRPass com um pagamento único e aproveite seu evento ao máximo.
+    </p>
+    
+    <div class="my-8 text-left space-y-4">
+        <div class="flex items-start">
+            <i class="fas fa-check-circle text-success mt-1 mr-3"></i>
+            <div>
+                <h3 class="font-semibold text-gray-900 dark:text-white">Festas Ilimitadas</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Crie e gerencie quantos eventos você precisar, sem restrições.</p>
+            </div>
+        </div>
+        <div class="flex items-start">
+            <i class="fas fa-check-circle text-success mt-1 mr-3"></i>
+            <div>
+                <h3 class="font-semibold text-gray-900 dark:text-white">Convidados Ilimitados</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Adicione mais de 50 convidados por festa. Perfeito para grandes eventos.</p>
+            </div>
+        </div>
+        <div class="flex items-start">
+            <i class="fas fa-check-circle text-success mt-1 mr-3"></i>
+            <div>
+                <h3 class="font-semibold text-gray-900 dark:text-white">Exportação de PDF</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Gere relatórios profissionais em PDF com gráficos e estatísticas completas.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-blue-100 dark:bg-blue-900/50 rounded-lg p-6">
+        <p class="text-lg font-medium text-gray-800 dark:text-gray-200">Pagamento Único</p>
+        <p class="text-4xl font-extrabold text-primary my-2">R$ 100,00</p>
+        <p class="text-sm text-gray-600 dark:text-gray-400">Acesso vitalício a todos os recursos VIP.</p>
+    </div>
+
+    <!-- MUDANÇA: Botão agora é um link para a página de completar perfil -->
+    <div class="mt-8">
+        <a href="{{ url_for('complete_profile') }}"
+           class="w-full inline-block bg-gradient-to-r from-success to-green-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:shadow-2xl transition-all duration-200 hover-scale transform hover:-translate-y-1">
+            <i class="fab fa-pix"></i>
+            <span>Pagar com PIX e Virar VIP</span>
+        </a>
+    </div>
+</div>
+{% endblock %}

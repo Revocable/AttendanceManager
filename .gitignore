@@ -1,3 +1,4 @@
 instance/party.db
 static/qr_codes/
 __pycache__/
+.env

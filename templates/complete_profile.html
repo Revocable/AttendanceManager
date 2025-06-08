@@ -1,0 +1,40 @@
+{% extends "layout.html" %}
+
+{% block title %}Complete seu Perfil - QRPass{% endblock %}
+
+{% block content %}
+<div class="flex justify-center items-center py-12">
+    <div class="w-full max-w-md">
+        <form method="POST" action="{{ url_for('complete_profile') }}" class="glass-card rounded-2xl shadow-2xl p-8 space-y-4">
+            <h2 class="text-center text-3xl font-bold text-gray-900 dark:text-white">Complete seu Perfil</h2>
+            <p class="text-center text-gray-600 dark:text-gray-400 !mt-2 !mb-6">
+                Precisamos de mais algumas informações para processar seu pagamento com segurança.
+            </p>
+            
+            <!-- Campo CPF -->
+            <div>
+                <label for="tax_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">CPF</label>
+                <input type="text" name="tax_id" id="tax_id" required placeholder="000.000.000-00" value="{{ current_user.tax_id or '' }}"
+                       class="mt-1 block w-full px-4 py-3 glass-effect rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
+            </div>
+
+            <!-- Campo Telefone -->
+            <div>
+                <label for="cellphone" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Telefone com DDD</label>
+                <input type="tel" name="cellphone" id="cellphone" required placeholder="(99) 99999-9999" value="{{ current_user.cellphone or '' }}"
+                       class="mt-1 block w-full px-4 py-3 glass-effect rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
+            </div>
+
+            <div class="pt-4">
+                <button type="submit"
+                        class="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-lg font-bold text-white bg-gradient-to-r from-primary to-secondary hover:shadow-lg transition-all duration-200 hover-scale">
+                    Salvar e Continuar para Pagamento
+                </button>
+            </div>
+             <p class="text-center text-sm">
+                <a href="{{ url_for('dashboard') }}" class="text-gray-500 hover:text-primary">Voltar</a>
+            </p>
+        </form>
+    </div>
+</div>
+{% endblock %}
