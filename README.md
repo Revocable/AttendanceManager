@@ -1,128 +1,97 @@
 # Attendance Manager - Gerenciador de Convidados para Festas e Eventos
 
-O Attendance Manager é um sistema web simples para gerenciar a lista de convidados de uma festa ou evento, gerar QR codes únicos para check-in, e acompanhar o comparecimento em tempo real.
+O Attendance Manager é um sistema web robusto para gerenciar listas de convidados de festas e eventos, com funcionalidades avançadas como geração de QR codes, check-in em tempo real e estatísticas detalhadas.
 
 ## Funcionalidades Principais
 
 *   **Gerenciamento de Convidados:**
-    *   Adicionar novos convidados à lista.
-    *   Visualizar a lista completa de convidados.
-    *   Remover convidados da lista.
-*   **Geração de QR Code Único:**
-    *   Para cada convidado adicionado, um QR code único é gerado (baseado em um hash do nome).
-    *   O nome do convidado é embutido visualmente abaixo do QR code na imagem gerada.
-    *   Os QR codes são armazenados como imagens `.png` no servidor.
-    *   Possibilidade de baixar a imagem do QR code gerado.
+    *   Adicionar, visualizar e remover convidados.
+    *   Controle manual do status de entrada (marcar como entrou/não entrou).
+*   **Geração de QR Code Personalizado:**
+    *   QR codes únicos gerados para cada convidado, com o nome embutido visualmente.
+    *   Imagens de QR code armazenadas no servidor e disponíveis para download.
 *   **Check-in por QR Code:**
-    *   Uma página dedicada (`/scanner`) permite o check-in rápido de convidados usando a câmera do dispositivo para escanear os QR codes.
-    *   Feedback visual (✓ para sucesso, ✗ para erro, ⓘ para "já entrou") e sonoro (beep) durante o check-in.
-    *   Cooldown lógico para evitar processamento repetido do mesmo QR code em rápida sucessão.
-    *   A página principal (`/`) também possui uma funcionalidade de scanner rápido para testes.
-*   **Controle de Entrada Manual:**
-    *   Possibilidade de alterar manualmente o status de entrada de um convidado (marcar como entrou/não entrou) diretamente na lista de convidados.
+    *   Página dedicada (`/scanner`) para check-in rápido via câmera do dispositivo.
+    *   Feedback visual e sonoro durante o check-in.
+    *   Lógica de cooldown para evitar processamento repetido de QR codes.
 *   **Estatísticas do Evento:**
-    *   Visualização na página principal do número total de convidados.
-    *   Contagem de quantos convidados já entraram.
-    *   Contagem de quantos ainda não entraram.
+    *   Número total de convidados, contagem de entradas e não-entradas.
     *   Porcentagem de comparecimento.
-    *   Gráfico de pizza representando a distribuição de comparecimento (Entraram vs. Não Entraram).
+    *   Gráficos de pizza para visualização de dados.
+*   **Exportação de Dados:**
+    *   Exportação da lista de convidados em formato CSV e PDF.
+    *   PDFs incluem estatísticas e gráficos detalhados.
+*   **Colaboração em Eventos:**
+    *   Compartilhamento de eventos com outros usuários para gerenciamento colaborativo.
 *   **Interface Responsiva:**
-    *   Layout adaptado para funcionar em desktops e dispositivos móveis.
+    *   Design adaptado para desktops e dispositivos móveis.
 
 ## Tecnologias Utilizadas
 
 *   **Backend:**
     *   Python 3
-    *   Flask (para o servidor web e API)
-    *   Flask-SQLAlchemy (para interação com o banco de dados)
-    *   qrcode (para gerar a matriz do QR code)
-    *   Pillow (para manipular imagens e adicionar texto aos QR codes)
+    *   Flask (servidor web e API)
+    *   Flask-SQLAlchemy (banco de dados relacional)
+    *   Flask-Login (autenticação de usuários)
+    *   qrcode (geração de QR codes)
+    *   Pillow (manipulação de imagens)
 *   **Frontend:**
-    *   HTML5
-    *   CSS3 (com design responsivo)
-    *   JavaScript (Vanilla JS para interações e lógica do cliente)
-    *   html5-qrcode (biblioteca JS para leitura de QR code via câmera)
-    *   Chart.js (biblioteca JS para o gráfico de pizza de estatísticas)
+    *   HTML5, CSS3 e JavaScript (Vanilla JS)
+    *   html5-qrcode (leitura de QR codes via câmera)
+    *   Chart.js (gráficos interativos)
 *   **Banco de Dados:**
-    *   SQLite (para simplicidade e portabilidade)
- 
+    *   SQLite (armazenamento local)
+
 ## Setup e Execução do Projeto Localmente
 
 ### Pré-requisitos
 
-*   Python 3.7 ou superior instalado.
-*   `pip` (gerenciador de pacotes Python) instalado.
-*   Um arquivo de fonte TrueType (TTF), por exemplo, `Montserrat-Regular.ttf` ou `arial.ttf`. Coloque este arquivo na raiz do projeto (mesmo nível que `app.py`). O código em `app.py` tentará carregar "Montserrat-Regular.ttf" por padrão; ajuste o nome do arquivo em `app.py` se usar outra fonte.
+*   Python 3.7 ou superior.
+*   `pip` (gerenciador de pacotes Python).
+*   Um arquivo de fonte TrueType (TTF), como `Montserrat-Regular.ttf`.
 
 ### Passos para Configuração
 
-1.  **Clone o Repositório (ou crie a estrutura de pastas e copie os arquivos):**
+1.  **Clone o Repositório:**
     ```bash
-    # Se estiver usando git
-    # git clone <url_do_repositorio>
-    # cd attendance_manager
+    git clone <url_do_repositorio>
+    cd attendance_manager
     ```
 
-2.  **Crie e Ative um Ambiente Virtual (Recomendado):**
+2.  **Crie e Ative um Ambiente Virtual:**
     ```bash
     python -m venv venv
-    # No Windows:
-    # venv\Scripts\activate
-    # No macOS/Linux:
-    # source venv/bin/activate
+    source venv/bin/activate  # macOS/Linux
+    venv\Scripts\activate   # Windows
     ```
 
-3.  **Instale as Dependências Python:**
-    Certifique-se de que o arquivo `requirements.txt` está atualizado com:
-    ```
-    Flask
-    Flask-SQLAlchemy
-    qrcode
-    Pillow
-    # Adicione outras dependências se tiver usado, como Flask-Login, etc.
-    ```
-    Então, execute:
+3.  **Instale as Dependências:**
     ```bash
     pip install -r requirements.txt
     ```
 
-4.  **Verifique o Arquivo de Fonte:**
-    *   Confirme que o arquivo de fonte TTF (ex: `Montserrat-Regular.ttf`) está na raiz do projeto.
-    *   Verifique em `app.py`, na função `add_guest`, a linha:
-        ```python
-        font_file_name = "Montserrat-Regular.ttf" 
-        # ...
-        font = ImageFont.truetype(font_file_name, font_size)
+4.  **Configure o Ambiente:**
+    *   Crie um arquivo `.env` na raiz do projeto com as seguintes variáveis:
+        ```env
+        SECRET_KEY=uma_chave_secreta
+        ABACATE_API_KEY=sua_chave_api
         ```
-        Ajuste `font_file_name` se necessário.
+    *   Certifique-se de que o arquivo de fonte TTF está na raiz do projeto.
 
-5.  **Execute a Aplicação Flask:**
+5.  **Execute a Aplicação:**
     ```bash
     python app.py
     ```
-    O servidor Flask iniciará, geralmente em `http://127.0.0.1:5000/` ou `http://localhost:5000/`. Se você configurou `host='0.0.0.0'`, ele também estará acessível pelo IP da sua máquina na rede local.
+    Acesse `http://localhost:5000/` no navegador.
 
-6.  **Acesse no Navegador:**
-    *   Abra seu navegador e vá para `http://localhost:5000/` para acessar a página de gerenciamento.
-    *   Acesse `http://localhost:5000/scanner` para a página dedicada ao scanner.
-
-### Testando o Scanner em Dispositivos Móveis (Requer HTTPS)
-
-Para que a funcionalidade de scanner da câmera funcione em dispositivos móveis (como iPhone ou Android), a página precisa ser acessada via HTTPS.
-
-1.  **Use `ngrok` (Recomendado para desenvolvimento local):**
-    *   Baixe o ngrok: [ngrok.com/download](https://ngrok.com/download)
-    *   Com seu servidor Flask rodando (ex: na porta 5000), abra outro terminal e execute:
+6.  **Teste o Scanner em Dispositivos Móveis:**
+    *   Use `ngrok` para expor o servidor local via HTTPS:
         ```bash
         ./ngrok http 5000
         ```
-    *   O ngrok fornecerá uma URL pública `https://xxxxxxx.ngrok.io`.
-    *   Acesse esta URL `https://` no navegador do seu dispositivo móvel. A câmera deverá funcionar após conceder as permissões.
+    *   Acesse a URL gerada no navegador do dispositivo móvel.
 
-## Possíveis Melhorias Futuras
+## Melhorias Futuras
 
-*   Autenticação de administrador para a página de gerenciamento.
-*   Exportar/Importar lista de convidados.
-*   Suporte a múltiplos eventos.
-*   Envio de convites com QR code por email.
-*   Estatísticas mais detalhadas e gráficos.
+*   Envio de convites por email com QR codes.
+*   Estatísticas mais detalhadas e personalizáveis.
