@@ -118,27 +118,108 @@ with app.app_context():
 def load_user(user_id):
     return db.session.get(User, int(user_id))
 
-def generate_qr_code_image(qr_data, guest_name, filename_base):
-    qr_fn = f"{filename_base}.png"; qr_fp = os.path.join(QR_CODE_SAVE_PATH, qr_fn)
+# <<< FUNÇÃO TOTALMENTE REESCRITA >>>
+def generate_qr_code_image(qr_data, guest_name, filename_base, party):
+    qr_filename = f"{filename_base}.png"
+    qr_filepath = os.path.join(QR_CODE_SAVE_PATH, qr_filename)
+
     try:
-        qr_instance = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
-        qr_instance.add_data(qr_data); qr_instance.make(fit=True)
+        # --- 1. Configurações do Convite ---
+        canvas_width = 500
+        background_color = (255, 255, 255)
+        text_color = (0, 0, 0)
+        footer_color = (180, 180, 180)
+        
+        # Carregar fontes com tamanhos diferentes
+        try:
+            font_party_name = PILImageFont.truetype(FONT_PATH, 36)
+            font_guest_name = PILImageFont.truetype(FONT_PATH, 28)
+            font_footer = PILImageFont.truetype(FONT_PATH, 12)
+        except IOError:
+            app.logger.warning("Fonte Montserrat não encontrada, usando fontes padrão.")
+            font_party_name = PILImageFont.load_default(size=36)
+            font_guest_name = PILImageFont.load_default(size=28)
+            font_footer = PILImageFont.load_default(size=12)
+
+        # --- 2. Gerar o QR Code base ---
+        qr_instance = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_H, # Alta correção para o logo
+            box_size=10,
+            border=4,
+        )
+        qr_instance.add_data(qr_data)
+        qr_instance.make(fit=True)
         img_qr = qr_instance.make_image(fill_color="black", back_color="white").convert('RGB')
-        padding_bottom_for_text = 60; text_color = (0, 0, 0); background_color_canvas = (255, 255, 255); font_size_pil = 30
-        pil_font = PILImageFont.load_default()
-        if os.path.exists(FONT_PATH):
-            try: pil_font = PILImageFont.truetype(FONT_PATH, font_size_pil)
-            except IOError: app.logger.warning("Fonte não pôde ser carregada, usando padrão.")
-        new_width = img_qr.width; new_height = img_qr.height + padding_bottom_for_text
-        img_canvas = Image.new('RGB', (new_width, new_height), background_color_canvas)
-        img_canvas.paste(img_qr, (0, 0)); draw = ImageDraw.Draw(img_canvas)
-        try: text_bbox = draw.textbbox((0, 0), guest_name, font=pil_font); text_width = text_bbox[2] - text_bbox[0]
-        except AttributeError: text_width, _ = draw.textsize(guest_name, font=pil_font)
-        text_x = (new_width - text_width) / 2; text_y = img_qr.height + (padding_bottom_for_text - font_size_pil) / 2 - 5
-        draw.text((text_x, text_y), guest_name, font=pil_font, fill=text_color)
-        img_canvas.save(qr_fp)
-        return qr_fn
-    except Exception as e: app.logger.error(f"Erro ao gerar QR: {e}"); return None
+        qr_code_size = img_qr.size[0]
+
+        # --- 3. Processar o logo da festa (se existir) ---
+        if party.logo_filename:
+            logo_path = os.path.join(PARTY_LOGOS_SAVE_PATH, party.logo_filename)
+            if os.path.exists(logo_path):
+                logo_display_size = int(qr_code_size * 0.25) # Logo terá 25% do tamanho do QR
+                
+                logo_img = Image.open(logo_path).convert("RGBA")
+                logo_img.thumbnail((logo_display_size, logo_display_size))
+
+                # Posição do logo no centro do QR Code
+                pos = ((qr_code_size - logo_img.size[0]) // 2, (qr_code_size - logo_img.size[1]) // 2)
+                
+                # Criar um fundo branco sólido para o logo
+                logo_bg_size = (logo_img.size[0] + 8, logo_img.size[1] + 8)
+                logo_bg = Image.new('RGB', logo_bg_size, (255, 255, 255))
+                bg_pos = ((qr_code_size - logo_bg_size[0]) // 2, (qr_code_size - logo_bg_size[1]) // 2)
+                
+                # Colar o fundo e depois o logo no QR Code
+                img_qr.paste(logo_bg, bg_pos)
+                img_qr.paste(logo_img, pos, logo_img)
+
+
+        # --- 4. Calcular o layout e criar o canvas final ---
+        padding = 30
+        spacing = 15
+        
+        party_name_bbox = font_party_name.getbbox(party.name)
+        guest_name_bbox = font_guest_name.getbbox(guest_name)
+        footer_bbox = font_footer.getbbox("Feito com QRPass")
+
+        canvas_height = (padding + (party_name_bbox[3] - party_name_bbox[1]) + spacing +
+                         qr_code_size + spacing +
+                         (guest_name_bbox[3] - guest_name_bbox[1]) + spacing * 2 +
+                         (footer_bbox[3] - footer_bbox[1]) + padding)
+
+        img_canvas = Image.new('RGB', (canvas_width, canvas_height), background_color)
+        draw = ImageDraw.Draw(img_canvas)
+
+        # --- 5. Desenhar os elementos no canvas ---
+        current_y = padding
+
+        # Desenhar nome da festa
+        text_x = (canvas_width - (party_name_bbox[2] - party_name_bbox[0])) / 2
+        draw.text((text_x, current_y), party.name, font=font_party_name, fill=text_color)
+        current_y += (party_name_bbox[3] - party_name_bbox[1]) + spacing
+
+        # Colar o QR Code
+        qr_x = (canvas_width - qr_code_size) / 2
+        img_canvas.paste(img_qr, (int(qr_x), current_y))
+        current_y += qr_code_size + spacing
+
+        # Desenhar nome do convidado
+        text_x = (canvas_width - (guest_name_bbox[2] - guest_name_bbox[0])) / 2
+        draw.text((text_x, current_y), guest_name, font=font_guest_name, fill=text_color)
+        current_y += (guest_name_bbox[3] - guest_name_bbox[1]) + spacing * 2
+
+        # Desenhar rodapé
+        text_x = (canvas_width - (footer_bbox[2] - footer_bbox[0])) / 2
+        draw.text((text_x, current_y), "Feito com QRPass", font=font_footer, fill=footer_color)
+
+        # --- 6. Salvar a imagem final ---
+        img_canvas.save(qr_filepath)
+        return qr_filename
+
+    except Exception as e:
+        app.logger.error(f"Erro ao gerar imagem do QR Code personalizado: {e}")
+        return None
 
 def check_collaboration_permission(party):
     if party.user_id != current_user.id and current_user not in party.collaborators: abort(403)
@@ -383,7 +464,6 @@ def get_party_stats_data(party_id):
 def get_stats(party_id):
     party = db.session.get(Party, party_id) or abort(404); stats = get_party_stats_data(party_id); return jsonify(stats)
 
-# --- ROTA COMBINADA PARA GET E POST DE CONVIDADOS ---
 @app.route('/api/party/<int:party_id>/guests', methods=['GET', 'POST'])
 @login_required
 def handle_guests(party_id):
@@ -400,7 +480,10 @@ def handle_guests(party_id):
             return jsonify({'error': f'Convidado "{name}" já existe.'}), 409
         
         qr_hash = generate_unique_code(Guest, 'qr_hash', 32, string.ascii_letters + string.digits)
-        qr_image_filename = generate_qr_code_image(qr_hash, name, qr_hash)
+        
+        # <<< ALTERAÇÃO: Passar o objeto 'party' para a função
+        qr_image_filename = generate_qr_code_image(qr_hash, name, qr_hash, party)
+        
         if not qr_image_filename: return jsonify({'error': 'Falha ao gerar QR Code.'}), 500
         
         new_guest = Guest(name=name, qr_hash=qr_hash, qr_image_filename=qr_image_filename, party_id=party_id, added_by_user_id=current_user.id)
@@ -412,13 +495,29 @@ def handle_guests(party_id):
             'added_by': new_guest.adder.username
         }), 201
 
-    # Método GET
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 50, type=int)
     search_term = request.args.get('search', None)
+    sort_by = request.args.get('sort_by', 'name')
+    sort_dir = request.args.get('sort_dir', 'asc')
+
     query = Guest.query.filter_by(party_id=party_id)
+
     if search_term and search_term.strip():
         query = query.filter(Guest.name.ilike(f'%{search_term.strip()}%'))
-    guests_list = query.order_by(Guest.name).all()
-    return jsonify([{'id': g.id, 'name': g.name, 'qr_hash': g.qr_hash, 'entered': g.entered, 'qr_image_url': g.qr_image_url, 'check_in_time': g.get_check_in_time_str(), 'added_by': g.adder.username} for g in guests_list])
+    
+    sort_columns = {'name': Guest.name, 'entered': Guest.entered, 'check_in_time': Guest.check_in_time, 'added_by': User.username }
+    if sort_by == 'added_by': query = query.join(User, Guest.added_by_user_id == User.id)
+    order_column = sort_columns.get(sort_by, Guest.name)
+
+    if sort_dir == 'desc': query = query.order_by(order_column.desc().nullslast())
+    else: query = query.order_by(order_column.asc().nullslast())
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    guests_list = pagination.items
+    return jsonify({
+        'guests': [{'id': g.id, 'name': g.name, 'qr_hash': g.qr_hash, 'entered': g.entered, 'qr_image_url': g.qr_image_url, 'check_in_time': g.get_check_in_time_str(), 'added_by': g.adder.username} for g in guests_list],
+        'pagination': {'page': pagination.page, 'per_page': pagination.per_page, 'total_pages': pagination.pages, 'total_items': pagination.total, 'has_next': pagination.has_next, 'has_prev': pagination.has_prev}
+    })
 
 @app.route('/api/party/<int:party_id>/guests/<qr_hash>/enter', methods=['POST'])
 def mark_entered(party_id, qr_hash):
@@ -440,8 +539,20 @@ def edit_guest_name(party_id, qr_hash):
     data = request.get_json(); new_name = data['name'].strip()
     if Guest.query.filter(Guest.name == new_name, Guest.party_id == party_id, Guest.qr_hash != qr_hash).first():
         return jsonify({'error': f'Já existe um convidado com o nome "{new_name}"'}), 409
-    guest.name = new_name; new_qr_image_filename = generate_qr_code_image(guest.qr_hash, new_name, guest.qr_hash)
-    if new_qr_image_filename: guest.qr_image_filename = new_qr_image_filename
+    
+    # <<< ALTERAÇÃO: Passar o objeto 'party' para a função
+    new_qr_image_filename = generate_qr_code_image(guest.qr_hash, new_name, guest.qr_hash, party)
+    
+    if new_qr_image_filename:
+        # Remover imagem antiga se o nome for diferente
+        if guest.qr_image_filename and guest.qr_image_filename != new_qr_image_filename:
+             try:
+                os.remove(os.path.join(QR_CODE_SAVE_PATH, guest.qr_image_filename))
+             except OSError:
+                pass
+        guest.qr_image_filename = new_qr_image_filename
+    
+    guest.name = new_name
     db.session.commit()
     return jsonify({'id': guest.id, 'name': guest.name, 'qr_hash': guest.qr_hash, 'entered': guest.entered, 'qr_image_url': guest.qr_image_url, 'check_in_time': guest.get_check_in_time_str(), 'message': f'Nome atualizado para "{new_name}".'}), 200
 
@@ -468,7 +579,10 @@ def delete_guest(party_id, qr_hash):
     db.session.delete(guest); db.session.commit()
     return jsonify({'message': f'Convidado {guest.name} removido.'}), 200
 
-# (Classe PDF e rotas de exportação não mudam)
+# O resto do arquivo (exportação, PDF, etc.) continua o mesmo
+def get_all_guests_for_export(party_id):
+    return Guest.query.filter_by(party_id=party_id).order_by(Guest.name).all()
+
 class PDF(FPDF):
     def __init__(self, orientation='P', unit='mm', format='A4', party_name=''):
         super().__init__(orientation, unit, format); self.montserrat_font_path = FONT_PATH; self.font_name = 'Montserrat'; self.default_font = 'Helvetica'; self.current_font_family = self.default_font; self.party_name = party_name

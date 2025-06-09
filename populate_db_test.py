@@ -5,7 +5,7 @@ from app import app, db, Guest, generate_qr_code_image
 from faker import Faker
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-NUM_GUESTS_TO_ADD = 350
+NUM_GUESTS_TO_ADD = 1000
 MAX_THREADS = 17
 
 fake = Faker('pt_BR')
