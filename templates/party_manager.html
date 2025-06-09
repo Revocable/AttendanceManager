@@ -20,7 +20,6 @@
     .modal-content, .toast { transition: transform 0.3s ease-in-out; }
     .modal.show .modal-content, .toast.show { transform: scale(1); }
     .modal .modal-content, .toast { transform: scale(0.95); }
-
     .sortable-header { cursor: pointer; transition: background-color 0.2s; position: relative; }
     .sortable-header:hover { background-color: rgba(0,0,0,0.05); }
     .dark .sortable-header:hover { background-color: rgba(255,255,255,0.08); }
@@ -30,14 +29,8 @@
     .sortable-header.sorted-asc .sort-icon::after { content: "\f0de"; }
     .sortable-header.sorted-desc .sort-icon { color: #3b82f6; }
     .sortable-header.sorted-desc .sort-icon::after { content: "\f0dd"; }
-    
-    .pagination-btn {
-        transition: all 0.2s;
-    }
-    .pagination-btn:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
+    .pagination-btn { transition: all 0.2s; }
+    .pagination-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>
 
 <body data-party-id="{{ party.id }}">
@@ -58,27 +51,13 @@
                 {% if can_add_guest %}
                     <form id="addGuestForm" class="space-y-4">
                         <div class="flex flex-col sm:flex-row gap-4">
-                            <div class="flex-1">
-                                <input type="text" id="guestName" placeholder="Nome do Convidado" required class="w-full px-4 py-3 glass-effect rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
-                            </div>
-                            <button type="submit" class="bg-gradient-to-r from-success to-green-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale flex items-center justify-center space-x-2">
-                                <i class="fas fa-plus"></i><span>Adicionar</span>
-                            </button>
+                            <div class="flex-1"><input type="text" id="guestName" placeholder="Nome do Convidado" required class="w-full px-4 py-3 glass-effect rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"></div>
+                            <button type="submit" class="bg-gradient-to-r from-success to-green-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale flex items-center justify-center space-x-2"><i class="fas fa-plus"></i><span>Adicionar</span></button>
                         </div>
                     </form>
-                    <!-- <<< DIV PARA O QR CODE GERADO >>> -->
-                    <div id="newQrCodeArea" class="mt-6 p-4 glass-effect rounded-xl text-center" style="display:none;">
-                        <p id="guestAddedInfo" class="font-semibold mb-4"></p>
-                        <img id="newGuestQrImage" src="" alt="QR Code" class="mx-auto mb-4 rounded-lg shadow-md" style="display:none; max-width: 150px;">
-                        <a id="downloadQrLink" href="#" download class="inline-flex items-center space-x-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-secondary transition-colors" style="display:none;">
-                            <i class="fas fa-download"></i><span>Baixar QR Code</span>
-                        </a>
-                    </div>
+                    <div id="newQrCodeArea" class="mt-6 p-4 glass-effect rounded-xl text-center" style="display:none;"><p id="guestAddedInfo" class="font-semibold mb-4"></p><img id="newGuestQrImage" src="" alt="QR Code" class="mx-auto mb-4 rounded-lg shadow-md" style="display:none; max-width: 150px;"><a id="downloadQrLink" href="#" download class="inline-flex items-center space-x-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-secondary transition-colors" style="display:none;"><i class="fas fa-download"></i><span>Baixar QR Code</span></a></div>
                 {% else %}
-                    <div class="bg-yellow-100 dark:bg-yellow-900/50 border-l-4 border-yellow-500 text-yellow-700 dark:text-yellow-300 p-4 rounded-r-lg" role="alert">
-                        <p class="font-bold">Limite de 50 Convidados Atingido</p>
-                        <p>Para adicionar mais convidados, <a href="{{ url_for('upgrade') }}" class="font-bold underline hover:text-yellow-500">faça o upgrade para VIP</a>.</p>
-                    </div>
+                    <div class="bg-yellow-100 dark:bg-yellow-900/50 border-l-4 border-yellow-500 text-yellow-700 dark:text-yellow-300 p-4 rounded-r-lg" role="alert"><p class="font-bold">Limite de 50 Convidados Atingido</p><p>Para adicionar mais convidados, <a href="{{ url_for('upgrade') }}" class="font-bold underline hover:text-yellow-500">faça o upgrade para VIP</a>.</p></div>
                 {% endif %}
             </div>
 
@@ -86,18 +65,9 @@
             <div class="glass-card rounded-2xl shadow-2xl p-6 hover-scale fade-in">
                 <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6">
                     <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center mb-4 lg:mb-0"><i class="fas fa-users text-primary mr-3"></i>Lista de Convidados<span id="guestCount" class="ml-2 text-sm bg-primary text-white px-2 py-1 rounded-full">0</span></h2>
-                    <div class="flex flex-col sm:flex-row gap-3">
-                        <button onclick="exportGuests('csv')" class="bg-success text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center space-x-2"><i class="fas fa-file-csv"></i><span>CSV</span></button>
-                        <button onclick="exportGuests('pdf')" class="bg-danger text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center space-x-2"><i class="fas fa-file-pdf"></i><span>PDF</span></button>
-                    </div>
+                    <div class="flex flex-col sm:flex-row gap-3"><button onclick="exportGuests('csv')" class="bg-success text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center space-x-2"><i class="fas fa-file-csv"></i><span>CSV</span></button><button onclick="exportGuests('pdf')" class="bg-danger text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center space-x-2"><i class="fas fa-file-pdf"></i><span>PDF</span></button></div>
                 </div>
-
-                <div class="flex flex-col sm:flex-row gap-4 mb-6">
-                    <div class="flex-1 relative">
-                        <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                        <input type="text" id="searchInput" placeholder="Buscar por nome..." class="w-full pl-10 pr-4 py-3 glass-effect rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
-                    </div>
-                </div>
+                <div class="flex flex-col sm:flex-row gap-4 mb-6"><div class="flex-1 relative"><i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i><input type="text" id="searchInput" placeholder="Buscar por nome..." class="w-full pl-10 pr-4 py-3 glass-effect rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"></div></div>
 
                 <!-- Tabela para telas grandes (Desktop) -->
                 <div class="hidden lg:block glass-effect rounded-xl overflow-hidden">
@@ -105,10 +75,9 @@
                         <table class="w-full table-fixed min-w-[800px]">
                             <thead class="bg-gray-50 dark:bg-gray-800/50 sticky top-0 z-10">
                                 <tr>
-                                    <th class="sortable-header px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 25%" data-sort-by="name" onclick="setSort('name')">Nome<span class="sort-icon"></span></th>
-                                    <th class="px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 10%">QR Code</th>
+                                    <th class="sortable-header px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 30%" data-sort-by="name" onclick="setSort('name')">Nome<span class="sort-icon"></span></th>
                                     <th class="sortable-header px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 15%" data-sort-by="entered" onclick="setSort('entered')">Status<span class="sort-icon"></span></th>
-                                    <th class="sortable-header px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 15%" data-sort-by="check_in_time" onclick="setSort('check_in_time')">Check-in<span class="sort-icon"></span></th>
+                                    <th class="sortable-header px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 20%" data-sort-by="check_in_time" onclick="setSort('check_in_time')">Check-in<span class="sort-icon"></span></th>
                                     <th class="sortable-header px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 15%" data-sort-by="added_by" onclick="setSort('added_by')">Adicionado Por<span class="sort-icon"></span></th>
                                     <th class="px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 20%">Ações</th>
                                 </tr>
@@ -120,22 +89,13 @@
 
                 <!-- Cards para telas pequenas (Mobile) -->
                 <div class="lg:hidden max-h-[450px] overflow-y-auto space-y-4" id="guestCardsList"></div>
-
-                <!-- Controles de Paginação -->
                 <nav id="paginationControls" class="flex items-center justify-between mt-6 px-4 py-3" aria-label="Pagination"></nav>
             </div>
-
-            <!-- Bloco de Opções da Festa -->
+            <!-- Outros blocos (Opções, etc.) permanecem iguais -->
             <div class="glass-card rounded-2xl shadow-2xl p-6 hover-scale fade-in">
                  <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center"><i class="fas fa-share-alt text-purple-500 mr-3"></i>Opções da Festa</h2>
                 {% if party.owner == current_user %}
-                <div class="space-y-2 mb-4">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Código para Colaboradores:</label>
-                    <div class="relative">
-                        <input type="text" id="shareCode" value="{{ party.share_code }}" readonly class="w-full text-lg font-mono tracking-widest px-2 py-2 bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 break-all">
-                        <button onclick="copyToClipboard('#shareCode', '#copyShareBtnIcon')" class="absolute right-1 top-1/2 -translate-y-1/2 bg-purple-500 text-white p-2 rounded-md hover:bg-purple-600 transition-colors text-xs"><i id="copyShareBtnIcon" class="fas fa-copy"></i></button>
-                    </div>
-                </div>
+                <div class="space-y-2 mb-4"><label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Código para Colaboradores:</label><div class="relative"><input type="text" id="shareCode" value="{{ party.share_code }}" readonly class="w-full text-lg font-mono tracking-widest px-2 py-2 bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 break-all"><button onclick="copyToClipboard('#shareCode', '#copyShareBtnIcon')" class="absolute right-1 top-1/2 -translate-y-1/2 bg-purple-500 text-white p-2 rounded-md hover:bg-purple-600 transition-colors text-xs"><i id="copyShareBtnIcon" class="fas fa-copy"></i></button></div></div>
                 {% endif %}
                 <div class="space-y-2"><label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Link da Página Pública:</label><div class="relative"><input type="text" id="shareableLink" value="{{ url_for('public_party_page', shareable_link_id=party.shareable_link_id, _external=True) }}" readonly class="w-full text-xs px-2 py-2 bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 break-all"><button onclick="copyToClipboard('#shareableLink', '#copyBtnIcon')" class="absolute right-1 top-1/2 -translate-y-1/2 bg-primary text-white p-2 rounded-md hover:bg-secondary transition-colors text-xs"><i id="copyBtnIcon" class="fas fa-copy"></i></button></div><a href="{{ url_for('public_party_page', shareable_link_id=party.shareable_link_id) }}" target="_blank" class="text-xs text-primary hover:underline">Abrir link em nova aba</a></div>
                 <form action="{{ url_for('upload_logo', party_id=party.id) }}" method="POST" enctype="multipart/form-data" class="mt-4 border-t pt-4"><label for="party_logo" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Logo da Festa:</label>{% if party.logo_filename %}<img src="{{ url_for('static', filename='party_logos/' + party.logo_filename) }}?v={{ range(1, 1000) | random }}" alt="Logo atual" class="w-20 h-20 rounded-full object-cover my-2 border">{% endif %}<input type="file" name="party_logo" id="party_logo" class="text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-primary hover:file:bg-blue-100"><button type="submit" class="mt-2 w-full text-xs bg-primary text-white py-1 px-3 rounded-lg hover:bg-secondary">Enviar Logo</button></form>
@@ -146,10 +106,23 @@
     </div>
 
     <!-- Modais -->
+    <!-- Modal de Confirmação e Edição permanecem os mesmos -->
     <div id="confirmationModal" class="modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 hidden opacity-0 visibility-hidden"><div class="modal-content glass-card rounded-2xl shadow-2xl p-6 w-full max-w-md text-center"><h3 id="modalTitle" class="text-xl font-bold text-gray-900 dark:text-white mb-4"></h3><p id="modalMessage" class="text-gray-600 dark:text-gray-400 mb-6"></p><div class="flex justify-center gap-4"><button id="modalCancelBtn" class="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 px-6 py-2 rounded-lg font-semibold hover:opacity-80 transition-opacity">Cancelar</button><button id="modalConfirmBtn" class="bg-danger text-white px-6 py-2 rounded-lg font-bold hover:opacity-80 transition-opacity">Confirmar</button></div></div></div>
     <div id="editModal" class="modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 hidden opacity-0 visibility-hidden"><div class="modal-content glass-card rounded-2xl shadow-2xl p-6 w-full max-w-md"><h3 id="editModalTitle" class="text-xl font-bold text-gray-900 dark:text-white mb-4">Editar Nome do Convidado</h3><div><label for="editModalInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Novo nome:</label><input type="text" id="editModalInput" class="mt-1 w-full px-4 py-3 glass-effect rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent"></div><div class="flex justify-end gap-4 mt-6"><button id="editModalCancelBtn" class="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 px-6 py-2 rounded-lg font-semibold hover:opacity-80 transition-opacity">Cancelar</button><button id="editModalConfirmBtn" class="bg-primary text-white px-6 py-2 rounded-lg font-bold hover:opacity-80 transition-opacity">Salvar</button></div></div></div>
-    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-3 w-full max-w-xs"></div>
     
+    <!-- NOVO MODAL PARA O QR CODE -->
+    <div id="qrCodeModal" class="modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 hidden opacity-0 visibility-hidden">
+        <div class="modal-content glass-card rounded-2xl shadow-2xl p-6 w-full max-w-xs text-center">
+            <h3 id="qrModalTitle" class="text-lg font-bold text-gray-900 dark:text-white mb-4"></h3>
+            <img id="qrModalImage" src="" alt="QR Code" class="mx-auto mb-4 rounded-lg shadow-md w-full max-w-[250px]">
+            <a id="qrModalDownload" href="#" download class="inline-flex items-center space-x-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-secondary transition-colors">
+                <i class="fas fa-download"></i><span>Baixar</span>
+            </a>
+            <button id="qrModalCloseBtn" class="mt-4 text-sm text-gray-500 dark:text-gray-400 hover:underline">Fechar</button>
+        </div>
+    </div>
+    
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-3 w-full max-w-xs"></div>
 </body>
 {% endblock %}
 
@@ -165,13 +138,7 @@
     const GUESTS_PER_PAGE = 50;
     const canAddGuest = "{{ can_add_guest | tojson | safe }}";
 
-    let appState = {
-        currentPage: 1,
-        totalPages: 1,
-        sortBy: 'name',
-        sortDir: 'asc',
-        searchTerm: ''
-    };
+    let appState = { currentPage: 1, totalPages: 1, sortBy: 'name', sortDir: 'asc', searchTerm: '' };
 
     function debounce(func, delay) { let timeout; return function(...args) { clearTimeout(timeout); timeout = setTimeout(() => func.apply(this, args), delay); }; }
     
@@ -181,42 +148,54 @@
         if (addGuestForm) { addGuestForm.addEventListener('submit', (e) => { e.preventDefault(); addGuest(); }); }
         document.getElementById('searchInput').addEventListener('input', debounce(handleSearch, SEARCH_DEBOUNCE_MS));
     });
-    
-    // As funções showToast, showConfirmationModal, showEditModal não mudam.
+
+    // --- FUNÇÕES DE MODAL E TOAST ---
     function showToast(message, type = 'info') { const container = document.getElementById('toastContainer'); const toast = document.createElement('div'); const colors = { success: 'bg-green-500', error: 'bg-red-500', info: 'bg-blue-500' }; toast.className = `toast ${colors[type]} text-white font-semibold py-3 px-4 rounded-lg shadow-lg transform transition-all duration-300 opacity-0 -translate-y-2`; toast.textContent = message; container.appendChild(toast); requestAnimationFrame(() => { toast.classList.remove('opacity-0', '-translate-y-2'); }); setTimeout(() => { toast.classList.add('opacity-0', 'translate-y-2'); toast.addEventListener('transitionend', () => toast.remove()); }, 3000); }
     function showConfirmationModal({ title, message, confirmText, onConfirm }) { const modal = document.getElementById('confirmationModal'); modal.querySelector('#modalTitle').textContent = title; modal.querySelector('#modalMessage').textContent = message; const confirmBtn = modal.querySelector('#modalConfirmBtn'); confirmBtn.textContent = confirmText; const show = () => { modal.classList.remove('hidden'); requestAnimationFrame(() => modal.classList.remove('opacity-0', 'visibility-hidden')); }; const hide = () => { modal.classList.add('opacity-0', 'visibility-hidden'); setTimeout(() => modal.classList.add('hidden'), 300); }; const confirmHandler = () => { onConfirm(); hide(); }; const cancelHandler = () => hide(); confirmBtn.onclick = confirmHandler; modal.querySelector('#modalCancelBtn').onclick = cancelHandler; modal.onclick = (e) => { if (e.target === modal) cancelHandler(); }; show(); }
     function showEditModal({ currentName, onConfirm }) { const modal = document.getElementById('editModal'); const input = modal.querySelector('#editModalInput'); input.value = currentName; const show = () => { modal.classList.remove('hidden'); requestAnimationFrame(() => modal.classList.remove('opacity-0', 'visibility-hidden')); }; const hide = () => { modal.classList.add('opacity-0', 'visibility-hidden'); setTimeout(() => modal.classList.add('hidden'), 300); }; const confirmHandler = () => { const newName = input.value.trim(); if (newName && newName !== currentName) { onConfirm(newName); hide(); } else if (!newName) { showToast('O nome não pode ser vazio.', 'error'); } else { hide(); } }; modal.querySelector('#editModalConfirmBtn').onclick = confirmHandler; modal.querySelector('#editModalCancelBtn').onclick = hide; modal.onclick = (e) => { if (e.target === modal) hide(); }; input.onkeydown = (e) => { if (e.key === 'Enter') confirmHandler(); }; show(); input.focus(); }
     
-    async function fetchData() {
-        await fetchGuests();
-        await fetchStats();
+    // --- NOVA FUNÇÃO PARA O MODAL DO QR CODE ---
+    function showQrCodeModal(guestName, qrImageUrl) {
+        const modal = document.getElementById('qrCodeModal');
+        modal.querySelector('#qrModalTitle').textContent = `QR Code de ${guestName}`;
+        modal.querySelector('#qrModalImage').src = qrImageUrl;
+        const downloadLink = modal.querySelector('#qrModalDownload');
+        downloadLink.href = qrImageUrl;
+        downloadLink.download = `QRCode-${guestName.replace(/ /g, '_')}.png`;
+
+        const show = () => { modal.classList.remove('hidden'); requestAnimationFrame(() => modal.classList.remove('opacity-0', 'visibility-hidden')); };
+        const hide = () => { modal.classList.add('opacity-0', 'visibility-hidden'); setTimeout(() => { modal.classList.add('hidden'); modal.querySelector('#qrModalImage').src = ''; }, 300); };
+        
+        modal.querySelector('#qrModalCloseBtn').onclick = hide;
+        modal.onclick = (e) => { if (e.target === modal) hide(); };
+        
+        show();
     }
     
-    // A função fetchGuests e as demais funções de controle (search, sort, page) não mudam.
+    async function fetchData() { await fetchGuests(); await fetchStats(); }
+    
     async function fetchGuests() {
         const { currentPage, sortBy, sortDir, searchTerm } = appState;
         const url = new URL(`${API_URL}/guests`, window.location.origin);
         url.searchParams.append('page', currentPage); url.searchParams.append('per_page', GUESTS_PER_PAGE); url.searchParams.append('sort_by', sortBy); url.searchParams.append('sort_dir', sortDir);
         if (searchTerm) { url.searchParams.append('search', searchTerm); }
-
         try {
-            document.getElementById('guestList').innerHTML = `<tr><td colspan="6" class="text-center p-8"><i class="fas fa-spinner fa-spin text-2xl text-primary"></i></td></tr>`;
+            document.getElementById('guestList').innerHTML = `<tr><td colspan="5" class="text-center p-8"><i class="fas fa-spinner fa-spin text-2xl text-primary"></i></td></tr>`;
             document.getElementById('guestCardsList').innerHTML = `<div class="text-center p-8"><i class="fas fa-spinner fa-spin text-2xl text-primary"></i></div>`;
-            
             const response = await fetch(url);
             if (!response.ok) throw new Error('Falha ao buscar convidados.');
             const data = await response.json();
-            
             renderGuests(data.guests, data.pagination.total_items);
             renderPagination(data.pagination);
             updateSortUI();
         } catch (error) {
             showToast(error.message, 'error');
-            const errorMessage = `<tr><td colspan="6" class="text-center p-4 text-danger">Erro ao carregar lista. Tente novamente.</td></tr>`;
+            const errorMessage = `<tr><td colspan="5" class="text-center p-4 text-danger">Erro ao carregar lista.</td></tr>`;
             document.getElementById('guestList').innerHTML = errorMessage;
             document.getElementById('guestCardsList').innerHTML = `<div class="p-4 text-center text-danger">${errorMessage}</div>`;
         }
     }
+
     function handleSearch() { appState.searchTerm = document.getElementById('searchInput').value.trim(); appState.currentPage = 1; fetchGuests(); }
     function setSort(column) { if (appState.sortBy === column) { appState.sortDir = appState.sortDir === 'asc' ? 'desc' : 'asc'; } else { appState.sortBy = column; appState.sortDir = 'asc'; } appState.currentPage = 1; fetchGuests(); }
     function changePage(newPage) { if (newPage > 0 && newPage <= appState.totalPages) { appState.currentPage = newPage; fetchGuests(); } }
@@ -230,76 +209,53 @@
         const endItem = Math.min(page * per_page, total_items);
         controlsContainer.innerHTML = `<div class="hidden sm:block"><p class="text-sm text-gray-700 dark:text-gray-400">Mostrando de <span class="font-medium">${startItem}</span> a <span class="font-medium">${endItem}</span> de <span class="font-medium">${total_items}</span> resultados</p></div><div class="flex-1 flex justify-between sm:justify-end"><button onclick="changePage(${page - 1})" ${!has_prev ? 'disabled' : ''} class="pagination-btn relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">Anterior</button><button onclick="changePage(${page + 1})" ${!has_next ? 'disabled' : ''} class="pagination-btn ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">Próximo</button></div>`;
     }
+    
     function renderGuests(guests, totalItems) {
         const tableBody = document.getElementById('guestList'); const cardsContainer = document.getElementById('guestCardsList'); tableBody.innerHTML = ''; cardsContainer.innerHTML = '';
         document.getElementById('guestCount').textContent = totalItems;
-        if (guests.length === 0) { const message = `<div class="text-center py-8 text-gray-500">${appState.searchTerm ? 'Nenhum convidado encontrado para "' + appState.searchTerm + '".' : 'Nenhum convidado adicionado.'}</div>`; tableBody.innerHTML = `<tr><td colspan="6">${message}</td></tr>`; cardsContainer.innerHTML = message; return; }
-        guests.forEach(guest => { const statusBadge = guest.entered ? '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"><i class="fas fa-check mr-1"></i>Entrou</span>' : '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200"><i class="fas fa-times mr-1"></i>Não Entrou</span>'; const actionsHtml = `<div class="flex space-x-2"><button onclick="showEditModal({ currentName: '${guest.name.replace(/'/g, "\\'")}', onConfirm: (newName) => editGuest('${guest.qr_hash}', newName) })" class="bg-yellow-500 text-white p-2 rounded-md text-xs hover:bg-yellow-600 transition-colors" title="Editar"><i class="fas fa-edit"></i></button><button onclick="toggleGuestEntry('${guest.qr_hash}')" class="${guest.entered ? 'bg-orange-500 hover:bg-orange-600' : 'bg-green-500 hover:bg-green-600'} text-white p-2 rounded-md text-xs transition-colors" title="${guest.entered ? 'Marcar Saída' : 'Marcar Entrada'}"><i class="fas fa-${guest.entered ? 'user-minus' : 'user-check'}"></i></button><button onclick="confirmDeleteGuest('${guest.qr_hash}', '${guest.name.replace(/'/g, "\\'")}')" class="bg-red-500 text-white p-2 rounded-md text-xs hover:bg-red-600 transition-colors" title="Remover"><i class="fas fa-trash"></i></button></div>`; const row = `<tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"><td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white truncate" title="${guest.name}">${guest.name}</td><td class="px-4 py-3 text-sm text-center">${guest.qr_image_url ? `<img src="${guest.qr_image_url}?t=${new Date().getTime()}" alt="QR" class="w-8 h-8 mx-auto cursor-pointer" onclick="window.open(this.src, '_blank')">` : 'N/A'}</td><td class="px-4 py-3 text-sm">${statusBadge}</td><td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">${guest.check_in_time || 'N/A'}</td><td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">${guest.added_by || 'N/A'}</td><td class="px-4 py-3 text-sm font-medium">${actionsHtml}</td></tr>`; tableBody.innerHTML += row; const card = `<div class="glass-effect rounded-xl p-4"><div class="flex justify-between items-start"><h3 class="font-bold text-lg text-gray-900 dark:text-white">${guest.name}</h3>${statusBadge}</div><p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Check-in: ${guest.check_in_time || 'N/A'}</p><p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Adicionado por: ${guest.added_by || 'N/A'}</p><div class="mt-4 flex justify-between items-center">${guest.qr_image_url ? `<img src="${guest.qr_image_url}?t=${new Date().getTime()}" alt="QR" class="w-12 h-12 cursor-pointer" onclick="window.open(this.src, '_blank')">` : '<div class="w-12 h-12 flex items-center justify-center text-xs bg-gray-200 dark:bg-gray-700 rounded">N/A</div>'}${actionsHtml}</div></div>`; cardsContainer.innerHTML += card; });
+        if (guests.length === 0) { const message = `<div class="text-center py-8 text-gray-500">${appState.searchTerm ? 'Nenhum convidado encontrado para "' + appState.searchTerm + '".' : 'Nenhum convidado adicionado.'}</div>`; tableBody.innerHTML = `<tr><td colspan="5">${message}</td></tr>`; cardsContainer.innerHTML = message; return; }
+        
+        guests.forEach(guest => {
+            const guestNameJs = guest.name.replace(/'/g, "\\'"); // Escapa aspas para uso no JS
+            const statusBadge = guest.entered ? '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"><i class="fas fa-check mr-1"></i>Entrou</span>' : '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200"><i class="fas fa-times mr-1"></i>Não Entrou</span>';
+            
+            // --- LÓGICA DO BOTÃO DE QR CODE ---
+            const qrButtonHtml = guest.qr_image_url 
+                ? `<button onclick="showQrCodeModal('${guestNameJs}', '${guest.qr_image_url}')" class="bg-blue-500 text-white p-2 rounded-md text-xs hover:bg-blue-600 transition-colors" title="Ver QR Code"><i class="fas fa-qrcode"></i></button>`
+                : `<button class="bg-gray-400 text-white p-2 rounded-md text-xs cursor-not-allowed" title="QR Code indisponível" disabled><i class="fas fa-qrcode"></i></button>`;
+
+            const actionsHtml = `<div class="flex space-x-2">${qrButtonHtml}<button onclick="showEditModal({ currentName: '${guestNameJs}', onConfirm: (newName) => editGuest('${guest.qr_hash}', newName) })" class="bg-yellow-500 text-white p-2 rounded-md text-xs hover:bg-yellow-600 transition-colors" title="Editar"><i class="fas fa-edit"></i></button><button onclick="toggleGuestEntry('${guest.qr_hash}')" class="${guest.entered ? 'bg-orange-500 hover:bg-orange-600' : 'bg-green-500 hover:bg-green-600'} text-white p-2 rounded-md text-xs transition-colors" title="${guest.entered ? 'Marcar Saída' : 'Marcar Entrada'}"><i class="fas fa-${guest.entered ? 'user-minus' : 'user-check'}"></i></button><button onclick="confirmDeleteGuest('${guest.qr_hash}', '${guestNameJs}')" class="bg-red-500 text-white p-2 rounded-md text-xs hover:bg-red-600 transition-colors" title="Remover"><i class="fas fa-trash"></i></button></div>`;
+            
+            // Renderiza linha da tabela
+            const row = `<tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white truncate" title="${guest.name}">${guest.name}</td>
+                <td class="px-4 py-3 text-sm">${statusBadge}</td>
+                <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">${guest.check_in_time || 'N/A'}</td>
+                <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">${guest.added_by || 'N/A'}</td>
+                <td class="px-4 py-3 text-sm font-medium">${actionsHtml}</td>
+            </tr>`;
+            tableBody.innerHTML += row;
+            
+            // Renderiza card mobile
+            const card = `<div class="glass-effect rounded-xl p-4">
+                <div class="flex justify-between items-start"><h3 class="font-bold text-lg text-gray-900 dark:text-white">${guest.name}</h3>${statusBadge}</div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Check-in: ${guest.check_in_time || 'N/A'}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Adicionado por: ${guest.added_by || 'N/A'}</p>
+                <div class="mt-4 flex justify-end items-center">${actionsHtml}</div>
+            </div>`;
+            cardsContainer.innerHTML += card;
+        });
     }
+
     function updateSortUI() { document.querySelectorAll('.sortable-header').forEach(header => { header.classList.remove('sorted-asc', 'sorted-desc'); if (header.dataset.sortBy === appState.sortBy) { header.classList.add(appState.sortDir === 'asc' ? 'sorted-asc' : 'sorted-desc'); } }); }
 
-    // <<< ALTERAÇÃO AQUI >>>
-    async function addGuest() {
-        if (!canAddGuest) { showToast('Limite de convidados atingido.', 'error'); return; }
-        const name = document.getElementById('guestName').value.trim();
-        if (!name) { showToast('Nome do convidado é obrigatório.', 'error'); return; }
-
-        const qrCodeArea = document.getElementById('newQrCodeArea');
-        const guestAddedInfo = document.getElementById('guestAddedInfo');
-        const newGuestQrImage = document.getElementById('newGuestQrImage');
-        const downloadQrLink = document.getElementById('downloadQrLink');
-        
-        // Mostra mensagem de carregamento
-        qrCodeArea.style.display = 'block';
-        guestAddedInfo.textContent = 'Adicionando...';
-        guestAddedInfo.className = 'font-semibold mb-4 text-blue-600 dark:text-blue-400';
-        newGuestQrImage.style.display = 'none';
-        downloadQrLink.style.display = 'none';
-
-        try {
-            const response = await fetch(`${API_URL}/guests`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
-            const result = await response.json(); 
-            if (!response.ok) throw new Error(result.error);
-            
-            // Sucesso: Preenche a área com o QR Code
-            guestAddedInfo.textContent = `Convidado "${result.name}" adicionado!`;
-            guestAddedInfo.className = 'font-semibold mb-4 text-green-700 dark:text-green-400';
-
-            newGuestQrImage.src = result.qr_image_url;
-            newGuestQrImage.alt = `QR Code para ${result.name}`;
-            
-            downloadQrLink.href = result.qr_image_url;
-            downloadQrLink.download = `QRCode-${result.name.replace(/ /g, '_')}.png`;
-            
-            newGuestQrImage.style.display = 'block';
-            downloadQrLink.style.display = 'inline-flex';
-
-            // Adiciona o evento para esconder a div ao clicar no download
-            downloadQrLink.onclick = () => {
-                setTimeout(() => {
-                    qrCodeArea.style.display = 'none';
-                }, 500); // Pequeno delay para garantir que o download inicie
-            };
-            
-            document.getElementById('guestName').value = '';
-            fetchData(); // Atualiza a lista principal e estatísticas
-
-        } catch (error) {
-            // Erro: Mostra a mensagem de erro na mesma área
-            guestAddedInfo.textContent = `Erro: ${error.message}`;
-            guestAddedInfo.className = 'font-semibold mb-4 text-red-600 dark:text-red-400';
-            showToast(error.message, 'error');
-        }
-    }
-    
-    // Funções de manipulação (edit, delete, toggle) não mudam.
+    // Funções de Ações (add, edit, delete, toggle) e Estatísticas (fetch, chart) permanecem as mesmas
+    async function addGuest() { if (!canAddGuest) { showToast('Limite de convidados atingido.', 'error'); return; } const name = document.getElementById('guestName').value.trim(); if (!name) { showToast('Nome do convidado é obrigatório.', 'error'); return; } const qrCodeArea = document.getElementById('newQrCodeArea'); const guestAddedInfo = document.getElementById('guestAddedInfo'); const newGuestQrImage = document.getElementById('newGuestQrImage'); const downloadQrLink = document.getElementById('downloadQrLink'); qrCodeArea.style.display = 'block'; guestAddedInfo.textContent = 'Adicionando...'; guestAddedInfo.className = 'font-semibold mb-4 text-blue-600 dark:text-blue-400'; newGuestQrImage.style.display = 'none'; downloadQrLink.style.display = 'none'; try { const response = await fetch(`${API_URL}/guests`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) }); const result = await response.json(); if (!response.ok) throw new Error(result.error); guestAddedInfo.textContent = `Convidado "${result.name}" adicionado!`; guestAddedInfo.className = 'font-semibold mb-4 text-green-700 dark:text-green-400'; newGuestQrImage.src = result.qr_image_url; newGuestQrImage.alt = `QR Code para ${result.name}`; downloadQrLink.href = result.qr_image_url; downloadQrLink.download = `QRCode-${result.name.replace(/ /g, '_')}.png`; newGuestQrImage.style.display = 'block'; downloadQrLink.style.display = 'inline-flex'; downloadQrLink.onclick = () => { setTimeout(() => { qrCodeArea.style.display = 'none'; }, 500); }; document.getElementById('guestName').value = ''; fetchData(); } catch (error) { guestAddedInfo.textContent = `Erro: ${error.message}`; guestAddedInfo.className = 'font-semibold mb-4 text-red-600 dark:text-red-400'; showToast(error.message, 'error'); } }
     async function editGuest(qrHash, newName) { try { const response = await fetch(`${API_URL}/guests/${qrHash}/edit`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName }) }); const result = await response.json(); if (!response.ok) throw new Error(result.error); showToast(result.message, 'success'); fetchGuests(); } catch (error) { showToast(error.message, 'error'); } }
     function confirmDeleteGuest(qrHash, guestName) { showConfirmationModal({ title: 'Confirmar Remoção', message: `Tem certeza que deseja remover "${guestName}"?`, confirmText: 'Deletar', onConfirm: () => { deleteGuest(qrHash); } }); }
     async function deleteGuest(qrHash) { try { const response = await fetch(`${API_URL}/guests/${qrHash}`, { method: 'DELETE' }); const result = await response.json(); if (!response.ok) throw new Error(result.error); showToast(result.message, 'success'); fetchData(); } catch (error) { showToast(error.message, 'error'); } }
     async function toggleGuestEntry(qrHash) { try { await fetch(`${API_URL}/guests/${qrHash}/toggle_entry`, { method: 'PUT' }); fetchGuests(); } catch (error) { showToast('Falha ao atualizar status.', 'error');} }
     function exportGuests(format) { const exportUrl = `${API_URL}/export/${format}`; window.location.href = exportUrl; }
-
-    // Funções de estatísticas e gráfico não mudam.
     async function fetchStats() { try { const response = await fetch(`/api/party/${partyId}/stats`); if (!response.ok) throw new Error('Falha ao buscar estatísticas.'); const stats = await response.json(); document.getElementById('statsTotalInvited').textContent = stats.total_invited; document.getElementById('statsEnteredCount').textContent = stats.entered_count; document.getElementById('statsNotEnteredCount').textContent = stats.not_entered_count; document.getElementById('statsPercentageEntered').textContent = stats.percentage_entered.toFixed(2) + "%"; updateAttendanceChart(stats.entered_count, stats.not_entered_count); } catch (error) { console.error('Erro ao buscar stats:', error); } }
     function updateAttendanceChart(entered, notEntered) { const ctx = document.getElementById('attendanceChart').getContext('2d'); if (!ctx) return; const isDark = document.documentElement.classList.contains('dark'); const data = { labels: ['Entraram', 'Não Entraram'], datasets: [{ data: [entered, notEntered], backgroundColor: ['#10b981', '#ef4444'], borderColor: [isDark ? '#0f172a' : '#fff'], borderWidth: 2, hoverOffset: 4 }] }; const config = { type: 'doughnut', data: data, options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom', labels: { color: isDark ? '#e5e7eb' : '#374151', usePointStyle: true } }, title: { display: false } } } }; if (attendanceChartInstance) { attendanceChartInstance.data.datasets[0].data = [entered, notEntered]; attendanceChartInstance.options.plugins.legend.labels.color = isDark ? '#e5e7eb' : '#374151'; attendanceChartInstance.options.borderColor = isDark ? '#0f172a' : '#fff'; attendanceChartInstance.update(); } else { attendanceChartInstance = new Chart(ctx, config); } }
 </script>
