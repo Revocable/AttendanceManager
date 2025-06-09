@@ -3,18 +3,19 @@
 {% block title %}{{ party.name }} - Gerenciador de Festa{% endblock %}
 
 {% block header_actions %}
-    <a href="{{ url_for('dashboard') }}" class="glass-effect text-primary dark:text-white px-4 py-2 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale flex items-center space-x-2">
-        <i class="fas fa-arrow-left"></i>
-        <span>Dashboard</span>
-    </a>
-    <a href="{{ url_for('public_scanner') }}" class="bg-gradient-to-r from-primary to-secondary text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale flex items-center space-x-2">
-        <i class="fas fa-qrcode"></i>
-        <span class="hidden sm:inline">Abrir Scanner</span>
-        <span class="sm:hidden">Scanner</span>
-    </a>
+<a href="{{ url_for('dashboard') }}" class="glass-effect text-primary dark:text-white px-4 py-2 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale flex items-center space-x-2">
+<i class="fas fa-arrow-left"></i>
+<span>Dashboard</span>
+</a>
+<a href="{{ url_for('public_scanner') }}" class="bg-gradient-to-r from-primary to-secondary text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale flex items-center space-x-2">
+<i class="fas fa-qrcode"></i>
+<span class="hidden sm:inline">Abrir Scanner</span>
+<span class="sm:hidden">Scanner</span>
+</a>
 {% endblock %}
 
 {% block content %}
+
 <style>
     .modal, .toast-container { transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out; }
     .modal-content, .toast { transition: transform 0.3s ease-in-out; }
@@ -37,7 +38,6 @@
     <h1 class="text-3xl font-bold text-center text-gray-900 dark:text-white mb-6">Gerenciando a Festa: <span class="text-primary">{{ party.name }}</span></h1>
     <div class="grid grid-cols-1 xl:grid-cols-4 gap-8">
         <div class="xl:col-span-1 space-y-8">
-            <!-- Bloco de Estatísticas -->
             <div class="glass-card rounded-2xl shadow-2xl p-6 hover-scale fade-in sticky top-24">
                 <div class="flex items-center justify-between mb-6"><h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center"><i class="fas fa-chart-pie text-primary mr-3"></i>Estatísticas</h2><button onclick="fetchStats()" class="glass-effect text-primary hover:text-secondary transition-colors p-2 rounded-lg hover:shadow-md"><i class="fas fa-sync-alt"></i></button></div>
                 <div class="grid grid-cols-1 gap-4 mb-6"><div class="glass-effect p-4 rounded-xl"><div class="text-2xl font-bold text-primary" id="statsTotalInvited">-</div><div class="text-sm text-gray-600 dark:text-gray-300">Total Convidados</div></div><div class="glass-effect p-4 rounded-xl"><div class="text-2xl font-bold text-success" id="statsEnteredCount">-</div><div class="text-sm text-gray-600 dark:text-gray-300">Entraram</div></div><div class="glass-effect p-4 rounded-xl"><div class="text-2xl font-bold text-danger" id="statsNotEnteredCount">-</div><div class="text-sm text-gray-600 dark:text-gray-300">Não Entraram</div></div><div class="glass-effect p-4 rounded-xl"><div class="text-2xl font-bold text-purple-600" id="statsPercentageEntered">-%</div><div class="text-sm text-gray-600 dark:text-gray-300">Comparecimento</div></div></div>
@@ -45,7 +45,6 @@
             </div>
         </div>
         <div class="xl:col-span-3 space-y-8">
-            <!-- Bloco de Adicionar Convidado -->
             <div class="glass-card rounded-2xl shadow-2xl p-6 hover-scale fade-in">
                 <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center"><i class="fas fa-user-plus text-success mr-3"></i>Adicionar Convidado</h2>
                 {% if can_add_guest %}
@@ -61,75 +60,136 @@
                 {% endif %}
             </div>
 
-            <!-- Bloco da Lista de Convidados -->
-            <div class="glass-card rounded-2xl shadow-2xl p-6 hover-scale fade-in">
-                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6">
-                    <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center mb-4 lg:mb-0"><i class="fas fa-users text-primary mr-3"></i>Lista de Convidados<span id="guestCount" class="ml-2 text-sm bg-primary text-white px-2 py-1 rounded-full">0</span></h2>
-                    <div class="flex flex-col sm:flex-row gap-3"><button onclick="exportGuests('csv')" class="bg-success text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center space-x-2"><i class="fas fa-file-csv"></i><span>CSV</span></button><button onclick="exportGuests('pdf')" class="bg-danger text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center space-x-2"><i class="fas fa-file-pdf"></i><span>PDF</span></button></div>
-                </div>
-                <div class="flex flex-col sm:flex-row gap-4 mb-6"><div class="flex-1 relative"><i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i><input type="text" id="searchInput" placeholder="Buscar por nome..." class="w-full pl-10 pr-4 py-3 glass-effect rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"></div></div>
-
-                <!-- Tabela para telas grandes (Desktop) -->
-                <div class="hidden lg:block glass-effect rounded-xl overflow-hidden">
-                    <div class="max-h-[450px] overflow-y-auto">
-                        <table class="w-full table-fixed min-w-[800px]">
-                            <thead class="bg-gray-50 dark:bg-gray-800/50 sticky top-0 z-10">
-                                <tr>
-                                    <th class="sortable-header px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 30%" data-sort-by="name" onclick="setSort('name')">Nome<span class="sort-icon"></span></th>
-                                    <th class="sortable-header px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 15%" data-sort-by="entered" onclick="setSort('entered')">Status<span class="sort-icon"></span></th>
-                                    <th class="sortable-header px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 20%" data-sort-by="check_in_time" onclick="setSort('check_in_time')">Check-in<span class="sort-icon"></span></th>
-                                    <th class="sortable-header px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 15%" data-sort-by="added_by" onclick="setSort('added_by')">Adicionado Por<span class="sort-icon"></span></th>
-                                    <th class="px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 20%">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="guestList" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Cards para telas pequenas (Mobile) -->
-                <div class="lg:hidden max-h-[450px] overflow-y-auto space-y-4" id="guestCardsList"></div>
-                <nav id="paginationControls" class="flex items-center justify-between mt-6 px-4 py-3" aria-label="Pagination"></nav>
+<div class="glass-card rounded-2xl shadow-2xl p-6 hover-scale fade-in">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center mb-4 lg:mb-0"><i class="fas fa-users text-primary mr-3"></i>Lista de Convidados<span id="guestCount" class="ml-2 text-sm bg-primary text-white px-2 py-1 rounded-full">0</span></h2>
+                <div class="flex flex-col sm:flex-row gap-3"><button onclick="exportGuests('csv')" class="bg-success text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center space-x-2"><i class="fas fa-file-csv"></i><span>CSV</span></button><button onclick="exportGuests('pdf')" class="bg-danger text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center space-x-2"><i class="fas fa-file-pdf"></i><span>PDF</span></button></div>
             </div>
-            <!-- Outros blocos (Opções, etc.) permanecem iguais -->
-            <div class="glass-card rounded-2xl shadow-2xl p-6 hover-scale fade-in">
-                 <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center"><i class="fas fa-share-alt text-purple-500 mr-3"></i>Opções da Festa</h2>
-                {% if party.owner == current_user %}
-                <div class="space-y-2 mb-4"><label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Código para Colaboradores:</label><div class="relative"><input type="text" id="shareCode" value="{{ party.share_code }}" readonly class="w-full text-lg font-mono tracking-widest px-2 py-2 bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 break-all"><button onclick="copyToClipboard('#shareCode', '#copyShareBtnIcon')" class="absolute right-1 top-1/2 -translate-y-1/2 bg-purple-500 text-white p-2 rounded-md hover:bg-purple-600 transition-colors text-xs"><i id="copyShareBtnIcon" class="fas fa-copy"></i></button></div></div>
-                {% endif %}
-                <div class="space-y-2"><label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Link da Página Pública:</label><div class="relative"><input type="text" id="shareableLink" value="{{ url_for('public_party_page', shareable_link_id=party.shareable_link_id, _external=True) }}" readonly class="w-full text-xs px-2 py-2 bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 break-all"><button onclick="copyToClipboard('#shareableLink', '#copyBtnIcon')" class="absolute right-1 top-1/2 -translate-y-1/2 bg-primary text-white p-2 rounded-md hover:bg-secondary transition-colors text-xs"><i id="copyBtnIcon" class="fas fa-copy"></i></button></div><a href="{{ url_for('public_party_page', shareable_link_id=party.shareable_link_id) }}" target="_blank" class="text-xs text-primary hover:underline">Abrir link em nova aba</a></div>
-                <form action="{{ url_for('upload_logo', party_id=party.id) }}" method="POST" enctype="multipart/form-data" class="mt-4 border-t pt-4"><label for="party_logo" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Logo da Festa:</label>{% if party.logo_filename %}<img src="{{ url_for('static', filename='party_logos/' + party.logo_filename) }}?v={{ range(1, 1000) | random }}" alt="Logo atual" class="w-20 h-20 rounded-full object-cover my-2 border">{% endif %}<input type="file" name="party_logo" id="party_logo" class="text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-primary hover:file:bg-blue-100"><button type="submit" class="mt-2 w-full text-xs bg-primary text-white py-1 px-3 rounded-lg hover:bg-secondary">Enviar Logo</button></form>
-                <form action="{{ url_for('update_party_details', party_id=party.id) }}" method="POST" class="mt-4 border-t pt-4"><label for="public_description" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Descrição Pública:</label><textarea name="public_description" id="public_description" rows="4" class="mt-1 w-full text-sm glass-effect rounded-lg p-2 focus:ring-primary focus:border-primary">{{ party.public_description or '' }}</textarea><button type="submit" class="mt-2 w-full text-xs bg-primary text-white py-1 px-3 rounded-lg hover:bg-secondary">Salvar Descrição</button></form>
-                <form action="{{ url_for('toggle_guest_count', party_id=party.id) }}" method="POST" class="mt-4 border-t pt-4"><label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Contagem de Convidados na Página:</label><div class="flex items-center space-x-3 mt-1"><span class="text-sm font-bold {{ 'text-green-500' if party.show_guest_count else 'text-red-500' }}">{% if party.show_guest_count %} Visível {% else %} Oculto {% endif %}</span><button type="submit" class="text-xs bg-gray-500 text-white py-1 px-3 rounded-lg hover:bg-gray-600">{% if party.show_guest_count %} Ocultar {% else %} Mostrar {% endif %}</button></div></form>
+            <div class="flex flex-col sm:flex-row gap-4 mb-6"><div class="flex-1 relative"><i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i><input type="text" id="searchInput" placeholder="Buscar por nome..." class="w-full pl-10 pr-4 py-3 glass-effect rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"></div></div>
+
+            <div class="hidden lg:block glass-effect rounded-xl overflow-hidden">
+                <div class="max-h-[450px] overflow-y-auto">
+                    <table class="w-full table-fixed min-w-[800px]">
+                        <thead class="bg-gray-50 dark:bg-gray-800/50 sticky top-0 z-10">
+                            <tr>
+                                <th class="sortable-header px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 30%" data-sort-by="name" onclick="setSort('name')">Nome<span class="sort-icon"></span></th>
+                                <th class="sortable-header px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 15%" data-sort-by="entered" onclick="setSort('entered')">Status<span class="sort-icon"></span></th>
+                                <th class="sortable-header px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 20%" data-sort-by="check_in_time" onclick="setSort('check_in_time')">Check-in<span class="sort-icon"></span></th>
+                                <th class="sortable-header px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 15%" data-sort-by="added_by" onclick="setSort('added_by')">Adicionado Por<span class="sort-icon"></span></th>
+                                <th class="px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 20%">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="guestList" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
+                    </table>
+                </div>
             </div>
+
+            <div class="lg:hidden max-h-[450px] overflow-y-auto space-y-4" id="guestCardsList"></div>
+            <nav id="paginationControls" class="flex items-center justify-between mt-6 px-4 py-3" aria-label="Pagination"></nav>
+        </div>
+        <div class="glass-card rounded-2xl shadow-2xl p-6 hover-scale fade-in">
+             <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center"><i class="fas fa-share-alt text-purple-500 mr-3"></i>Opções da Festa</h2>
+            {% if party.owner == current_user %}
+            <div class="space-y-2 mb-4"><label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Código para Colaboradores:</label><div class="relative"><input type="text" id="shareCode" value="{{ party.share_code }}" readonly class="w-full text-lg font-mono tracking-widest px-2 py-2 bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 break-all"><button onclick="copyToClipboard('#shareCode', '#copyShareBtnIcon')" class="absolute right-1 top-1/2 -translate-y-1/2 bg-purple-500 text-white p-2 rounded-md hover:bg-purple-600 transition-colors text-xs"><i id="copyShareBtnIcon" class="fas fa-copy"></i></button></div></div>
+            {% endif %}
+            <div class="space-y-2"><label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Link da Página Pública:</label><div class="relative"><input type="text" id="shareableLink" value="{{ url_for('public_party_page', shareable_link_id=party.shareable_link_id, _external=True) }}" readonly class="w-full text-xs px-2 py-2 bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 break-all"><button onclick="copyToClipboard('#shareableLink', '#copyBtnIcon')" class="absolute right-1 top-1/2 -translate-y-1/2 bg-primary text-white p-2 rounded-md hover:bg-secondary transition-colors text-xs"><i id="copyBtnIcon" class="fas fa-copy"></i></button></div><a href="{{ url_for('public_party_page', shareable_link_id=party.shareable_link_id) }}" target="_blank" class="text-xs text-primary hover:underline">Abrir link em nova aba</a></div>
+            <form action="{{ url_for('upload_logo', party_id=party.id) }}" method="POST" enctype="multipart/form-data" class="mt-4 border-t pt-4"><label for="party_logo" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Logo da Festa:</label>{% if party.logo_filename %}<img src="{{ url_for('static', filename='party_logos/' + party.logo_filename) }}?v={{ range(1, 1000) | random }}" alt="Logo atual" class="w-20 h-20 rounded-full object-cover my-2 border">{% endif %}<input type="file" name="party_logo" id="party_logo" class="text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-primary hover:file:bg-blue-100"><button type="submit" class="mt-2 w-full text-xs bg-primary text-white py-1 px-3 rounded-lg hover:bg-secondary">Enviar Logo</button></form>
+            <form action="{{ url_for('update_party_details', party_id=party.id) }}" method="POST" class="mt-4 border-t pt-4"><label for="public_description" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Descrição Pública:</label><textarea name="public_description" id="public_description" rows="4" class="mt-1 w-full text-sm glass-effect rounded-lg p-2 focus:ring-primary focus:border-primary">{{ party.public_description or '' }}</textarea><button type="submit" class="mt-2 w-full text-xs bg-primary text-white py-1 px-3 rounded-lg hover:bg-secondary">Salvar Descrição</button></form>
+            <form action="{{ url_for('toggle_guest_count', party_id=party.id) }}" method="POST" class="mt-4 border-t pt-4"><label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Contagem de Convidados na Página:</label><div class="flex items-center space-x-3 mt-1"><span class="text-sm font-bold {{ 'text-green-500' if party.show_guest_count else 'text-red-500' }}">{% if party.show_guest_count %} Visível {% else %} Oculto {% endif %}</span><button type="submit" class="text-xs bg-gray-500 text-white py-1 px-3 rounded-lg hover:bg-gray-600">{% if party.show_guest_count %} Ocultar {% else %} Mostrar {% endif %}</button></div></form>
         </div>
     </div>
+</div>
 
-    <!-- Modais -->
-    <!-- Modal de Confirmação e Edição permanecem os mesmos -->
-    <div id="confirmationModal" class="modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 hidden opacity-0 visibility-hidden"><div class="modal-content glass-card rounded-2xl shadow-2xl p-6 w-full max-w-md text-center"><h3 id="modalTitle" class="text-xl font-bold text-gray-900 dark:text-white mb-4"></h3><p id="modalMessage" class="text-gray-600 dark:text-gray-400 mb-6"></p><div class="flex justify-center gap-4"><button id="modalCancelBtn" class="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 px-6 py-2 rounded-lg font-semibold hover:opacity-80 transition-opacity">Cancelar</button><button id="modalConfirmBtn" class="bg-danger text-white px-6 py-2 rounded-lg font-bold hover:opacity-80 transition-opacity">Confirmar</button></div></div></div>
-    <div id="editModal" class="modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 hidden opacity-0 visibility-hidden"><div class="modal-content glass-card rounded-2xl shadow-2xl p-6 w-full max-w-md"><h3 id="editModalTitle" class="text-xl font-bold text-gray-900 dark:text-white mb-4">Editar Nome do Convidado</h3><div><label for="editModalInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Novo nome:</label><input type="text" id="editModalInput" class="mt-1 w-full px-4 py-3 glass-effect rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent"></div><div class="flex justify-end gap-4 mt-6"><button id="editModalCancelBtn" class="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 px-6 py-2 rounded-lg font-semibold hover:opacity-80 transition-opacity">Cancelar</button><button id="editModalConfirmBtn" class="bg-primary text-white px-6 py-2 rounded-lg font-bold hover:opacity-80 transition-opacity">Salvar</button></div></div></div>
-    
-    <!-- NOVO MODAL PARA O QR CODE -->
-    <div id="qrCodeModal" class="modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 hidden opacity-0 visibility-hidden">
-        <div class="modal-content glass-card rounded-2xl shadow-2xl p-6 w-full max-w-xs text-center">
-            <h3 id="qrModalTitle" class="text-lg font-bold text-gray-900 dark:text-white mb-4"></h3>
-            <img id="qrModalImage" src="" alt="QR Code" class="mx-auto mb-4 rounded-lg shadow-md w-full max-w-[250px]">
-            <a id="qrModalDownload" href="#" download class="inline-flex items-center space-x-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-secondary transition-colors">
-                <i class="fas fa-download"></i><span>Baixar</span>
-            </a>
-            <button id="qrModalCloseBtn" class="mt-4 text-sm text-gray-500 dark:text-gray-400 hover:underline">Fechar</button>
-        </div>
+<div id="confirmationModal" class="modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 hidden opacity-0 visibility-hidden"><div class="modal-content glass-card rounded-2xl shadow-2xl p-6 w-full max-w-md text-center"><h3 id="modalTitle" class="text-xl font-bold text-gray-900 dark:text-white mb-4"></h3><p id="modalMessage" class="text-gray-600 dark:text-gray-400 mb-6"></p><div class="flex justify-center gap-4"><button id="modalCancelBtn" class="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 px-6 py-2 rounded-lg font-semibold hover:opacity-80 transition-opacity">Cancelar</button><button id="modalConfirmBtn" class="bg-danger text-white px-6 py-2 rounded-lg font-bold hover:opacity-80 transition-opacity">Confirmar</button></div></div></div>
+<div id="editModal" class="modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 hidden opacity-0 visibility-hidden"><div class="modal-content glass-card rounded-2xl shadow-2xl p-6 w-full max-w-md"><h3 id="editModalTitle" class="text-xl font-bold text-gray-900 dark:text-white mb-4">Editar Nome do Convidado</h3><div><label for="editModalInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Novo nome:</label><input type="text" id="editModalInput" class="mt-1 w-full px-4 py-3 glass-effect rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent"></div><div class="flex justify-end gap-4 mt-6"><button id="editModalCancelBtn" class="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 px-6 py-2 rounded-lg font-semibold hover:opacity-80 transition-opacity">Cancelar</button><button id="editModalConfirmBtn" class="bg-primary text-white px-6 py-2 rounded-lg font-bold hover:opacity-80 transition-opacity">Salvar</button></div></div></div>
+
+<div id="qrCodeModal" class="modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 hidden opacity-0 visibility-hidden">
+    <div class="modal-content glass-card rounded-2xl shadow-2xl p-6 w-full max-w-xs text-center">
+        <h3 id="qrModalTitle" class="text-lg font-bold text-gray-900 dark:text-white mb-4"></h3>
+        <img id="qrModalImage" src="" alt="QR Code" class="mx-auto mb-4 rounded-lg shadow-md w-full max-w-[250px]">
+        <a id="qrModalDownload" href="#" download class="inline-flex items-center space-x-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-secondary transition-colors">
+            <i class="fas fa-download"></i><span>Baixar</span>
+        </a>
+        <button id="qrModalCloseBtn" class="mt-4 text-sm text-gray-500 dark:text-gray-400 hover:underline">Fechar</button>
     </div>
-    
-    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-3 w-full max-w-xs"></div>
+</div>
+
+<div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-3 w-full max-w-xs"></div>
+
 </body>
 {% endblock %}
 
+
 {% block scripts %}
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script type="text/javascript">
-    function copyToClipboard(elementSelector, iconSelector) { navigator.clipboard.writeText(document.querySelector(elementSelector).value).then(() => { const icon = document.querySelector(iconSelector); icon.classList.remove('fa-copy'); icon.classList.add('fa-check'); setTimeout(() => { icon.classList.remove('fa-check'); icon.classList.add('fa-copy'); }, 2000); }).catch(err => console.error('Erro ao copiar: ', err)); }
+    // --- FUNÇÃO DE COPIAR CORRIGIDA ---
+    // Esta função agora inclui um método de fallback para garantir que funcione
+    // tanto em ambientes seguros (HTTPS) quanto em ambientes de desenvolvimento (HTTP).
+    function fallbackCopyTextToClipboard(text, iconSelector) {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.top = '-9999px';
+        textArea.style.left = '-9999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+                const icon = document.querySelector(iconSelector);
+                if (icon) {
+                    icon.classList.remove('fa-copy');
+                    icon.classList.add('fa-check');
+                    setTimeout(() => {
+                        icon.classList.remove('fa-check');
+                        icon.classList.add('fa-copy');
+                    }, 2000);
+                }
+            } else {
+                console.error('Fallback: Falha ao copiar o texto.');
+                showToast('Falha ao copiar.', 'error');
+            }
+        } catch (err) {
+            console.error('Fallback: Erro ao copiar', err);
+            showToast('Falha ao copiar.', 'error');
+        }
+        document.body.removeChild(textArea);
+    }
+
+    function copyToClipboard(elementSelector, iconSelector) {
+        const inputElement = document.querySelector(elementSelector);
+        if (!inputElement) {
+            console.error('Elemento para copiar não encontrado:', elementSelector);
+            return;
+        }
+        const textToCopy = inputElement.value;
+
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const icon = document.querySelector(iconSelector);
+                if (icon) {
+                    icon.classList.remove('fa-copy');
+                    icon.classList.add('fa-check');
+                    setTimeout(() => {
+                        icon.classList.remove('fa-check');
+                        icon.classList.add('fa-copy');
+                    }, 2000);
+                }
+                showToast('Copiado!', 'success');
+            }).catch(err => {
+                console.warn('Erro ao copiar com navigator.clipboard, usando fallback: ', err);
+                fallbackCopyTextToClipboard(textToCopy, iconSelector);
+            });
+        } else {
+            console.warn('Contexto não seguro ou navigator.clipboard não disponível. Usando fallback.');
+            fallbackCopyTextToClipboard(textToCopy, iconSelector);
+        }
+    }
+
 
     const partyId = document.body.getAttribute('data-party-id');
     const API_URL = `/api/party/${partyId}`;
@@ -259,4 +319,6 @@
     async function fetchStats() { try { const response = await fetch(`/api/party/${partyId}/stats`); if (!response.ok) throw new Error('Falha ao buscar estatísticas.'); const stats = await response.json(); document.getElementById('statsTotalInvited').textContent = stats.total_invited; document.getElementById('statsEnteredCount').textContent = stats.entered_count; document.getElementById('statsNotEnteredCount').textContent = stats.not_entered_count; document.getElementById('statsPercentageEntered').textContent = stats.percentage_entered.toFixed(2) + "%"; updateAttendanceChart(stats.entered_count, stats.not_entered_count); } catch (error) { console.error('Erro ao buscar stats:', error); } }
     function updateAttendanceChart(entered, notEntered) { const ctx = document.getElementById('attendanceChart').getContext('2d'); if (!ctx) return; const isDark = document.documentElement.classList.contains('dark'); const data = { labels: ['Entraram', 'Não Entraram'], datasets: [{ data: [entered, notEntered], backgroundColor: ['#10b981', '#ef4444'], borderColor: [isDark ? '#0f172a' : '#fff'], borderWidth: 2, hoverOffset: 4 }] }; const config = { type: 'doughnut', data: data, options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom', labels: { color: isDark ? '#e5e7eb' : '#374151', usePointStyle: true } }, title: { display: false } } } }; if (attendanceChartInstance) { attendanceChartInstance.data.datasets[0].data = [entered, notEntered]; attendanceChartInstance.options.plugins.legend.labels.color = isDark ? '#e5e7eb' : '#374151'; attendanceChartInstance.options.borderColor = isDark ? '#0f172a' : '#fff'; attendanceChartInstance.update(); } else { attendanceChartInstance = new Chart(ctx, config); } }
 </script>
+
+
 {% endblock %}
