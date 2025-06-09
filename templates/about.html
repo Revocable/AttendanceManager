@@ -1,0 +1,73 @@
+{% extends "layout.html" %}
+{% block title %}Sobre o QRPass - Como Funciona{% endblock %}
+
+{% block header_actions %}
+<a href="{{ url_for('login') }}" class="glass-effect text-primary dark:text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale text-sm sm:text-base">Entrar</a>
+<a href="{{ url_for('signup') }}" class="bg-gradient-to-r from-primary to-secondary text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale text-sm sm:text-base">Criar Conta</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-16 py-8">
+      <section class="text-center fade-in">
+        <h2 class="text-4xl sm:text-5xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+            Seu Evento, <span class="text-primary">Simplificado</span>.
+        </h2>
+        <p class="mt-6 max-w-2xl mx-auto text-lg sm:text-xl text-gray-600 dark:text-gray-300">
+            O QRPass é a ferramenta definitiva para organizar e gerenciar o acesso de convidados em seus eventos. Desde festas privadas a workshops corporativos, nossa plataforma oferece controle total, segurança e estatísticas em tempo real, tudo de forma intuitiva e profissional.
+        </p>
+    </section>
+
+    <section class="fade-in" style="animation-delay: 0.2s;">
+        <h3 class="text-center text-3xl font-bold text-gray-900 dark:text-white mb-12">Como Funciona: Um Guia Rápido</h3>
+        
+        <div class="space-y-12">
+            <div class="flex flex-col md:flex-row items-center gap-8">
+                <div class="text-6xl text-primary w-24 text-center"><i class="fas fa-glass-cheers"></i></div>
+                <div class="flex-1">
+                    <h4 class="text-2xl font-bold mb-2 text-gray-900 dark:text-white">1. Crie sua Festa</h4>
+                    <p class="text-gray-600 dark:text-gray-400">Após criar sua conta, acesse o dashboard e crie um novo evento com apenas um clique. Cada festa recebe automaticamente códigos únicos para o scanner e para colaboração.</p>
+                </div>
+            </div>
+
+            <div class="flex flex-col md:flex-row-reverse items-center gap-8">
+                <div class="text-6xl text-success w-24 text-center"><i class="fas fa-user-plus"></i></div>
+                <div class="flex-1">
+                    <h4 class="text-2xl font-bold mb-2 text-gray-900 dark:text-white">2. Adicione seus Convidados</h4>
+                    <p class="text-gray-600 dark:text-gray-400">Na página de gerenciamento da festa, adicione seus convidados um por um. O sistema irá gerar instantaneamente um QR Code seguro e individual para cada pessoa na sua lista.</p>
+                </div>
+            </div>
+
+            <div class="flex flex-col md:flex-row items-center gap-8">
+                <div class="text-6xl text-purple-500 w-24 text-center"><i class="fas fa-share-alt"></i></div>
+                <div class="flex-1">
+                    <h4 class="text-2xl font-bold mb-2 text-gray-900 dark:text-white">3. Compartilhe e Personalize</h4>
+                    <p class="text-gray-600 dark:text-gray-400">Envie os QR Codes para seus convidados. Personalize a página pública do seu evento com um logo e uma descrição, e compartilhe o link! Se precisar de ajuda, compartilhe o "Código de Colaborador" com sua equipe para que eles também possam gerenciar a lista.</p>
+                </div>
+            </div>
+
+            <div class="flex flex-col md:flex-row-reverse items-center gap-8">
+                <div class="text-6xl text-warning w-24 text-center"><i class="fas fa-qrcode"></i></div>
+                <div class="flex-1">
+                    <h4 class="text-2xl font-bold mb-2 text-gray-900 dark:text-white">4. Escaneie e Controle</h4>
+                    <p class="text-gray-600 dark:text-gray-400">No dia do evento, qualquer pessoa com um celular e o "Código do Scanner" pode acessar a página de check-in. Aponte a câmera para o QR Code do convidado e receba uma confirmação visual instantânea na tela. Acompanhe as estatísticas de entrada em tempo real no seu dashboard.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="text-center fade-in" style="animation-delay: 0.4s;">
+        <div class="glass-card rounded-2xl shadow-xl p-8">
+            <h3 class="text-3xl font-bold text-gray-900 dark:text-white">Dúvidas ou Sugestões?</h3>
+            <p class="mt-4 text-lg text-gray-600 dark:text-gray-400">
+                Estamos sempre buscando melhorar! Se você tiver qualquer pergunta, feedback ou encontrar algum problema, não hesite em nos contatar.
+            </p>
+            <div class="mt-6">
+                <a href="mailto:murilovazscolari6@gmail.com" class="inline-flex items-center space-x-3 bg-primary text-white px-6 py-3 rounded-xl font-semibold hover:bg-secondary transition-colors text-lg">
+                    <i class="fas fa-envelope"></i>
+                    <span>murilovazscolari6@gmail.com</span>
+                </a>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

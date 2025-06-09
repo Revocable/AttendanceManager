@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Meta tags para compartilhamento social -->
     <meta property="og:title" content="{{ party.name }}">
     <meta property="og:description" content="{{ party.public_description or 'Detalhes do evento em QRPass.' }}">
     {% if party.logo_filename %}
@@ -15,61 +14,193 @@
     <title>{{ party.name }} - Detalhes do Evento</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css" rel="stylesheet">
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.0/color-thief.umd.js"></script>
+
     <script>
+        // A configuração do Tailwind é mantida, mas será sobrescrita pelo nosso script
         tailwind.config = { darkMode: 'class' }
     </script>
     <style>
-        .glass-card {
-            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-            background: rgba(255, 255, 255, 0.9);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+        /* Estilos base para garantir a transição suave das cores */
+        body, .bg-circle, #download-btn {
+            transition: background-color 1s ease, background 1s ease;
         }
-        .dark .glass-card {
-            background: rgba(17, 24, 39, 0.7);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
+        /* Style que será preenchido dinamicamente pelo nosso script */
+        #dynamic-theme-styles { }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900 min-h-screen flex items-center justify-center p-4 text-gray-800 dark:text-gray-200">
     <div class="fixed inset-0 overflow-hidden pointer-events-none -z-10">
-        <div class="absolute -top-40 -right-40 w-80 h-80 bg-purple-300 dark:bg-purple-600 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-50 animate-pulse"></div>
-        <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-300 dark:bg-blue-600 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-50 animate-pulse animation-delay-2000"></div>
+        <div id="bg-circle-1" class="absolute -top-40 -right-40 w-80 h-80 bg-purple-300 dark:bg-purple-600 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-50 animate-pulse"></div>
+        <div id="bg-circle-2" class="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-300 dark:bg-blue-600 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-50 animate-pulse animation-delay-2000"></div>
+        <div id="bg-circle-3" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-300 dark:bg-indigo-600 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-50 animate-pulse animation-delay-4000"></div>
     </div>
 
     <div class="w-full max-w-lg mx-auto">
-        <div class="glass-card rounded-3xl shadow-2xl p-6 sm:p-8 text-center">
+        <div id="invitation-card" class="glass-card rounded-3xl shadow-2xl overflow-hidden">
             
             {% if party.logo_filename %}
-            <div class="mb-6">
-                <img src="{{ url_for('static', filename='party_logos/' + party.logo_filename) }}" alt="Logo da Festa" class="w-32 h-32 rounded-full mx-auto object-cover border-4 border-white dark:border-gray-800 shadow-lg">
+            <div class="w-full bg-gray-200 dark:bg-gray-800">
+                 <img id="party-logo-image" src="{{ url_for('static', filename='party_logos/' + party.logo_filename) }}" 
+                     alt="Logo da Festa" 
+                     class="w-full h-full object-cover"
+                     crossorigin="anonymous">
             </div>
             {% endif %}
 
-            <h1 class="text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">{{ party.name }}</h1>
-            
-            {% if party.show_guest_count %}
-            <div class="my-6">
-                <!-- MUDANÇA APLICADA AQUI -->
-                <span class="inline-flex items-center bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-lg font-bold px-4 py-2 rounded-full">
-                    <i class="fas fa-users mr-2"></i>
-                    {{ stats.total_invited }} Convidados na Lista
-                </span>
-                <!-- FIM DA MUDANÇA -->
+            <div class="p-6 sm:p-8 text-center">
+                <h1 class="text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">{{ party.name }}</h1>
+                
+                {% if party.show_guest_count %}
+                <div class="my-6">
+                    <span id="guest-count-badge" class="inline-flex items-center bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-lg font-bold px-4 py-2 rounded-full">
+                        <i class="fas fa-users mr-2"></i>
+                        {{ stats.total_invited }} Convidados na Lista
+                    </span>
+                </div>
+                {% endif %}
+                
+                {% if party.public_description %}
+                <div class="mt-8 text-left border-t border-gray-200 dark:border-gray-700 pt-6">
+                    <p class="text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{{ party.public_description }}</p>
+                </div>
+                {% endif %}
             </div>
-            {% endif %}
-            
-            {% if party.public_description %}
-            <div class="mt-8 text-left border-t border-gray-200 dark:border-gray-700 pt-6">
-                <p class="text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{{ party.public_description }}</p>
-            </div>
-            {% endif %}
+        </div>
+
+        <div class="mt-6 text-center">
+            <button id="download-btn" class="bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 w-48">
+                <i class="fas fa-download mr-2"></i>
+                Salvar Convite
+            </button>
         </div>
         
         <footer class="text-center mt-6">
-            <a href="{{ url_for('landing') }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-primary">
+            <a id="footer-link" href="{{ url_for('landing') }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-primary">
                 Criado com <strong>QRPass</strong>
             </a>
         </footer>
     </div>
+    
+    <style id="dynamic-theme-styles"></style>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const downloadButton = document.getElementById('download-btn');
+            const invitationCard = document.getElementById('invitation-card');
+
+            downloadButton.addEventListener('click', () => {
+                downloadButton.disabled = true;
+                downloadButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Salvando...';
+                const stage = document.createElement('div');
+                stage.style.width = invitationCard.offsetWidth + 'px';
+                stage.style.height = invitationCard.offsetHeight + 'px';
+                stage.style.background = window.getComputedStyle(document.body).background;
+                stage.style.position = 'absolute';
+                stage.style.top = '-9999px';
+                stage.style.left = '-9999px';
+                const clonedCard = invitationCard.cloneNode(true);
+                clonedCard.style.margin = '0'; 
+                stage.appendChild(clonedCard);
+                document.body.appendChild(stage);
+                const options = { useCORS: true, scale: 3, logging: false };
+
+                html2canvas(stage, options).then(canvas => {
+                    const link = document.createElement('a');
+                    const partyName = "{{ party.name }}".replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                    link.download = `convite_${partyName || 'festa'}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                }).finally(() => {
+                    document.body.removeChild(stage);
+                    downloadButton.disabled = false;
+                    downloadButton.innerHTML = '<i class="fas fa-download mr-2"></i>Salvar Convite';
+                });
+            });
+        });
+    </script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const partyImage = document.getElementById('party-logo-image');
+            if (!partyImage) return;
+
+            const colorThief = new ColorThief();
+
+            // Função para converter um array [r, g, b] em uma string "rgb(r, g, b)"
+            const toRgbString = (rgbArray) => `rgb(${rgbArray[0]}, ${rgbArray[1]}, ${rgbArray[2]})`;
+            
+            // Função para calcular a luminosidade de uma cor (0-255)
+            // Usado para ordenar as cores da mais escura para a mais clara
+            const getLuminance = (rgb) => 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2];
+
+            const applyDynamicTheme = () => {
+                // Extrai uma paleta de 8 cores para ter mais opções
+                const palette = colorThief.getPalette(partyImage, 8);
+                if (!palette || palette.length < 5) {
+                    console.log("Paleta de cores insuficiente extraída da imagem.");
+                    return;
+                }
+
+                // Ordena a paleta da cor mais escura para a mais clara
+                palette.sort((a, b) => getLuminance(a) - getLuminance(b));
+
+                // --- Define os papéis de cada cor ---
+                const darkBgStart = toRgbString(palette[0]); // A mais escura
+                const darkBgEnd = toRgbString(palette[1]);   // A segunda mais escura
+
+                const lightBgStart = toRgbString(palette[palette.length - 1]); // A mais clara
+                const lightBgEnd = toRgbString(palette[palette.length - 2]);   // A segunda mais clara
+                
+                const primaryColor = toRgbString(palette[Math.floor(palette.length / 2)]); // Cor do meio, geralmente vibrante
+                const secondaryColor = toRgbString(palette[Math.floor(palette.length / 2) + 1]); // Cor adjacente
+                
+                const accent1 = toRgbString(palette[2]); // Cores de destaque
+                const accent2 = toRgbString(palette[palette.length - 3]);
+
+                // Gera o CSS dinâmico que será injetado na página
+                const dynamicCSS = `
+                    /* Tema Claro */
+                    body {
+                        background: linear-gradient(to bottom right, ${lightBgStart}, ${lightBgEnd});
+                    }
+                    #guest-count-badge {
+                        background-color: ${secondaryColor}33; /* Usa a cor secundária com 20% de opacidade */
+                        color: ${primaryColor};
+                    }
+                    #download-btn {
+                        background: linear-gradient(to right, ${primaryColor}, ${secondaryColor});
+                    }
+                    #footer-link:hover {
+                        color: ${primaryColor};
+                    }
+
+                    /* Tema Escuro */
+                    .dark body {
+                        background: linear-gradient(to bottom right, ${darkBgStart}, ${darkBgEnd});
+                    }
+                    .dark #guest-count-badge {
+                        background-color: ${primaryColor}33; /* Usa a cor primária com 20% de opacidade */
+                        color: ${lightBgStart};
+                    }
+
+                    /* Círculos de Fundo (para ambos os temas) */
+                    #bg-circle-1 { background-color: ${primaryColor}; }
+                    #bg-circle-2 { background-color: ${secondaryColor}; }
+                    #bg-circle-3 { background-color: ${accent1}; }
+                `;
+
+                // Injeta as regras de CSS na tag <style> que criamos
+                const styleSheet = document.getElementById('dynamic-theme-styles');
+                styleSheet.innerText = dynamicCSS;
+            };
+
+            if (partyImage.complete) {
+                applyDynamicTheme();
+            } else {
+                partyImage.addEventListener('load', applyDynamicTheme);
+            }
+        });
+    </script>
 </body>
 </html>

@@ -1,17 +1,17 @@
 {% extends "layout.html" %}
-
 {% block title %}Login - QRPass{% endblock %}
-
 {% block content %}
 <div class="flex justify-center items-center py-12">
     <div class="w-full max-w-md">
         <form method="POST" action="{{ url_for('login') }}" class="glass-card rounded-2xl shadow-2xl p-8 space-y-6">
             <h2 class="text-center text-3xl font-bold text-gray-900 dark:text-white">Login</h2>
+            
             <div>
-                <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nome de Usuário</label>
-                <input type="text" name="username" id="username" required
+                <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+                <input type="email" name="email" id="email" required autocomplete="email" placeholder="seu@email.com"
                        class="mt-1 block w-full px-4 py-3 glass-effect rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
             </div>
+
             <div>
                 <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Senha</label>
                 <input type="password" name="password" id="password" required

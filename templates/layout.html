@@ -8,7 +8,7 @@
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css" rel="stylesheet">
-    <link rel="shortcut icon" href="../static/logo.png" type="image/x-icon">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='logo.png') }}" type="image/x-icon">
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -65,15 +65,12 @@
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900 min-h-screen transition-all duration-300 text-gray-800 dark:text-gray-200">
-    <!-- Animated Background -->
     <div class="fixed inset-0 overflow-hidden pointer-events-none -z-10">
         <div class="absolute -top-40 -right-40 w-80 h-80 bg-purple-300 dark:bg-purple-600 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-50 animate-pulse-slow"></div>
         <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-300 dark:bg-blue-600 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-50 animate-pulse-slow animation-delay-2000"></div>
         <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-300 dark:bg-indigo-600 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-50 animate-pulse-slow animation-delay-4000"></div>
     </div>
-
-    <!-- Header -->
-    <header class="glass-header sticky top-0 z-50 shadow-lg">
+      <header class="glass-header sticky top-0 z-50 shadow-lg">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div class="flex items-center justify-between">
                 <a href="{{ url_for('landing') }}" class="flex items-center space-x-3">
@@ -84,8 +81,7 @@
                 </a>
                 <div class="flex items-center space-x-2 sm:space-x-4">
                     {% block header_actions %}
-                        <!-- Ações do cabeçalho específicas da página virão aqui -->
-                    {% endblock %}
+                        {% endblock %}
                     <button id="darkModeToggle" class="glass-effect text-gray-700 dark:text-gray-300 p-3 rounded-xl hover:shadow-lg transition-all duration-200 hover-scale">
                         <i class="fas fa-moon dark:hidden text-lg"></i>
                         <i class="fas fa-sun hidden dark:inline text-lg"></i>
@@ -95,7 +91,6 @@
         </div>
     </header>
 
-    <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -112,40 +107,63 @@
         {% endwith %}
 
         {% block content %}
-            <!-- Conteúdo da página virá aqui -->
-        {% endblock %}
+            {% endblock %}
     </main>
 
-    <script>
+    <footer class="text-center py-8 px-4">
+        <div class="text-sm text-gray-500 dark:text-gray-400">
+            <a href="{{ url_for('landing') }}" class="hover:text-primary">Início</a>
+            <span class="mx-2">·</span>
+            <a href="{{ url_for('about') }}" class="hover:text-primary">Sobre</a>
+            <span class="mx-2">·</span>
+            <span>© {{ current_year }} QRPass. Todos os direitos reservados.</span>
+        </div>
+    </footer>
+
+      <script>
         const html = document.documentElement;
         const darkModeToggle = document.getElementById('darkModeToggle');
-        
+
         const applyTheme = (isDark) => {
             const logo = document.querySelector('.logo-image');
+            // Altera a visibilidade dos ícones de sol/lua
+            const sunIcon = darkModeToggle.querySelector('.fa-sun');
+            const moonIcon = darkModeToggle.querySelector('.fa-moon');
+
             if (isDark) {
                 html.classList.add('dark');
                 if(logo) logo.classList.add('dark');
+                if(sunIcon) sunIcon.classList.remove('hidden');
+                if(moonIcon) moonIcon.classList.add('hidden');
             } else {
                 html.classList.remove('dark');
                 if(logo) logo.classList.remove('dark');
+                if(sunIcon) sunIcon.classList.add('hidden');
+                if(moonIcon) moonIcon.classList.remove('hidden');
             }
         };
 
         const toggleDarkMode = () => {
             const isDark = !html.classList.contains('dark');
+            // Salva a preferência do usuário
             localStorage.setItem('darkMode', isDark);
             applyTheme(isDark);
         };
 
         darkModeToggle.addEventListener('click', toggleDarkMode);
         
-        // Initialize theme
-        applyTheme(localStorage.getItem('darkMode') === 'true');
-    </script>
-    
-    {% block scripts %}
-        <!-- Scripts específicos da página virão aqui -->
-    {% endblock %}
+        // --- ALTERAÇÃO PRINCIPAL AQUI ---
+        // Inicializa o tema. O padrão é 'dark' a menos que 'darkMode' esteja explicitamente salvo como 'false'.
+        // Se localStorage.getItem('darkMode') for null (primeira visita) ou 'true', a condição será verdadeira e o tema escuro será aplicado.
+        const initializeTheme = () => {
+            const userPreferenceIsLight = localStorage.getItem('darkMode') === 'false';
+            applyTheme(!userPreferenceIsLight);
+        };
 
+        initializeTheme();
+    </script>
+
+    {% block scripts %}
+        {% endblock %}
 </body>
 </html>
