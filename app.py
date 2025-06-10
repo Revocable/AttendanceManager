@@ -39,9 +39,9 @@ if not STORAGE_BASE_PATH:
     STORAGE_BASE_PATH = os.path.join(basedir, 'data')
     print(f"AVISO: Variável de ambiente 'STORAGE_BASE_PATH' não definida. Usando: {STORAGE_BASE_PATH} (para testes locais).")
 
-# Inicializa o Flask, definindo o static_folder para o caminho de armazenamento persistente.
-# Isso permite que url_for('static', filename=...) continue funcionando para arquivos neste disco.
-app = Flask(__name__, static_folder=STORAGE_BASE_PATH)
+# Inicializa o Flask. REMOVIDA a definição de static_folder aqui,
+# o Flask agora usa a pasta 'static' padrão do seu projeto para CSS, JS, logo.png, etc.
+app = Flask(__name__)
 
 # --- Configurações ---
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
@@ -52,9 +52,9 @@ ABACATE_API_KEY = os.environ.get('ABACATE_API_KEY')
 if not ABACATE_API_KEY:
     raise ValueError("ABACATE_API_KEY não definida no .env")
 
-# O banco de dados SQLite continua na pasta 'instance' do aplicativo,
-# que é efêmera na Render por padrão. Se você quiser que o DB seja persistente,
-# você precisaria movê-lo também para dentro de STORAGE_BASE_PATH.
+# O banco de dados SQLite continua na pasta 'instance' do aplicativo.
+# Se quiser que o DB seja persistente, você precisaria movê-lo também para dentro de STORAGE_BASE_PATH.
+# Exemplo: os.path.join(STORAGE_BASE_PATH, 'party.db')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'instance', 'party.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -67,11 +67,11 @@ login_manager.login_message = "Por favor, faça login para acessar esta página.
 login_manager.login_message_category = "info"
 
 # --- Constantes e Pastas ---
-# Nomes das subpastas dentro do STORAGE_BASE_PATH
+# Nomes das subpastas dentro do STORAGE_BASE_PATH para arquivos persistentes
 PARTY_LOGOS_FOLDER_NAME = 'party_logos'
 PAYMENT_QRCODES_FOLDER_NAME = 'payment_qrcodes'
 
-# Caminhos completos para salvar os arquivos, agora baseados em STORAGE_BASE_PATH
+# Caminhos completos para SALVAR os arquivos, agora baseados em STORAGE_BASE_PATH
 PARTY_LOGOS_SAVE_PATH = os.path.join(STORAGE_BASE_PATH, PARTY_LOGOS_FOLDER_NAME)
 PAYMENT_QRCODES_SAVE_PATH = os.path.join(STORAGE_BASE_PATH, PAYMENT_QRCODES_FOLDER_NAME)
 
@@ -104,6 +104,21 @@ def inject_current_year():
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+# --- NOVA ROTA para servir arquivos persistentes ---
+@app.route('/persistent/<path:filename>')
+def serve_persistent_file(filename):
+    """
+    Serve arquivos da pasta de armazenamento persistente.
+    A 'path:filename' captura o caminho completo do arquivo a partir da raiz do STORAGE_BASE_PATH.
+    Ex: /persistent/party_logos/meu_logo.png
+    """
+    try:
+        return send_from_directory(STORAGE_BASE_PATH, filename)
+    except Exception as e:
+        app.logger.error(f"Erro ao servir arquivo persistente {filename}: {e}")
+        abort(404)
+
 
 # --- Funções Auxiliares ---
 def save_base64_as_png(base64_string, charge_id):
@@ -195,16 +210,14 @@ class Guest(db.Model):
 
     @property
     def qr_image_url(self):
-        # A rota 'serve_qr_code' gera a imagem dinamicamente, não serve de um arquivo estático.
+        # A rota 'serve_qr_code' gera a imagem dinamicamente, não serve de um arquivo estático no disco
         return url_for('serve_qr_code', qr_hash=self.qr_hash)
 
     @property
     def pix_qr_code_url(self):
         if self.pix_qr_code_filename:
-            # Como STORAGE_BASE_PATH é o static_folder, o filename para url_for deve ser
-            # o caminho relativo a STORAGE_BASE_PATH.
-            web_path = f"{PAYMENT_QRCODES_FOLDER_NAME}/{self.pix_qr_code_filename}"
-            return url_for('static', filename=web_path)
+            # AGORA USA A NOVA ROTA '/persistent/' para arquivos salvos no disco persistente
+            return url_for('serve_persistent_file', filename=f"{PAYMENT_QRCODES_FOLDER_NAME}/{self.pix_qr_code_filename}")
         return None
 
     def get_check_in_time_str(self):
@@ -258,6 +271,7 @@ def generate_qr_code_image(qr_data, guest_name, party, output_format='PNG'):
 
         logo_img_raw, logo_height = None, 0
         if party.logo_filename:
+            # O caminho aqui está correto, ele tenta carregar a imagem do disco persistente
             logo_path = os.path.join(PARTY_LOGOS_SAVE_PATH, party.logo_filename)
             if os.path.exists(logo_path):
                 logo_height = int(CARD_WIDTH / LOGO_ASPECT_RATIO)
