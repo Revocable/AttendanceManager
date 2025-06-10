@@ -144,7 +144,10 @@
             
             <form action="{{ url_for('upload_logo', party_id=party.id) }}" method="POST" enctype="multipart/form-data" class="mt-4 border-t pt-4">
                 <label for="party_logo" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Logo da Festa:</label>
-                {% if party.logo_filename %}<img src="{{ url_for('static', filename='party_logos/' + party.logo_filename) }}?v={{ range(1, 1000) | random }}" alt="Logo atual" class="w-20 h-20 rounded-full object-cover my-2 border">{% endif %}
+                {% if party.logo_filename %}
+                <!-- ALTERADO AQUI: Usar a nova rota para arquivos persistentes -->
+                <img src="{{ url_for('serve_persistent_file', filename='party_logos/' + party.logo_filename) }}?v={{ range(1, 1000) | random }}" alt="Logo atual" class="w-20 h-20 rounded-full object-cover my-2 border">
+                {% endif %}
                 <input type="file" name="party_logo" id="party_logo" class="text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-primary hover:file:bg-blue-100">
                 <button type="submit" class="mt-2 w-full text-xs bg-primary text-white py-1 px-3 rounded-lg hover:bg-secondary">Enviar Logo</button>
             </form>
