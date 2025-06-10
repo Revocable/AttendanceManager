@@ -1,0 +1,39 @@
+{% extends "layout.html" %}
+
+{% block title %}Comprar Ingresso - {{ party.name }} - QRPass{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto glass-card rounded-2xl shadow-2xl p-8 hover-scale fade-in text-center">
+    <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-6">Comprar Ingresso para <span class="text-primary">{{ party.name }}</span></h1>
+    
+    {% if party.ticket_price > 0 %}
+    <p class="text-xl text-gray-700 dark:text-gray-300 mb-6">Valor do Ingresso: <span class="font-bold text-success">R$ {{ ticket_price_display }}</span></p>
+    {% else %}
+    <p class="text-xl text-gray-700 dark:text-gray-300 mb-6">Este é um ingresso <span class="font-bold text-primary">GRATUITO</span>!</p>
+    {% endif %}
+
+    <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">Por favor, confirme seu nome para o ingresso. Se você já está logado, seu nome de usuário será sugerido.</p>
+
+    <form method="POST">
+        <div class="mb-4">
+            <label for="guest_name" class="sr-only">Seu Nome para o Ingresso</label>
+            <input type="text" id="guest_name" name="guest_name" placeholder="Seu Nome para o Ingresso"
+                   value="{{ current_user.username if current_user.is_authenticated else '' }}"
+                   required class="w-full px-4 py-3 glass-effect rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
+        </div>
+        <button type="submit" class="bg-gradient-to-r from-primary to-secondary text-white px-8 py-4 rounded-xl font-bold text-xl hover:shadow-xl transition-all duration-200 hover-scale w-full">
+            {% if party.ticket_price > 0 %}
+            Gerar Pix para Pagamento
+            {% else %}
+            Obter Ingresso Gratuito
+            {% endif %}
+        </button>
+    </form>
+
+    <div class="mt-6 text-sm text-gray-600 dark:text-gray-400">
+        <p>Você será redirecionado para a página de pagamento (se aplicável) ou para o seu ingresso.</p>
+        <p class="mt-2">Já tem uma conta? <a href="{{ url_for('login', next=request.url) }}" class="text-primary hover:underline font-semibold">Faça Login</a></p>
+        <p>Não tem uma conta? <a href="{{ url_for('signup', next=request.url) }}" class="text-primary hover:underline font-semibold">Cadastre-se</a></p>
+    </div>
+</div>
+{% endblock %}

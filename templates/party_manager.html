@@ -40,61 +40,131 @@
         <div class="xl:col-span-1 space-y-8">
             <div class="glass-card rounded-2xl shadow-2xl p-6 hover-scale fade-in sticky top-24">
                 <div class="flex items-center justify-between mb-6"><h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center"><i class="fas fa-chart-pie text-primary mr-3"></i>Estatísticas</h2><button onclick="fetchStats()" class="glass-effect text-primary hover:text-secondary transition-colors p-2 rounded-lg hover:shadow-md"><i class="fas fa-sync-alt"></i></button></div>
-                <div class="grid grid-cols-1 gap-4 mb-6"><div class="glass-effect p-4 rounded-xl"><div class="text-2xl font-bold text-primary" id="statsTotalInvited">-</div><div class="text-sm text-gray-600 dark:text-gray-300">Total Convidados</div></div><div class="glass-effect p-4 rounded-xl"><div class="text-2xl font-bold text-success" id="statsEnteredCount">-</div><div class="text-sm text-gray-600 dark:text-gray-300">Entraram</div></div><div class="glass-effect p-4 rounded-xl"><div class="text-2xl font-bold text-danger" id="statsNotEnteredCount">-</div><div class="text-sm text-gray-600 dark:text-gray-300">Não Entraram</div></div><div class="glass-effect p-4 rounded-xl"><div class="text-2xl font-bold text-purple-600" id="statsPercentageEntered">-%</div><div class="text-sm text-gray-600 dark:text-gray-300">Comparecimento</div></div></div>
+                <div class="grid grid-cols-1 gap-4 mb-6">
+                    <div class="glass-effect p-4 rounded-xl">
+                        <div class="text-2xl font-bold text-primary" id="statsTotalInvited">-</div>
+                        <div class="text-sm text-gray-600 dark:text-gray-300">Total de Convidados (Todos)</div>
+                    </div>
+                    {% if party.ticket_price > 0 %}
+                    <div class="glass-effect p-4 rounded-xl">
+                        <div class="text-2xl font-bold text-blue-600" id="statsTotalPaidTickets">-</div>
+                        <div class="text-sm text-gray-600 dark:text-gray-300">Ingressos Pagos</div>
+                    </div>
+                    {% endif %}
+                    <div class="glass-effect p-4 rounded-xl">
+                        <div class="text-2xl font-bold text-success" id="statsEnteredCount">-</div>
+                        <div class="text-sm text-gray-600 dark:text-gray-300">Entraram</div>
+                    </div>
+                    <div class="glass-effect p-4 rounded-xl">
+                        <div class="text-2xl font-bold text-danger" id="statsNotEnteredCount">-</div>
+                        <div class="text-sm text-gray-600 dark:text-gray-300">Não Entraram</div>
+                    </div>
+                    <div class="glass-effect p-4 rounded-xl">
+                        <div class="text-2xl font-bold text-purple-600" id="statsPercentageEntered">-%</div>
+                        <div class="text-sm text-gray-600 dark:text-gray-300">Comparecimento</div>
+                    </div>
+                </div>
                 <div class="relative h-64 glass-effect rounded-xl p-4"><canvas id="attendanceChart"></canvas></div>
             </div>
         </div>
         <div class="xl:col-span-3 space-y-8">
             <div class="glass-card rounded-2xl shadow-2xl p-6 hover-scale fade-in">
-                <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center"><i class="fas fa-user-plus text-success mr-3"></i>Adicionar Convidado</h2>
-                {% if can_add_guest %}
-                    <form id="addGuestForm" class="space-y-4">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center"><i class="fas fa-user-plus text-success mr-3"></i>Adicionar Convidado Gratuito</h2>
+                <form id="addGuestForm" class="space-y-4">
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <div class="flex-1"><input type="text" id="guestName" placeholder="Nome do Convidado" required class="w-full px-4 py-3 glass-effect rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-400"></div>
+                        <button type="submit" class="bg-gradient-to-r from-success to-green-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale flex items-center justify-center space-x-2"><i class="fas fa-plus"></i><span>Adicionar</span></button>
+                    </div>
+                </form>
+                <div id="newQrCodeArea" class="mt-6 p-4 glass-effect rounded-xl text-center" style="display:none;"><p id="guestAddedInfo" class="font-semibold mb-4"></p><img id="newGuestQrImage" src="" alt="QR Code" class="mx-auto mb-4 rounded-lg shadow-md" style="display:none; max-width: 150px;"><a id="downloadQrLink" href="#" download class="inline-flex items-center space-x-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-secondary transition-colors" style="display:none;"><i class="fas fa-download"></i><span>Baixar QR Code</span></a></div>
+            </div>
+
+            <div class="glass-card rounded-2xl shadow-2xl p-6 hover-scale fade-in">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center"><i class="fas fa-money-check-alt text-blue-500 mr-3"></i>Convidar para Pagar Ingresso</h2>
+                {% if party.ticket_price > 0 %}
+                    <form id="inviteForPaymentForm" class="space-y-4">
                         <div class="flex flex-col sm:flex-row gap-4">
-                            <div class="flex-1"><input type="text" id="guestName" placeholder="Nome do Convidado" required class="w-full px-4 py-3 glass-effect rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"></div>
-                            <button type="submit" class="bg-gradient-to-r from-success to-green-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale flex items-center justify-center space-x-2"><i class="fas fa-plus"></i><span>Adicionar</span></button>
+                            <div class="flex-1"><input type="text" id="guestNameForPayment" placeholder="Nome do Convidado para Pagamento" required class="w-full px-4 py-3 glass-effect rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"></div>
+                            <button type="submit" class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale flex items-center justify-center space-x-2"><i class="fas fa-link"></i><span>Gerar Link de Pagamento</span></button>
                         </div>
                     </form>
-                    <div id="newQrCodeArea" class="mt-6 p-4 glass-effect rounded-xl text-center" style="display:none;"><p id="guestAddedInfo" class="font-semibold mb-4"></p><img id="newGuestQrImage" src="" alt="QR Code" class="mx-auto mb-4 rounded-lg shadow-md" style="display:none; max-width: 150px;"><a id="downloadQrLink" href="#" download class="inline-flex items-center space-x-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-secondary transition-colors" style="display:none;"><i class="fas fa-download"></i><span>Baixar QR Code</span></a></div>
+                    <div id="paymentLinkArea" class="mt-6 p-4 glass-effect rounded-xl text-center" style="display:none;">
+                        <p id="paymentLinkInfo" class="font-semibold mb-4"></p>
+                        <div class="relative mb-4">
+                            <input type="text" id="generatedPaymentLink" readonly class="w-full text-xs px-2 py-2 bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 break-all">
+                            <button onclick="copyToClipboard('#generatedPaymentLink', '#copyPaymentLinkIcon')" class="absolute right-1 top-1/2 -translate-y-1/2 bg-primary text-white p-2 rounded-md hover:bg-secondary transition-colors text-xs">
+                                <i id="copyPaymentLinkIcon" class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Copie e envie este link para o convidado.</p>
+                    </div>
                 {% else %}
-                    <div class="bg-yellow-100 dark:bg-yellow-900/50 border-l-4 border-yellow-500 text-yellow-700 dark:text-yellow-300 p-4 rounded-r-lg" role="alert"><p class="font-bold">Limite de 50 Convidados Atingido</p><p>Para adicionar mais convidados, <a href="{{ url_for('upgrade') }}" class="font-bold underline hover:text-yellow-500">faça o upgrade para VIP</a>.</p></div>
+                    <div class="bg-yellow-100 dark:bg-yellow-900/50 border-l-4 border-yellow-500 text-yellow-700 dark:text-yellow-300 p-4 rounded-r-lg" role="alert">
+                        <p class="font-bold">Defina o Preço do Ingresso</p>
+                        <p>Para gerar links de pagamento, <a href="#party-options-section" class="font-bold underline hover:text-yellow-500">defina o valor do ingresso</a> na seção "Opções da Festa" abaixo.</p>
+                    </div>
                 {% endif %}
             </div>
+            
+            <div class="glass-card rounded-2xl shadow-2xl p-6 hover-scale fade-in">
+                        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6">
+                            <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center mb-4 lg:mb-0"><i class="fas fa-users text-primary mr-3"></i>Lista de Convidados<span id="guestCount" class="ml-2 text-sm bg-primary text-white px-2 py-1 rounded-full">0</span></h2>
+                            <div class="flex flex-col sm:flex-row gap-3"><button onclick="exportGuests('csv')" class="bg-success text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center space-x-2"><i class="fas fa-file-csv"></i><span>CSV</span></button><button onclick="exportGuests('pdf')" class="bg-danger text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center space-x-2"><i class="fas fa-file-pdf"></i><span>PDF</span></button></div>
+                        </div>
+                        <div class="flex flex-col sm:flex-row gap-4 mb-6"><div class="flex-1 relative"><i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i><input type="text" id="searchInput" placeholder="Buscar por nome..." class="w-full pl-10 pr-4 py-3 glass-effect rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"></div></div>
 
-<div class="glass-card rounded-2xl shadow-2xl p-6 hover-scale fade-in">
-            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6">
-                <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center mb-4 lg:mb-0"><i class="fas fa-users text-primary mr-3"></i>Lista de Convidados<span id="guestCount" class="ml-2 text-sm bg-primary text-white px-2 py-1 rounded-full">0</span></h2>
-                <div class="flex flex-col sm:flex-row gap-3"><button onclick="exportGuests('csv')" class="bg-success text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center space-x-2"><i class="fas fa-file-csv"></i><span>CSV</span></button><button onclick="exportGuests('pdf')" class="bg-danger text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center space-x-2"><i class="fas fa-file-pdf"></i><span>PDF</span></button></div>
-            </div>
-            <div class="flex flex-col sm:flex-row gap-4 mb-6"><div class="flex-1 relative"><i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i><input type="text" id="searchInput" placeholder="Buscar por nome..." class="w-full pl-10 pr-4 py-3 glass-effect rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"></div></div>
+                        <div class="hidden lg:block glass-effect rounded-xl overflow-hidden">
+                            <div class="max-h-[450px] overflow-y-auto">
+                                <table class="w-full table-fixed min-w-[1000px]">
+                                    <thead class="bg-gray-50 dark:bg-gray-800/50 sticky top-0 z-10">
+                                        <tr>
+                                            <th class="sortable-header px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 25%" data-sort-by="name" onclick="setSort('name')">Nome<span class="sort-icon"></span></th>
+                                            <th class="sortable-header px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 12%" data-sort-by="payment_status" onclick="setSort('payment_status')">Pagamento<span class="sort-icon"></span></th>
+                                            <th class="sortable-header px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 12%" data-sort-by="added_by" onclick="setSort('added_by')">Adicionado Por<span class="sort-icon"></span></th>
+                                            <th class="sortable-header px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 12%" data-sort-by="entered" onclick="setSort('entered')">Status<span class="sort-icon"></span></th>
+                                            <th class="sortable-header px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 18%" data-sort-by="check_in_time" onclick="setSort('check_in_time')">Check-in<span class="sort-icon"></span></th>
+                                            <th class="px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 21%">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="guestList" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
+                                </table>
+                            </div>
+                        </div>
 
-            <div class="hidden lg:block glass-effect rounded-xl overflow-hidden">
-                <div class="max-h-[450px] overflow-y-auto">
-                    <table class="w-full table-fixed min-w-[800px]">
-                        <thead class="bg-gray-50 dark:bg-gray-800/50 sticky top-0 z-10">
-                            <tr>
-                                <th class="sortable-header px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 30%" data-sort-by="name" onclick="setSort('name')">Nome<span class="sort-icon"></span></th>
-                                <th class="sortable-header px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 15%" data-sort-by="entered" onclick="setSort('entered')">Status<span class="sort-icon"></span></th>
-                                <th class="sortable-header px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 20%" data-sort-by="check_in_time" onclick="setSort('check_in_time')">Check-in<span class="sort-icon"></span></th>
-                                <th class="sortable-header px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 15%" data-sort-by="added_by" onclick="setSort('added_by')">Adicionado Por<span class="sort-icon"></span></th>
-                                <th class="px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 20%">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="guestList" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
-                    </table>
-                </div>
-            </div>
+                        <div class="lg:hidden max-h-[450px] overflow-y-auto space-y-4" id="guestCardsList"></div>
+                        <nav id="paginationControls" class="flex items-center justify-between mt-6 px-4 py-3" aria-label="Pagination"></nav>
+                    </div>
 
-            <div class="lg:hidden max-h-[450px] overflow-y-auto space-y-4" id="guestCardsList"></div>
-            <nav id="paginationControls" class="flex items-center justify-between mt-6 px-4 py-3" aria-label="Pagination"></nav>
-        </div>
-        <div class="glass-card rounded-2xl shadow-2xl p-6 hover-scale fade-in">
+        <div id="party-options-section" class="glass-card rounded-2xl shadow-2xl p-6 hover-scale fade-in">
              <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center"><i class="fas fa-share-alt text-purple-500 mr-3"></i>Opções da Festa</h2>
             {% if party.owner == current_user %}
             <div class="space-y-2 mb-4"><label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Código para Colaboradores:</label><div class="relative"><input type="text" id="shareCode" value="{{ party.share_code }}" readonly class="w-full text-lg font-mono tracking-widest px-2 py-2 bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 break-all"><button onclick="copyToClipboard('#shareCode', '#copyShareBtnIcon')" class="absolute right-1 top-1/2 -translate-y-1/2 bg-purple-500 text-white p-2 rounded-md hover:bg-purple-600 transition-colors text-xs"><i id="copyShareBtnIcon" class="fas fa-copy"></i></button></div></div>
             {% endif %}
             <div class="space-y-2"><label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Link da Página Pública:</label><div class="relative"><input type="text" id="shareableLink" value="{{ url_for('public_party_page', shareable_link_id=party.shareable_link_id, _external=True) }}" readonly class="w-full text-xs px-2 py-2 bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 break-all"><button onclick="copyToClipboard('#shareableLink', '#copyBtnIcon')" class="absolute right-1 top-1/2 -translate-y-1/2 bg-primary text-white p-2 rounded-md hover:bg-secondary transition-colors text-xs"><i id="copyBtnIcon" class="fas fa-copy"></i></button></div><a href="{{ url_for('public_party_page', shareable_link_id=party.shareable_link_id) }}" target="_blank" class="text-xs text-primary hover:underline">Abrir link em nova aba</a></div>
-            <form action="{{ url_for('upload_logo', party_id=party.id) }}" method="POST" enctype="multipart/form-data" class="mt-4 border-t pt-4"><label for="party_logo" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Logo da Festa:</label>{% if party.logo_filename %}<img src="{{ url_for('static', filename='party_logos/' + party.logo_filename) }}?v={{ range(1, 1000) | random }}" alt="Logo atual" class="w-20 h-20 rounded-full object-cover my-2 border">{% endif %}<input type="file" name="party_logo" id="party_logo" class="text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-primary hover:file:bg-blue-100"><button type="submit" class="mt-2 w-full text-xs bg-primary text-white py-1 px-3 rounded-lg hover:bg-secondary">Enviar Logo</button></form>
-            <form action="{{ url_for('update_party_details', party_id=party.id) }}" method="POST" class="mt-4 border-t pt-4"><label for="public_description" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Descrição Pública:</label><textarea name="public_description" id="public_description" rows="4" class="mt-1 w-full text-sm glass-effect rounded-lg p-2 focus:ring-primary focus:border-primary">{{ party.public_description or '' }}</textarea><button type="submit" class="mt-2 w-full text-xs bg-primary text-white py-1 px-3 rounded-lg hover:bg-secondary">Salvar Descrição</button></form>
+            
+            <form action="{{ url_for('upload_logo', party_id=party.id) }}" method="POST" enctype="multipart/form-data" class="mt-4 border-t pt-4">
+                <label for="party_logo" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Logo da Festa:</label>
+                {% if party.logo_filename %}<img src="{{ url_for('static', filename='party_logos/' + party.logo_filename) }}?v={{ range(1, 1000) | random }}" alt="Logo atual" class="w-20 h-20 rounded-full object-cover my-2 border">{% endif %}
+                <input type="file" name="party_logo" id="party_logo" class="text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-primary hover:file:bg-blue-100">
+                <button type="submit" class="mt-2 w-full text-xs bg-primary text-white py-1 px-3 rounded-lg hover:bg-secondary">Enviar Logo</button>
+            </form>
+
+            <form action="{{ url_for('update_party_details', party_id=party.id) }}" method="POST" class="mt-4 border-t pt-4">
+                <label for="public_description" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Descrição Pública:</label>
+                <textarea name="public_description" id="public_description" rows="4" class="mt-1 w-full text-sm glass-effect rounded-lg p-2 focus:ring-primary focus:border-primary">{{ party.public_description or '' }}</textarea>
+                
+                <label for="ticket_price" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mt-4">Preço do Ingresso (R$):</label>
+                <input type="number" step="0.01" min="0" name="ticket_price" id="ticket_price" value="{{ '%.2f' | format(party.ticket_price) }}" class="mt-1 w-full text-sm glass-effect rounded-lg p-2 focus:ring-primary focus:border-primary">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Defina 0.00 para ingresso gratuito.</p>
+                
+                <div class="flex items-center mt-4">
+                    <input type="checkbox" name="allow_public_purchase" id="allow_public_purchase" class="h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary" {% if party.allow_public_purchase %}checked{% endif %}>
+                    <label for="allow_public_purchase" class="ml-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Permitir compra direta pela página pública</label>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Se marcada, um botão "Comprar Ingresso" aparecerá na página pública da festa.</p>
+
+                <button type="submit" class="mt-4 w-full text-xs bg-primary text-white py-1 px-3 rounded-lg hover:bg-secondary">Salvar Informações</button>
+            </form>
             <form action="{{ url_for('toggle_guest_count', party_id=party.id) }}" method="POST" class="mt-4 border-t pt-4"><label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Contagem de Convidados na Página:</label><div class="flex items-center space-x-3 mt-1"><span class="text-sm font-bold {{ 'text-green-500' if party.show_guest_count else 'text-red-500' }}">{% if party.show_guest_count %} Visível {% else %} Oculto {% endif %}</span><button type="submit" class="text-xs bg-gray-500 text-white py-1 px-3 rounded-lg hover:bg-gray-600">{% if party.show_guest_count %} Ocultar {% else %} Mostrar {% endif %}</button></div></form>
         </div>
     </div>
@@ -125,9 +195,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script type="text/javascript">
-    // --- FUNÇÃO DE COPIAR CORRIGIDA ---
-    // Esta função agora inclui um método de fallback para garantir que funcione
-    // tanto em ambientes seguros (HTTPS) quanto em ambientes de desenvolvimento (HTTP).
     function fallbackCopyTextToClipboard(text, iconSelector) {
         const textArea = document.createElement("textarea");
         textArea.value = text;
@@ -149,6 +216,7 @@
                         icon.classList.add('fa-copy');
                     }, 2000);
                 }
+                showToast('Copiado!', 'success');
             } else {
                 console.error('Fallback: Falha ao copiar o texto.');
                 showToast('Falha ao copiar.', 'error');
@@ -196,7 +264,6 @@
     let attendanceChartInstance = null;
     const SEARCH_DEBOUNCE_MS = 300;
     const GUESTS_PER_PAGE = 50;
-    const canAddGuest = "{{ can_add_guest | tojson | safe }}";
 
     let appState = { currentPage: 1, totalPages: 1, sortBy: 'name', sortDir: 'asc', searchTerm: '' };
 
@@ -206,15 +273,18 @@
         fetchData();
         const addGuestForm = document.getElementById('addGuestForm');
         if (addGuestForm) { addGuestForm.addEventListener('submit', (e) => { e.preventDefault(); addGuest(); }); }
+        
+        const inviteForPaymentForm = document.getElementById('inviteForPaymentForm');
+        if (inviteForPaymentForm) { inviteForPaymentForm.addEventListener('submit', (e) => { e.preventDefault(); inviteGuestForPayment(); }); }
+
         document.getElementById('searchInput').addEventListener('input', debounce(handleSearch, SEARCH_DEBOUNCE_MS));
     });
 
     // --- FUNÇÕES DE MODAL E TOAST ---
-    function showToast(message, type = 'info') { const container = document.getElementById('toastContainer'); const toast = document.createElement('div'); const colors = { success: 'bg-green-500', error: 'bg-red-500', info: 'bg-blue-500' }; toast.className = `toast ${colors[type]} text-white font-semibold py-3 px-4 rounded-lg shadow-lg transform transition-all duration-300 opacity-0 -translate-y-2`; toast.textContent = message; container.appendChild(toast); requestAnimationFrame(() => { toast.classList.remove('opacity-0', '-translate-y-2'); }); setTimeout(() => { toast.classList.add('opacity-0', 'translate-y-2'); toast.addEventListener('transitionend', () => toast.remove()); }, 3000); }
+    function showToast(message, type = 'info') { const container = document.getElementById('toastContainer'); const toast = document.createElement('div'); const colors = { success: 'bg-green-500', error: 'bg-red-500', info: 'bg-blue-500', warning: 'bg-yellow-500' }; toast.className = `toast ${colors[type]} text-white font-semibold py-3 px-4 rounded-lg shadow-lg transform transition-all duration-300 opacity-0 -translate-y-2`; toast.textContent = message; container.appendChild(toast); requestAnimationFrame(() => { toast.classList.remove('opacity-0', '-translate-y-2'); }); setTimeout(() => { toast.classList.add('opacity-0', 'translate-y-2'); toast.addEventListener('transitionend', () => toast.remove()); }, 3000); }
     function showConfirmationModal({ title, message, confirmText, onConfirm }) { const modal = document.getElementById('confirmationModal'); modal.querySelector('#modalTitle').textContent = title; modal.querySelector('#modalMessage').textContent = message; const confirmBtn = modal.querySelector('#modalConfirmBtn'); confirmBtn.textContent = confirmText; const show = () => { modal.classList.remove('hidden'); requestAnimationFrame(() => modal.classList.remove('opacity-0', 'visibility-hidden')); }; const hide = () => { modal.classList.add('opacity-0', 'visibility-hidden'); setTimeout(() => modal.classList.add('hidden'), 300); }; const confirmHandler = () => { onConfirm(); hide(); }; const cancelHandler = () => hide(); confirmBtn.onclick = confirmHandler; modal.querySelector('#modalCancelBtn').onclick = cancelHandler; modal.onclick = (e) => { if (e.target === modal) cancelHandler(); }; show(); }
     function showEditModal({ currentName, onConfirm }) { const modal = document.getElementById('editModal'); const input = modal.querySelector('#editModalInput'); input.value = currentName; const show = () => { modal.classList.remove('hidden'); requestAnimationFrame(() => modal.classList.remove('opacity-0', 'visibility-hidden')); }; const hide = () => { modal.classList.add('opacity-0', 'visibility-hidden'); setTimeout(() => modal.classList.add('hidden'), 300); }; const confirmHandler = () => { const newName = input.value.trim(); if (newName && newName !== currentName) { onConfirm(newName); hide(); } else if (!newName) { showToast('O nome não pode ser vazio.', 'error'); } else { hide(); } }; modal.querySelector('#editModalConfirmBtn').onclick = confirmHandler; modal.querySelector('#editModalCancelBtn').onclick = hide; modal.onclick = (e) => { if (e.target === modal) hide(); }; input.onkeydown = (e) => { if (e.key === 'Enter') confirmHandler(); }; show(); input.focus(); }
     
-    // --- NOVA FUNÇÃO PARA O MODAL DO QR CODE ---
     function showQrCodeModal(guestName, qrImageUrl) {
         const modal = document.getElementById('qrCodeModal');
         modal.querySelector('#qrModalTitle').textContent = `QR Code de ${guestName}`;
@@ -240,7 +310,7 @@
         url.searchParams.append('page', currentPage); url.searchParams.append('per_page', GUESTS_PER_PAGE); url.searchParams.append('sort_by', sortBy); url.searchParams.append('sort_dir', sortDir);
         if (searchTerm) { url.searchParams.append('search', searchTerm); }
         try {
-            document.getElementById('guestList').innerHTML = `<tr><td colspan="5" class="text-center p-8"><i class="fas fa-spinner fa-spin text-2xl text-primary"></i></td></tr>`;
+            document.getElementById('guestList').innerHTML = `<tr><td colspan="6" class="text-center p-8"><i class="fas fa-spinner fa-spin text-2xl text-primary"></i></td></tr>`;
             document.getElementById('guestCardsList').innerHTML = `<div class="text-center p-8"><i class="fas fa-spinner fa-spin text-2xl text-primary"></i></div>`;
             const response = await fetch(url);
             if (!response.ok) throw new Error('Falha ao buscar convidados.');
@@ -250,7 +320,7 @@
             updateSortUI();
         } catch (error) {
             showToast(error.message, 'error');
-            const errorMessage = `<tr><td colspan="5" class="text-center p-4 text-danger">Erro ao carregar lista.</td></tr>`;
+            const errorMessage = `<tr><td colspan="6" class="text-center p-4 text-danger">Erro ao carregar lista.</td></tr>`;
             document.getElementById('guestList').innerHTML = errorMessage;
             document.getElementById('guestCardsList').innerHTML = `<div class="p-4 text-center text-danger">${errorMessage}</div>`;
         }
@@ -273,32 +343,54 @@
     function renderGuests(guests, totalItems) {
         const tableBody = document.getElementById('guestList'); const cardsContainer = document.getElementById('guestCardsList'); tableBody.innerHTML = ''; cardsContainer.innerHTML = '';
         document.getElementById('guestCount').textContent = totalItems;
-        if (guests.length === 0) { const message = `<div class="text-center py-8 text-gray-500">${appState.searchTerm ? 'Nenhum convidado encontrado para "' + appState.searchTerm + '".' : 'Nenhum convidado adicionado.'}</div>`; tableBody.innerHTML = `<tr><td colspan="5">${message}</td></tr>`; cardsContainer.innerHTML = message; return; }
+        if (guests.length === 0) { const message = `<div class="text-center py-8 text-gray-500">${appState.searchTerm ? 'Nenhum convidado encontrado para "' + appState.searchTerm + '".' : 'Nenhum convidado adicionado.'}</div>`; tableBody.innerHTML = `<tr><td colspan="6">${message}</td></tr>`; cardsContainer.innerHTML = message; return; }
         
         guests.forEach(guest => {
-            const guestNameJs = guest.name.replace(/'/g, "\\'"); // Escapa aspas para uso no JS
+            const guestNameJs = guest.name.replace(/'/g, "\\'");
             const statusBadge = guest.entered ? '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"><i class="fas fa-check mr-1"></i>Entrou</span>' : '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200"><i class="fas fa-times mr-1"></i>Não Entrou</span>';
             
-            // --- LÓGICA DO BOTÃO DE QR CODE ---
-            const qrButtonHtml = guest.qr_image_url 
-                ? `<button onclick="showQrCodeModal('${guestNameJs}', '${guest.qr_image_url}')" class="bg-blue-500 text-white p-2 rounded-md text-xs hover:bg-blue-600 transition-colors" title="Ver QR Code"><i class="fas fa-qrcode"></i></button>`
-                : `<button class="bg-gray-400 text-white p-2 rounded-md text-xs cursor-not-allowed" title="QR Code indisponível" disabled><i class="fas fa-qrcode"></i></button>`;
+            let paymentStatusBadge;
+            let qrButtonHtml;
 
-            const actionsHtml = `<div class="flex space-x-2">${qrButtonHtml}<button onclick="showEditModal({ currentName: '${guestNameJs}', onConfirm: (newName) => editGuest('${guest.qr_hash}', newName) })" class="bg-yellow-500 text-white p-2 rounded-md text-xs hover:bg-yellow-600 transition-colors" title="Editar"><i class="fas fa-edit"></i></button><button onclick="toggleGuestEntry('${guest.qr_hash}')" class="${guest.entered ? 'bg-orange-500 hover:bg-orange-600' : 'bg-green-500 hover:bg-green-600'} text-white p-2 rounded-md text-xs transition-colors" title="${guest.entered ? 'Marcar Saída' : 'Marcar Entrada'}"><i class="fas fa-${guest.entered ? 'user-minus' : 'user-check'}"></i></button><button onclick="confirmDeleteGuest('${guest.qr_hash}', '${guestNameJs}')" class="bg-red-500 text-white p-2 rounded-md text-xs hover:bg-red-600 transition-colors" title="Remover"><i class="fas fa-trash"></i></button></div>`;
+            if (guest.payment_status === 'paid') {
+                paymentStatusBadge = '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200"><i class="fas fa-dollar-sign mr-1"></i>Pago</span>';
+                qrButtonHtml = `<button onclick="showQrCodeModal('${guestNameJs}', '${guest.qr_image_url}')" class="bg-blue-500 text-white p-2 rounded-md text-xs hover:bg-blue-600 transition-colors" title="Ver QR Code"><i class="fas fa-qrcode"></i></button>`;
+            } else if (guest.payment_status === 'pending' || guest.payment_status === 'pending_owner_invite') {
+                paymentStatusBadge = '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200"><i class="fas fa-hourglass-half mr-1"></i>Aguardando</span>';
+                qrButtonHtml = guest.purchase_link_id 
+                    ? `<a href="${window.location.origin}/buy_ticket/owner_invite/${guest.purchase_link_id}" target="_blank" class="bg-yellow-500 text-white p-2 rounded-md text-xs hover:bg-yellow-600 transition-colors" title="Ver Página de Pagamento"><i class="fas fa-link"></i></a>`
+                    : `<button class="bg-gray-400 text-white p-2 rounded-md text-xs cursor-not-allowed" title="QR Code indisponível" disabled><i class="fas fa-qrcode"></i></button>`;
+            } else if (guest.payment_status === 'failed') {
+                paymentStatusBadge = '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200"><i class="fas fa-exclamation-triangle mr-1"></i>Falhou</span>';
+                qrButtonHtml = `<button class="bg-gray-400 text-white p-2 rounded-md text-xs cursor-not-allowed" title="Pagamento falhou" disabled><i class="fas fa-qrcode"></i></button>`;
+            } else { // not_applicable (convidado gratuito)
+                paymentStatusBadge = '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300"><i class="fas fa-ticket-alt mr-1"></i>Gratuito</span>';
+                qrButtonHtml = guest.qr_image_url 
+                    ? `<button onclick="showQrCodeModal('${guestNameJs}', '${guest.qr_image_url}')" class="bg-blue-500 text-white p-2 rounded-md text-xs hover:bg-blue-600 transition-colors" title="Ver QR Code"><i class="fas fa-qrcode"></i></button>`
+                    : `<button class="bg-gray-400 text-white p-2 rounded-md text-xs cursor-not-allowed" title="QR Code indisponível" disabled><i class="fas fa-qrcode"></i></button>`;
+            }
+
+            const actionsHtml = `
+                <div class="flex space-x-2">
+                    ${qrButtonHtml}
+                    <button onclick="showEditModal({ currentName: '${guestNameJs}', onConfirm: (newName) => editGuest('${guest.qr_hash}', newName) })" class="bg-yellow-500 text-white p-2 rounded-md text-xs hover:bg-yellow-600 transition-colors" title="Editar"><i class="fas fa-edit"></i></button>
+                    <button onclick="toggleGuestEntry('${guest.qr_hash}')" class="${guest.entered ? 'bg-orange-500 hover:bg-orange-600' : 'bg-green-500 hover:bg-green-600'} text-white p-2 rounded-md text-xs transition-colors" title="${guest.entered ? 'Marcar Saída' : 'Marcar Entrada'}"><i class="fas fa-${guest.entered ? 'user-minus' : 'user-check'}"></i></button>
+                    <button onclick="confirmDeleteGuest('${guest.qr_hash}', '${guestNameJs}')" class="bg-red-500 text-white p-2 rounded-md text-xs hover:bg-red-600 transition-colors" title="Remover"><i class="fas fa-trash"></i></button>
+                </div>`;
             
-            // Renderiza linha da tabela
             const row = `<tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                 <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white truncate" title="${guest.name}">${guest.name}</td>
+                <td class="px-4 py-3 text-sm">${paymentStatusBadge}</td>
+                <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">${guest.added_by || 'N/A'}</td>
                 <td class="px-4 py-3 text-sm">${statusBadge}</td>
                 <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">${guest.check_in_time || 'N/A'}</td>
-                <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">${guest.added_by || 'N/A'}</td>
                 <td class="px-4 py-3 text-sm font-medium">${actionsHtml}</td>
             </tr>`;
             tableBody.innerHTML += row;
             
-            // Renderiza card mobile
             const card = `<div class="glass-effect rounded-xl p-4">
                 <div class="flex justify-between items-start"><h3 class="font-bold text-lg text-gray-900 dark:text-white">${guest.name}</h3>${statusBadge}</div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Status Pagamento: ${paymentStatusBadge}</p>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Check-in: ${guest.check_in_time || 'N/A'}</p>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Adicionado por: ${guest.added_by || 'N/A'}</p>
                 <div class="mt-4 flex justify-end items-center">${actionsHtml}</div>
@@ -309,16 +401,187 @@
 
     function updateSortUI() { document.querySelectorAll('.sortable-header').forEach(header => { header.classList.remove('sorted-asc', 'sorted-desc'); if (header.dataset.sortBy === appState.sortBy) { header.classList.add(appState.sortDir === 'asc' ? 'sorted-asc' : 'sorted-desc'); } }); }
 
-    // Funções de Ações (add, edit, delete, toggle) e Estatísticas (fetch, chart) permanecem as mesmas
-    async function addGuest() { if (!canAddGuest) { showToast('Limite de convidados atingido.', 'error'); return; } const name = document.getElementById('guestName').value.trim(); if (!name) { showToast('Nome do convidado é obrigatório.', 'error'); return; } const qrCodeArea = document.getElementById('newQrCodeArea'); const guestAddedInfo = document.getElementById('guestAddedInfo'); const newGuestQrImage = document.getElementById('newGuestQrImage'); const downloadQrLink = document.getElementById('downloadQrLink'); qrCodeArea.style.display = 'block'; guestAddedInfo.textContent = 'Adicionando...'; guestAddedInfo.className = 'font-semibold mb-4 text-blue-600 dark:text-blue-400'; newGuestQrImage.style.display = 'none'; downloadQrLink.style.display = 'none'; try { const response = await fetch(`${API_URL}/guests`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) }); const result = await response.json(); if (!response.ok) throw new Error(result.error); guestAddedInfo.textContent = `Convidado "${result.name}" adicionado!`; guestAddedInfo.className = 'font-semibold mb-4 text-green-700 dark:text-green-400'; newGuestQrImage.src = result.qr_image_url; newGuestQrImage.alt = `QR Code para ${result.name}`; downloadQrLink.href = result.qr_image_url; downloadQrLink.download = `QRCode-${result.name.replace(/ /g, '_')}.png`; newGuestQrImage.style.display = 'block'; downloadQrLink.style.display = 'inline-flex'; downloadQrLink.onclick = () => { setTimeout(() => { qrCodeArea.style.display = 'none'; }, 500); }; document.getElementById('guestName').value = ''; fetchData(); } catch (error) { guestAddedInfo.textContent = `Erro: ${error.message}`; guestAddedInfo.className = 'font-semibold mb-4 text-red-600 dark:text-red-400'; showToast(error.message, 'error'); } }
+    async function addGuest() {
+        const name = document.getElementById('guestName').value.trim();
+        if (!name) { showToast('Nome do convidado é obrigatório.', 'error'); return; }
+        const qrCodeArea = document.getElementById('newQrCodeArea');
+        const guestAddedInfo = document.getElementById('guestAddedInfo');
+        const newGuestQrImage = document.getElementById('newGuestQrImage');
+        const downloadQrLink = document.getElementById('downloadQrLink');
+        qrCodeArea.style.display = 'block';
+        guestAddedInfo.textContent = 'Adicionando...';
+        guestAddedInfo.className = 'font-semibold mb-4 text-blue-600 dark:text-blue-400';
+        newGuestQrImage.style.display = 'none';
+        downloadQrLink.style.display = 'none';
+        try {
+            const response = await fetch(`${API_URL}/guests`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error);
+            guestAddedInfo.textContent = `Convidado "${result.name}" adicionado!`;
+            guestAddedInfo.className = 'font-semibold mb-4 text-green-700 dark:text-green-400';
+            newGuestQrImage.src = result.qr_image_url;
+            newGuestQrImage.alt = `QR Code para ${result.name}`;
+            downloadQrLink.href = result.qr_image_url;
+            downloadQrLink.download = `QRCode-${result.name.replace(/ /g, '_')}.png`;
+            newGuestQrImage.style.display = 'block';
+            downloadQrLink.style.display = 'inline-flex';
+            downloadQrLink.onclick = () => { setTimeout(() => { qrCodeArea.style.display = 'none'; }, 500); };
+            document.getElementById('guestName').value = '';
+            fetchData();
+        } catch (error) {
+            guestAddedInfo.textContent = `Erro: ${error.message}`;
+            guestAddedInfo.className = 'font-semibold mb-4 text-red-600 dark:text-red-400';
+            showToast(error.message, 'error');
+        }
+    }
+    
     async function editGuest(qrHash, newName) { try { const response = await fetch(`${API_URL}/guests/${qrHash}/edit`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName }) }); const result = await response.json(); if (!response.ok) throw new Error(result.error); showToast(result.message, 'success'); fetchGuests(); } catch (error) { showToast(error.message, 'error'); } }
     function confirmDeleteGuest(qrHash, guestName) { showConfirmationModal({ title: 'Confirmar Remoção', message: `Tem certeza que deseja remover "${guestName}"?`, confirmText: 'Deletar', onConfirm: () => { deleteGuest(qrHash); } }); }
     async function deleteGuest(qrHash) { try { const response = await fetch(`${API_URL}/guests/${qrHash}`, { method: 'DELETE' }); const result = await response.json(); if (!response.ok) throw new Error(result.error); showToast(result.message, 'success'); fetchData(); } catch (error) { showToast(error.message, 'error'); } }
-    async function toggleGuestEntry(qrHash) { try { await fetch(`${API_URL}/guests/${qrHash}/toggle_entry`, { method: 'PUT' }); fetchGuests(); } catch (error) { showToast('Falha ao atualizar status.', 'error');} }
+    async function toggleGuestEntry(qrHash) { try { const response = await fetch(`${API_URL}/guests/${qrHash}/toggle_entry`, { method: 'PUT' }); const result = await response.json(); if (!response.ok) throw new Error(result.error); showToast(result.message, 'success'); fetchGuests(); } catch (error) { showToast(error.message, 'error');} }
     function exportGuests(format) { const exportUrl = `${API_URL}/export/${format}`; window.location.href = exportUrl; }
-    async function fetchStats() { try { const response = await fetch(`/api/party/${partyId}/stats`); if (!response.ok) throw new Error('Falha ao buscar estatísticas.'); const stats = await response.json(); document.getElementById('statsTotalInvited').textContent = stats.total_invited; document.getElementById('statsEnteredCount').textContent = stats.entered_count; document.getElementById('statsNotEnteredCount').textContent = stats.not_entered_count; document.getElementById('statsPercentageEntered').textContent = stats.percentage_entered.toFixed(2) + "%"; updateAttendanceChart(stats.entered_count, stats.not_entered_count); } catch (error) { console.error('Erro ao buscar stats:', error); } }
-    function updateAttendanceChart(entered, notEntered) { const ctx = document.getElementById('attendanceChart').getContext('2d'); if (!ctx) return; const isDark = document.documentElement.classList.contains('dark'); const data = { labels: ['Entraram', 'Não Entraram'], datasets: [{ data: [entered, notEntered], backgroundColor: ['#10b981', '#ef4444'], borderColor: [isDark ? '#0f172a' : '#fff'], borderWidth: 2, hoverOffset: 4 }] }; const config = { type: 'doughnut', data: data, options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom', labels: { color: isDark ? '#e5e7eb' : '#374151', usePointStyle: true } }, title: { display: false } } } }; if (attendanceChartInstance) { attendanceChartInstance.data.datasets[0].data = [entered, notEntered]; attendanceChartInstance.options.plugins.legend.labels.color = isDark ? '#e5e7eb' : '#374151'; attendanceChartInstance.options.borderColor = isDark ? '#0f172a' : '#fff'; attendanceChartInstance.update(); } else { attendanceChartInstance = new Chart(ctx, config); } }
-</script>
+    
+    // --- FUNÇÃO MODIFICADA ---
+    async function inviteGuestForPayment() {
+        const guestNameForPayment = document.getElementById('guestNameForPayment').value.trim();
+        if (!guestNameForPayment) {
+            showToast('Nome do convidado para pagamento é obrigatório.', 'error');
+            return;
+        }
 
+        const paymentLinkArea = document.getElementById('paymentLinkArea');
+        const paymentLinkInfo = document.getElementById('paymentLinkInfo');
+        const generatedPaymentLinkInput = document.getElementById('generatedPaymentLink');
+
+        paymentLinkArea.style.display = 'block';
+        paymentLinkInfo.textContent = 'Gerando link...';
+        paymentLinkInfo.className = 'font-semibold mb-4 text-blue-600 dark:text-blue-400';
+        generatedPaymentLinkInput.value = '';
+
+        try {
+            const response = await fetch(`/party/${partyId}/register_guest_for_payment`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ guest_name_for_payment: guestNameForPayment })
+            });
+            
+            const result = await response.json();
+
+            if (response.ok) { // Sucesso (status 2xx)
+                paymentLinkInfo.textContent = `Link de pagamento gerado para "${result.guest_name || guestNameForPayment}"!`;
+                paymentLinkInfo.className = 'font-semibold mb-4 text-green-700 dark:text-green-400';
+                generatedPaymentLinkInput.value = result.payment_link;
+                showToast(result.message, 'success');
+                document.getElementById('guestNameForPayment').value = '';
+                fetchGuests();
+            } else { // Erro (status 4xx, 5xx)
+                // Verifica se a ação é redirecionar para completar o perfil
+                if (result.action === 'redirect' && result.url) {
+                    showToast(result.message, 'warning'); // Mostra um aviso
+                    // Redireciona o usuário após um curto período
+                    setTimeout(() => {
+                        window.location.href = result.url;
+                    }, 2500);
+                    // Lança o erro para ser pego pelo catch e exibir a mensagem na UI
+                    throw new Error(result.message);
+                } else {
+                    // Para todos os outros erros, lança a mensagem padrão
+                    throw new Error(result.message || 'Ocorreu um erro desconhecido.');
+                }
+            }
+        } catch (error) {
+            paymentLinkInfo.textContent = `Erro: ${error.message}`;
+            paymentLinkInfo.className = 'font-semibold mb-4 text-red-600 dark:text-red-400';
+        }
+    }
+
+
+    async function fetchStats() {
+        try {
+            const response = await fetch(`/api/party/${partyId}/stats`);
+            if (!response.ok) throw new Error('Falha ao buscar estatísticas.');
+            const stats = await response.json();
+            
+            document.getElementById('statsTotalInvited').textContent = stats.total_invited;
+            
+            const totalPaidTicketsElement = document.getElementById('statsTotalPaidTickets');
+            if (totalPaidTicketsElement) {
+                totalPaidTicketsElement.textContent = stats.total_paid_tickets;
+            }
+
+            document.getElementById('statsEnteredCount').textContent = stats.entered_count;
+            document.getElementById('statsNotEnteredCount').textContent = stats.not_entered_count;
+            document.getElementById('statsPercentageEntered').textContent = stats.percentage_entered.toFixed(2) + "%";
+            
+            updateAttendanceChart(stats.entered_count, stats.not_entered_count, stats.total_paid_tickets);
+        } catch (error) {
+            console.error('Erro ao buscar stats:', error);
+            showToast('Erro ao carregar estatísticas.', 'error');
+        }
+    }
+
+    function updateAttendanceChart(entered, notEntered, totalPaidTickets) {
+        const ctx = document.getElementById('attendanceChart').getContext('2d');
+        if (!ctx) return;
+
+        const isDark = document.documentElement.classList.contains('dark');
+        const textColor = isDark ? '#e5e7eb' : '#374151';
+        const borderColor = isDark ? '#0f172a' : '#fff';
+
+        let dataToChart;
+        let labelsToChart;
+
+        if (totalPaidTickets > 0) {
+            dataToChart = [entered, notEntered];
+            labelsToChart = ['Entraram', 'Não Entraram'];
+        } else {
+            dataToChart = [entered, notEntered];
+            labelsToChart = ['Entraram', 'Não Entraram'];
+        }
+
+        const data = {
+            labels: labelsToChart,
+            datasets: [{
+                data: dataToChart,
+                backgroundColor: ['#10b981', '#ef4444'],
+                borderColor: borderColor,
+                borderWidth: 2,
+                hoverOffset: 4
+            }]
+        };
+
+        const config = {
+            type: 'doughnut',
+            data: data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: textColor,
+                            usePointStyle: true
+                        }
+                    },
+                    title: {
+                        display: false
+                    }
+                }
+            }
+        };
+
+        if (attendanceChartInstance) {
+            attendanceChartInstance.data.datasets[0].data = dataToChart;
+            attendanceChartInstance.data.labels = labelsToChart;
+            attendanceChartInstance.options.plugins.legend.labels.color = textColor;
+            attendanceChartInstance.options.borderColor = borderColor;
+            attendanceChartInstance.update();
+        } else {
+            attendanceChartInstance = new Chart(ctx, config);
+        }
+    }
+</script>
 
 {% endblock %}

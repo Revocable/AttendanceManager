@@ -8,29 +8,17 @@
 <div class="fade-in">
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Seu Dashboard</h1>
-        {% if current_user.is_vip %}
-            <span class="bg-yellow-400 text-yellow-900 text-sm font-bold px-3 py-1 rounded-full flex items-center"><i class="fas fa-crown mr-2"></i>CONTA VIP</span>
-        {% else %}
-             <a href="{{ url_for('upgrade') }}" class="bg-yellow-400 text-yellow-900 text-sm font-bold px-4 py-2 rounded-full flex items-center hover:bg-yellow-500 transition-colors"><i class="fas fa-crown mr-2"></i>Tornar-se VIP</a>
-        {% endif %}
-    </div>
+        </div>
 
-    <!-- Seção de Ações -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-        <!-- Criar Nova Festa -->
         <div class="glass-card rounded-2xl shadow-2xl p-6">
             <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Criar Nova Festa</h2>
-            {% if can_create_party %}
             <form action="{{ url_for('create_party') }}" method="POST" class="flex flex-col sm:flex-row gap-4">
                 <input type="text" name="party_name" placeholder="Nome da sua nova festa" required class="flex-grow w-full px-4 py-3 glass-effect rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
                 <button type="submit" class="bg-gradient-to-r from-primary to-secondary text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale flex items-center justify-center space-x-2"><i class="fas fa-plus"></i><span>Criar</span></button>
             </form>
-            {% else %}
-            <div class="bg-yellow-100 dark:bg-yellow-900/50 border-l-4 border-yellow-500 text-yellow-700 dark:text-yellow-300 p-4 rounded-r-lg" role="alert"><p class="font-bold">Limite Atingido</p><p>Você já criou sua festa gratuita. Para criar mais, <a href="{{ url_for('upgrade') }}" class="font-bold underline hover:text-yellow-500">faça o upgrade para VIP</a>.</p></div>
-            {% endif %}
         </div>
 
-        <!-- Entrar como Colaborador -->
         <div class="glass-card rounded-2xl shadow-2xl p-6">
             <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Colaborar em Festa</h2>
             <form action="{{ url_for('add_collaboration') }}" method="POST" class="flex flex-col sm:flex-row gap-4">
@@ -40,12 +28,10 @@
         </div>
     </div>
     
-    <!-- Listagem de Festas -->
     <div class="glass-card rounded-2xl shadow-2xl p-6">
         <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">Suas Festas</h2>
         {% if owned_parties or collaborated_parties %}
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <!-- Festas que você criou -->
             {% for party in owned_parties %}
             <div class="glass-effect rounded-xl p-6 flex flex-col justify-between hover-scale shadow-lg border-2 border-primary/50">
                 <div>
@@ -60,7 +46,6 @@
                 <div class="mt-4 text-right"><form action="{{ url_for('delete_party', party_id=party.id) }}" method="POST" onsubmit="return confirm('Tem certeza que deseja apagar a festa \'{{ party.name }}\' e todos os seus dados? Esta ação não pode ser desfeita.');"><button type="submit" class="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-400 font-semibold"><i class="fas fa-trash-alt mr-1"></i>Apagar Festa</button></form></div>
             </div>
             {% endfor %}
-            <!-- Festas que você colabora -->
             {% for party in collaborated_parties %}
             <div class="glass-effect rounded-xl p-6 flex flex-col justify-between hover-scale shadow-lg border-2 border-green-500/50">
                 <div>

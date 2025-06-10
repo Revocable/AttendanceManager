@@ -1,0 +1,220 @@
+{% extends "layout.html" %}
+
+{% block title %}Seu Ingresso - QRPass{% endblock %}
+
+{% block content %}
+<div id="payment-details" 
+     class="max-w-xl mx-auto glass-card rounded-2xl shadow-2xl p-8 hover-scale fade-in text-center"
+     data-payment-pending="{{ payment_pending | tojson }}"
+     data-pix-id="{{ guest.payment_charge_id or '' }}"
+     data-expired-redirect-url="{% if guest.purchase_link_id %}{{ url_for('buy_ticket_owner_invite', purchase_link_id=guest.purchase_link_id) }}{% elif guest.purchased_by_user_id %}{{ url_for('buy_ticket_public', party_id=guest.party.id) }}{% else %}{{ url_for('public_party_page', shareable_link_id=guest.party.shareable_link_id) }}{% endif %}"
+     data-pix-creation-iso="{{ pix_creation_iso or '' }}">
+
+    {% if payment_pending %}
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">Aguardando Pagamento do Ingresso</h1>
+        <p class="text-lg text-gray-700 dark:text-gray-300 mb-6">Escaneie o QR Code abaixo com seu aplicativo de banco para finalizar a compra de <span class="text-primary">{{ guest.name }}</span> para a festa <span class="text-primary">{{ guest.party.name }}</span>.</p>
+        <p class="text-xl font-bold text-success mb-2">Valor: R$ {{ '%.2f' | format(guest.party.ticket_price) }}</p>
+
+        <div id="pix-timer" class="text-xl font-mono text-danger mb-4 font-bold"></div>
+
+        {% if guest.pix_qr_code_url %}
+            <img src="{{ guest.pix_qr_code_url }}" alt="QR Code PIX" class="mx-auto mb-4 rounded-lg shadow-md max-w-[250px] border-2 border-gray-200 dark:border-gray-700">
+            
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Ou copie o código Pix:</p>
+            <div class="relative w-full mb-6">
+                <input type="text" id="pixEmvCode" value="{{ guest.pix_emv_code }}" readonly class="w-full text-sm px-4 py-2 bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 break-all">
+                <button onclick="copyToClipboard(document.getElementById('pixEmvCode'), '#copyPixBtnIcon')" class="absolute right-1 top-1/2 -translate-y-1/2 bg-primary text-white p-2 rounded-md hover:bg-secondary transition-colors text-xs">
+                    <i id="copyPixBtnIcon" class="fas fa-copy"></i>
+                </button>
+            </div>
+            <p class="text-md text-gray-700 dark:text-gray-300 mb-4 font-semibold" id="paymentStatusMessage">Verificando status do pagamento...</p>
+        {% else %}
+            <p class="text-danger font-semibold text-lg">Erro ao carregar o QR Code Pix.</p>
+            <p class="text-gray-600 dark:text-gray-400">{{ error_message or "Não foi possível obter o QR Code Pix. Tente recarregar a página." }}</p>
+        {% endif %}
+
+    {% else %}
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">Seu Ingresso Está Pronto!</h1>
+        <p class="text-lg text-gray-700 dark:text-gray-300 mb-6">
+            Bem-vindo(a), <span class="text-primary font-bold">{{ guest.name }}</span>!
+            Este é o seu ingresso para a festa <span class="text-primary font-bold">{{ guest.party.name }}</span>.
+        </p>
+        
+        <img src="{{ guest.qr_image_url }}" alt="QR Code do seu ingresso" class="mx-auto mb-6 rounded-lg shadow-xl max-w-[300px] border-4 border-success">
+        
+        <a href="{{ guest.qr_image_url }}" download="ingresso_{{ guest.name | replace(' ', '_') }}.png" class="bg-gradient-to-r from-primary to-secondary text-white px-8 py-4 rounded-xl font-bold text-xl hover:shadow-xl transition-all duration-200 hover-scale inline-flex items-center space-x-3">
+            <i class="fas fa-download"></i>
+            <span>Baixar Ingresso</span>
+        </a>
+        <p class="mt-4 text-sm text-gray-600 dark:text-gray-400">Apresente este QR Code na entrada da festa.</p>
+    {% endif %}
+
+    <a href="{{ url_for('public_party_page', shareable_link_id=guest.party.shareable_link_id) }}" class="mt-8 inline-block text-primary hover:underline">Voltar para a página da festa</a>
+</div>
+
+<div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-3 w-full max-w-xs"></div>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+    // Funções de copiar e toast (sem alterações)
+    function fallbackCopyTextToClipboard(text, iconSelector) {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = 'fixed'; textArea.style.top = '-9999px'; textArea.style.left = '-9999px';
+        document.body.appendChild(textArea);
+        textArea.focus(); textArea.select();
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+                const icon = document.querySelector(iconSelector);
+                if (icon) {
+                    icon.classList.remove('fa-copy'); icon.classList.add('fa-check');
+                    setTimeout(() => { icon.classList.remove('fa-check'); icon.classList.add('fa-copy'); }, 2000);
+                }
+                showToast('Copiado!', 'success');
+            } else { showToast('Falha ao copiar.', 'error'); }
+        } catch (err) { showToast('Falha ao copiar.', 'error'); }
+        document.body.removeChild(textArea);
+    }
+    function copyToClipboard(elementOrSelector, iconSelector) {
+        const inputElement = typeof elementOrSelector === 'string' ? document.querySelector(elementOrSelector) : elementOrSelector;
+        if (!inputElement) return;
+        const textToCopy = inputElement.value;
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const icon = document.querySelector(iconSelector);
+                if (icon) {
+                    icon.classList.remove('fa-copy'); icon.classList.add('fa-check');
+                    setTimeout(() => { icon.classList.remove('fa-check'); icon.classList.add('fa-copy'); }, 2000);
+                }
+                showToast('Copiado!', 'success');
+            }).catch(() => { fallbackCopyTextToClipboard(textToCopy, iconSelector); });
+        } else { fallbackCopyTextToClipboard(textToCopy, iconSelector); }
+    }
+    function showToast(message, type = 'info') {
+        const container = document.getElementById('toastContainer');
+        if (!container) return;
+        const toast = document.createElement('div');
+        const colors = { success: 'bg-green-500', error: 'bg-red-500', info: 'bg-blue-500', warning: 'bg-yellow-500' };
+        toast.className = `toast ${colors[type]} text-white font-semibold py-3 px-4 rounded-lg shadow-lg transform transition-all duration-300 opacity-0 -translate-y-2`;
+        toast.textContent = message;
+        container.appendChild(toast);
+        requestAnimationFrame(() => { toast.classList.remove('opacity-0', '-translate-y-2'); });
+        setTimeout(() => {
+            toast.classList.add('opacity-0', 'translate-y-2');
+            toast.addEventListener('transitionend', () => toast.remove());
+        }, 3000);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const paymentDetails = document.getElementById('payment-details');
+        if (!paymentDetails || !JSON.parse(paymentDetails.dataset.paymentPending)) {
+            return;
+        }
+
+        // --- Variáveis ---
+        const pixId = paymentDetails.dataset.pixId;
+        const expiredRedirectUrl = paymentDetails.dataset.expiredRedirectUrl;
+        const pixCreationISO = paymentDetails.dataset.pixCreationIso;
+        
+        const paymentStatusMessage = document.getElementById('paymentStatusMessage');
+        const pixTimerEl = document.getElementById('pix-timer');
+
+        let pollingTimeout;
+        let timerInterval;
+        let stopAllProcesses = false;
+
+        // --- Funções Auxiliares ---
+        function handleSuccessfulPayment() {
+            if (stopAllProcesses) return;
+            stopAllProcesses = true;
+            clearInterval(timerInterval);
+            clearTimeout(pollingTimeout);
+
+            if (paymentStatusMessage) {
+                paymentStatusMessage.textContent = 'Pagamento Confirmado! Redirecionando...';
+                paymentStatusMessage.classList.add('text-success');
+            }
+            showToast('Pagamento confirmado!', 'success');
+            window.location.reload();
+        }
+
+        function handleExpiredPayment(source = 'timer') {
+            if (stopAllProcesses) return;
+            stopAllProcesses = true;
+            clearInterval(timerInterval);
+            clearTimeout(pollingTimeout);
+            
+            pixTimerEl.textContent = "Tempo Expirado!";
+            if (paymentStatusMessage) {
+                paymentStatusMessage.textContent = 'Cobrança expirou. Você será redirecionado...';
+                paymentStatusMessage.classList.add('text-danger');
+            }
+            // Só mostra o toast de erro se a expiração for detectada pelo timer ou polling, não no carregamento da página
+            if (source !== 'pageload') {
+                showToast('Cobrança expirada!', 'error');
+            }
+            setTimeout(() => { window.location.href = expiredRedirectUrl; }, 3000);
+        }
+
+        // --- Lógica Principal ---
+        function startPixTimer(creationISO) {
+            if (!creationISO) {
+                pixTimerEl.textContent = "Erro: Tempo de expiração indisponível.";
+                return;
+            }
+
+            const startTime = new Date(creationISO);
+            const endTime = new Date(startTime.getTime() + 3600 * 1000); // Adiciona 1 hora
+
+            // Verifica se já expirou no momento que a página carregou
+            if (Date.now() >= endTime) {
+                handleExpiredPayment('pageload');
+                return;
+            }
+
+            // Inicia o timer para atualizar a cada segundo
+            timerInterval = setInterval(() => {
+                if (stopAllProcesses) return;
+
+                const remaining = endTime - Date.now();
+                if (remaining <= 0) {
+                    handleExpiredPayment('timer');
+                } else {
+                    const minutes = Math.floor((remaining / 1000 / 60) % 60);
+                    const seconds = Math.floor((remaining / 1000) % 60);
+                    pixTimerEl.textContent = `Expira em: ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                }
+            }, 1000);
+        }
+
+        async function checkPaymentStatus() {
+            if (stopAllProcesses || !pixId) return;
+
+            try {
+                const response = await fetch(`/payment/check_status/${pixId}`);
+                const data = await response.json();
+
+                if (data.status === 'PAID') {
+                    handleSuccessfulPayment();
+                } else if (data.status === 'EXPIRED') {
+                    handleExpiredPayment('polling');
+                } else {
+                    pollingTimeout = setTimeout(checkPaymentStatus, 5000);
+                }
+            } catch (error) {
+                console.error('Erro ao verificar status do pagamento:', error);
+                pollingTimeout = setTimeout(checkPaymentStatus, 10000);
+            }
+        }
+
+        // --- Inicialização ---
+        if (pixTimerEl) {
+            startPixTimer(pixCreationISO);
+            checkPaymentStatus();
+        }
+    });
+</script>
+{% endblock %}
