@@ -3,4 +3,5 @@ static/qr_codes/
 static/party_logos/
 static/payment_qrcodes/
 __pycache__/
+data/
 .env

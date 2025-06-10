@@ -39,8 +39,7 @@ if not STORAGE_BASE_PATH:
     STORAGE_BASE_PATH = os.path.join(basedir, 'data')
     print(f"AVISO: Variável de ambiente 'STORAGE_BASE_PATH' não definida. Usando: {STORAGE_BASE_PATH} (para testes locais).")
 
-# Inicializa o Flask. REMOVIDA a definição de static_folder aqui,
-# o Flask agora usa a pasta 'static' padrão do seu projeto para CSS, JS, logo.png, etc.
+# Inicializa o Flask.
 app = Flask(__name__)
 
 # --- Configurações ---
@@ -52,10 +51,11 @@ ABACATE_API_KEY = os.environ.get('ABACATE_API_KEY')
 if not ABACATE_API_KEY:
     raise ValueError("ABACATE_API_KEY não definida no .env")
 
-# O banco de dados SQLite continua na pasta 'instance' do aplicativo.
-# Se quiser que o DB seja persistente, você precisaria movê-lo também para dentro de STORAGE_BASE_PATH.
-# Exemplo: os.path.join(STORAGE_BASE_PATH, 'party.db')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'instance', 'party.db')
+# --- NOVO: Definir caminho para o banco de dados dentro do STORAGE_BASE_PATH ---
+DB_FOLDER_NAME = 'database'
+DB_SAVE_PATH = os.path.join(STORAGE_BASE_PATH, DB_FOLDER_NAME, 'party.db')
+
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + DB_SAVE_PATH
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # --- Inicializações ---
@@ -86,7 +86,12 @@ if not os.path.exists(STORAGE_BASE_PATH):
     os.makedirs(STORAGE_BASE_PATH)
     print(f"Criado diretório de armazenamento base: {STORAGE_BASE_PATH}")
 
-# Criar as subpastas dentro do diretório base de armazenamento
+# Criar a pasta do banco de dados dentro do STORAGE_BASE_PATH
+if not os.path.exists(os.path.dirname(DB_SAVE_PATH)):
+    os.makedirs(os.path.dirname(DB_SAVE_PATH))
+    print(f"Criada pasta para o banco de dados: {os.path.dirname(DB_SAVE_PATH)}")
+
+# Criar as subpastas para logos e QR codes dentro do diretório base de armazenamento
 if not os.path.exists(PARTY_LOGOS_SAVE_PATH):
     os.makedirs(PARTY_LOGOS_SAVE_PATH)
     print(f"Criada pasta para logos de festas: {PARTY_LOGOS_SAVE_PATH}")
@@ -94,9 +99,13 @@ if not os.path.exists(PAYMENT_QRCODES_SAVE_PATH):
     os.makedirs(PAYMENT_QRCODES_SAVE_PATH)
     print(f"Criada pasta para QR Codes de pagamento: {PAYMENT_QRCODES_SAVE_PATH}")
 
-# A pasta 'instance' para o banco de dados continua sendo criada no diretório do projeto
+# A pasta 'instance' no diretório do projeto agora é opcional,
+# já que o banco de dados não está mais lá. Se ela não for usada para mais nada, pode ser removida.
+# Por segurança, vamos mantê-la, caso você tenha outros arquivos temporários sendo salvos lá.
 if not os.path.exists(os.path.join(basedir, 'instance')):
     os.makedirs(os.path.join(basedir, 'instance'))
+    print(f"Criada pasta 'instance' no diretório do projeto: {os.path.join(basedir, 'instance')}")
+
 
 @app.context_processor
 def inject_current_year():
@@ -226,6 +235,7 @@ class Guest(db.Model):
         return "N/A"
 
 with app.app_context():
+    # Isso criará o arquivo do banco de dados na pasta DB_SAVE_PATH
     db.create_all()
 
 @login_manager.user_loader
@@ -1238,7 +1248,7 @@ def export_guests_pdf(party_id):
         pdf.chapter_body(guests_for_table)
     else:
         pdf.set_font(pdf.current_font_family, 'I', 10)
-        pdf.cell(0, 10, "Nenhum convidado na lista.", 0, 1, 'C')
+        self.cell(0, 10, "Nenhum convidado na lista.", 0, 1, 'C')
 
     timestamp = datetime.now(BRASILIA_TZ).strftime("%Y%m%d_%H%M%S")
     filename = f"relatorio_{party.name.replace(' ', '_')}_{timestamp}.pdf"
