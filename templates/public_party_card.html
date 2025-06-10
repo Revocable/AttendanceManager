@@ -6,7 +6,8 @@
     <meta property="og:title" content="{{ party.name }}">
     <meta property="og:description" content="{{ party.public_description or 'Detalhes do evento em QRPass.' }}">
     {% if party.logo_filename %}
-    <meta property="og:image" content="{{ url_for('static', filename='party_logos/' + party.logo_filename, _external=True) }}">
+    <!-- ALTERADO AQUI: Usar a nova rota para arquivos persistentes -->
+    <meta property="og:image" content="{{ url_for('serve_persistent_file', filename='party_logos/' + party.logo_filename, _external=True) }}">
     {% endif %}
     <meta property="og:url" content="{{ url_for('public_party_page', shareable_link_id=party.shareable_link_id, _external=True) }}">
     <meta property="og:type" content="website">
@@ -42,7 +43,8 @@
             
             {% if party.logo_filename %}
             <div class="w-full bg-gray-200 dark:bg-gray-800">
-                 <img id="party-logo-image" src="{{ url_for('static', filename='party_logos/' + party.logo_filename) }}" 
+                 <!-- ALTERADO AQUI: Usar a nova rota para arquivos persistentes -->
+                 <img id="party-logo-image" src="{{ url_for('serve_persistent_file', filename='party_logos/' + party.logo_filename) }}" 
                      alt="Logo da Festa" 
                      class="w-full h-full object-cover"
                      crossorigin="anonymous">
@@ -247,6 +249,7 @@
                 }
             };
 
+            // Certifique-se de que a imagem tenha carregado antes de tentar extrair as cores
             if (partyImage.complete) {
                 applyDynamicTheme();
             } else {
