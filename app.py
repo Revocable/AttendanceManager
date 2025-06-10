@@ -29,8 +29,19 @@ import matplotlib.pyplot as plt
 
 load_dotenv()
 
-app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
+
+# --- Configuração do Caminho de Armazenamento Persistente ---
+# Na Render, defina uma variável de ambiente STORAGE_BASE_PATH como '/var/data/qrpass_data'
+# Localmente, se a variável não estiver definida, usará './data' no diretório do projeto.
+STORAGE_BASE_PATH = os.environ.get('STORAGE_BASE_PATH')
+if not STORAGE_BASE_PATH:
+    STORAGE_BASE_PATH = os.path.join(basedir, 'data')
+    print(f"AVISO: Variável de ambiente 'STORAGE_BASE_PATH' não definida. Usando: {STORAGE_BASE_PATH} (para testes locais).")
+
+# Inicializa o Flask, definindo o static_folder para o caminho de armazenamento persistente.
+# Isso permite que url_for('static', filename=...) continue funcionando para arquivos neste disco.
+app = Flask(__name__, static_folder=STORAGE_BASE_PATH)
 
 # --- Configurações ---
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
@@ -41,6 +52,9 @@ ABACATE_API_KEY = os.environ.get('ABACATE_API_KEY')
 if not ABACATE_API_KEY:
     raise ValueError("ABACATE_API_KEY não definida no .env")
 
+# O banco de dados SQLite continua na pasta 'instance' do aplicativo,
+# que é efêmera na Render por padrão. Se você quiser que o DB seja persistente,
+# você precisaria movê-lo também para dentro de STORAGE_BASE_PATH.
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'instance', 'party.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -53,19 +67,34 @@ login_manager.login_message = "Por favor, faça login para acessar esta página.
 login_manager.login_message_category = "info"
 
 # --- Constantes e Pastas ---
+# Nomes das subpastas dentro do STORAGE_BASE_PATH
 PARTY_LOGOS_FOLDER_NAME = 'party_logos'
 PAYMENT_QRCODES_FOLDER_NAME = 'payment_qrcodes'
-PARTY_LOGOS_SAVE_PATH = os.path.join(basedir, 'static', PARTY_LOGOS_FOLDER_NAME)
-PAYMENT_QRCODES_SAVE_PATH = os.path.join(basedir, 'static', PAYMENT_QRCODES_FOLDER_NAME)
+
+# Caminhos completos para salvar os arquivos, agora baseados em STORAGE_BASE_PATH
+PARTY_LOGOS_SAVE_PATH = os.path.join(STORAGE_BASE_PATH, PARTY_LOGOS_FOLDER_NAME)
+PAYMENT_QRCODES_SAVE_PATH = os.path.join(STORAGE_BASE_PATH, PAYMENT_QRCODES_FOLDER_NAME)
+
+# A fonte é um recurso da aplicação, não precisa ser persistente no disco de dados
 FONT_PATH = os.path.join(basedir, "Montserrat-Regular.ttf")
 BRASILIA_TZ = pytz.timezone('America/Sao_Paulo')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 # --- Criação de Pastas ---
+# Criar o diretório base de armazenamento se não existir
+if not os.path.exists(STORAGE_BASE_PATH):
+    os.makedirs(STORAGE_BASE_PATH)
+    print(f"Criado diretório de armazenamento base: {STORAGE_BASE_PATH}")
+
+# Criar as subpastas dentro do diretório base de armazenamento
 if not os.path.exists(PARTY_LOGOS_SAVE_PATH):
     os.makedirs(PARTY_LOGOS_SAVE_PATH)
+    print(f"Criada pasta para logos de festas: {PARTY_LOGOS_SAVE_PATH}")
 if not os.path.exists(PAYMENT_QRCODES_SAVE_PATH):
     os.makedirs(PAYMENT_QRCODES_SAVE_PATH)
+    print(f"Criada pasta para QR Codes de pagamento: {PAYMENT_QRCODES_SAVE_PATH}")
+
+# A pasta 'instance' para o banco de dados continua sendo criada no diretório do projeto
 if not os.path.exists(os.path.join(basedir, 'instance')):
     os.makedirs(os.path.join(basedir, 'instance'))
 
@@ -166,11 +195,14 @@ class Guest(db.Model):
 
     @property
     def qr_image_url(self):
+        # A rota 'serve_qr_code' gera a imagem dinamicamente, não serve de um arquivo estático.
         return url_for('serve_qr_code', qr_hash=self.qr_hash)
 
     @property
     def pix_qr_code_url(self):
         if self.pix_qr_code_filename:
+            # Como STORAGE_BASE_PATH é o static_folder, o filename para url_for deve ser
+            # o caminho relativo a STORAGE_BASE_PATH.
             web_path = f"{PAYMENT_QRCODES_FOLDER_NAME}/{self.pix_qr_code_filename}"
             return url_for('static', filename=web_path)
         return None
@@ -219,7 +251,10 @@ def generate_qr_code_image(qr_data, guest_name, party, output_format='PNG'):
             font_guest_name = PILImageFont.truetype(font_path_bold, 36)
             font_footer = PILImageFont.truetype(font_path_regular, 14)
         except IOError:
+            # Fallback para fontes padrão se as personalizadas não puderem ser carregadas
+            app.logger.warning(f"Fonte personalizada não encontrada em {FONT_PATH}. Usando fonte padrão.")
             font_party_name, font_guest_name, font_footer = (PILImageFont.load_default(s) for s in [52,36,14])
+
 
         logo_img_raw, logo_height = None, 0
         if party.logo_filename:
@@ -1004,7 +1039,7 @@ def delete_guest(party_id, qr_hash):
 class PDF(FPDF):
     def __init__(self, orientation='P', unit='mm', format='A4', party_name=''):
         super().__init__(orientation, unit, format)
-        self.montserrat_font_path = FONT_PATH
+        self.montserrat_font_path = FONT_PATH # A fonte continua vindo do diretório da aplicação
         self.font_name = 'Montserrat'
         self.default_font = 'Helvetica'
         self.current_font_family = self.default_font
@@ -1015,7 +1050,9 @@ class PDF(FPDF):
                 self.add_font(self.font_name, 'B', self.montserrat_font_path)
                 self.add_font(self.font_name, 'I', self.montserrat_font_path)
                 self.current_font_family = self.font_name
-            except Exception: pass
+            except Exception:
+                app.logger.warning(f"Erro ao carregar fonte Montserrat de {self.montserrat_font_path}. Usando fonte padrão.")
+                pass
     def header(self):
         self.set_font(self.current_font_family, 'B', 16)
         title, title_w = f'Relatório do Evento: {self.party_name}', self.get_string_width(f'Relatório do Evento: {self.party_name}')
