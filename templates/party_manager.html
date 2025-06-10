@@ -63,6 +63,11 @@
                         <div class="text-2xl font-bold text-purple-600" id="statsPercentageEntered">-%</div>
                         <div class="text-sm text-gray-600 dark:text-gray-300">Comparecimento</div>
                     </div>
+                    <!-- NOVO: Campo para faturamento total -->
+                    <div class="glass-effect p-4 rounded-xl">
+                        <div class="text-2xl font-bold text-teal-600" id="statsTotalRevenue">R$ -</div>
+                        <div class="text-sm text-gray-600 dark:text-gray-300">Faturamento Total</div>
+                    </div>
                 </div>
                 <div class="relative h-64 glass-effect rounded-xl p-4"><canvas id="attendanceChart"></canvas></div>
             </div>
@@ -120,7 +125,7 @@
                                         <tr>
                                             <th class="sortable-header px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 25%" data-sort-by="name" onclick="setSort('name')">Nome<span class="sort-icon"></span></th>
                                             <th class="sortable-header px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 12%" data-sort-by="payment_status" onclick="setSort('payment_status')">Pagamento<span class="sort-icon"></span></th>
-                                            <th class="sortable-header px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 12%" data-sort-by="added_by" onclick="setSort('added_by')">Adicionado Por<span class="sort-icon"></span></th>
+                                            <th class="sortable-header px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 12%" data-sort-by="purchased_by" onclick="setSort('purchased_by')">Comprado Por<span class="sort-icon"></span></th> {# Adicionado purchased_by como sortable #}
                                             <th class="sortable-header px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 12%" data-sort-by="entered" onclick="setSort('entered')">Status<span class="sort-icon"></span></th>
                                             <th class="sortable-header px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 18%" data-sort-by="check_in_time" onclick="setSort('check_in_time')">Check-in<span class="sort-icon"></span></th>
                                             <th class="px-4 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style="width: 21%">Ações</th>
@@ -164,7 +169,7 @@
                     <input type="checkbox" name="allow_public_purchase" id="allow_public_purchase" class="h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary" {% if party.allow_public_purchase %}checked{% endif %}>
                     <label for="allow_public_purchase" class="ml-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Permitir compra direta pela página pública</label>
                 </div>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Se marcada, um botão "Comprar Ingresso" aparecerá na página pública da festa.</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">If checked, a "Buy Ticket" button will appear on the party's public page.</p>
 
                 <button type="submit" class="mt-4 w-full text-xs bg-primary text-white py-1 px-3 rounded-lg hover:bg-secondary">Salvar Informações</button>
             </form>
@@ -384,7 +389,7 @@
             const row = `<tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                 <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white truncate" title="${guest.name}">${guest.name}</td>
                 <td class="px-4 py-3 text-sm">${paymentStatusBadge}</td>
-                <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">${guest.added_by || 'N/A'}</td>
+                <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">${guest.purchased_by || 'N/A'}</td> {# Coluna Comprado Por #}
                 <td class="px-4 py-3 text-sm">${statusBadge}</td>
                 <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">${guest.check_in_time || 'N/A'}</td>
                 <td class="px-4 py-3 text-sm font-medium">${actionsHtml}</td>
@@ -394,6 +399,7 @@
             const card = `<div class="glass-effect rounded-xl p-4">
                 <div class="flex justify-between items-start"><h3 class="font-bold text-lg text-gray-900 dark:text-white">${guest.name}</h3>${statusBadge}</div>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Status Pagamento: ${paymentStatusBadge}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Comprado por: ${guest.purchased_by || 'N/A'}</p> {# Adicionado purchased_by no card #}
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Check-in: ${guest.check_in_time || 'N/A'}</p>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Adicionado por: ${guest.added_by || 'N/A'}</p>
                 <div class="mt-4 flex justify-end items-center">${actionsHtml}</div>
@@ -515,6 +521,8 @@
             document.getElementById('statsEnteredCount').textContent = stats.entered_count;
             document.getElementById('statsNotEnteredCount').textContent = stats.not_entered_count;
             document.getElementById('statsPercentageEntered').textContent = stats.percentage_entered.toFixed(2) + "%";
+            // NOVO: Atualiza o faturamento total
+            document.getElementById('statsTotalRevenue').textContent = `R$ ${stats.total_revenue.toFixed(2).replace('.', ',')}`;
             
             updateAttendanceChart(stats.entered_count, stats.not_entered_count, stats.total_paid_tickets);
         } catch (error) {
@@ -538,6 +546,10 @@
             dataToChart = [entered, notEntered];
             labelsToChart = ['Entraram', 'Não Entraram'];
         } else {
+            // Se não houver ingressos pagos, o gráfico deve mostrar os totais gerais,
+            // ou talvez uma mensagem indicando que não há dados de pagamento.
+            // Por simplicidade, mantemos a lógica original aqui, que usa entered/notEntered
+            // do total de convidados se o preço for 0.
             dataToChart = [entered, notEntered];
             labelsToChart = ['Entraram', 'Não Entraram'];
         }

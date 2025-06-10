@@ -53,9 +53,13 @@ if not ABACATE_API_KEY:
 
 # --- NOVO: Definir caminho para o banco de dados dentro do STORAGE_BASE_PATH ---
 DB_FOLDER_NAME = 'database'
-DB_SAVE_PATH = os.path.join(STORAGE_BASE_PATH, DB_FOLDER_NAME, 'party.db')
+DB_FULL_PATH = os.path.join(STORAGE_BASE_PATH, DB_FOLDER_NAME, 'party.db')
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + DB_SAVE_PATH
+# ##################################################################################
+# ## CORREÇÃO APLICADA AQUI ##
+# ##################################################################################
+# Converte as barras invertidas do Windows para barras normais para a URI
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + DB_FULL_PATH.replace('\\', '/')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # --- Inicializações ---
@@ -87,9 +91,9 @@ if not os.path.exists(STORAGE_BASE_PATH):
     print(f"Criado diretório de armazenamento base: {STORAGE_BASE_PATH}")
 
 # Criar a pasta do banco de dados dentro do STORAGE_BASE_PATH
-if not os.path.exists(os.path.dirname(DB_SAVE_PATH)):
-    os.makedirs(os.path.dirname(DB_SAVE_PATH))
-    print(f"Criada pasta para o banco de dados: {os.path.dirname(DB_SAVE_PATH)}")
+if not os.path.exists(os.path.dirname(DB_FULL_PATH)):
+    os.makedirs(os.path.dirname(DB_FULL_PATH))
+    print(f"Criada pasta para o banco de dados: {os.path.dirname(DB_FULL_PATH)}")
 
 # Criar as subpastas para logos e QR codes dentro do diretório base de armazenamento
 if not os.path.exists(PARTY_LOGOS_SAVE_PATH):
@@ -114,7 +118,7 @@ def inject_current_year():
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# --- NOVA ROTA para servir arquivos persistentes ---
+# --- ROTA para servir arquivos persistentes ---
 @app.route('/persistent/<path:filename>')
 def serve_persistent_file(filename):
     """
@@ -123,6 +127,8 @@ def serve_persistent_file(filename):
     Ex: /persistent/party_logos/meu_logo.png
     """
     try:
+        # Importante: filename pode conter subdiretórios (ex: 'party_logos/meu_logo.png')
+        # send_from_directory lida com isso automaticamente.
         return send_from_directory(STORAGE_BASE_PATH, filename)
     except Exception as e:
         app.logger.error(f"Erro ao servir arquivo persistente {filename}: {e}")
@@ -216,6 +222,7 @@ class Guest(db.Model):
     purchase_link_id = db.Column(db.String(64), unique=True, nullable=True)
     purchased_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     purchaser = db.relationship('User', foreign_keys=[purchased_by_user_id], backref='purchased_tickets')
+    purchase_price = db.Column(db.Float, nullable=True) # NOVO CAMPO para registrar o preço pago
 
     @property
     def qr_image_url(self):
@@ -235,7 +242,11 @@ class Guest(db.Model):
         return "N/A"
 
 with app.app_context():
-    # Isso criará o arquivo do banco de dados na pasta DB_SAVE_PATH
+    # Isso criará o arquivo do banco de dados na pasta DB_FULL_PATH
+    # Para bancos de dados existentes, isso adicionará a coluna 'purchase_price' como NULL.
+    # Se você já tem dados 'paid' e deseja que eles contribuam para o faturamento,
+    # precisaria de uma migração de dados ou um script one-off para popular 'purchase_price'
+    # para esses registros existentes com o valor de party.ticket_price na época.
     db.create_all()
 
 @login_manager.user_loader
@@ -574,13 +585,13 @@ def register_guest_for_payment(party_id):
         return jsonify({'status': 'error','message': 'Defina um preço para o ingresso na seção "Opções da Festa".'}), 400
     if not guest_name:
         return jsonify({'status': 'error','message': 'Nome do convidado para pagamento é obrigatório.'}), 400
-    
+
     # Validação do perfil do usuário
     if not current_user.tax_id or not current_user.cellphone:
         # Constrói a URL para completar o perfil, com o 'next' para voltar à página da festa
         next_url = url_for('party_manager', party_id=party_id)
         complete_profile_url = url_for('complete_profile', next=next_url)
-        
+
         # Retorna um JSON com a ação de redirecionamento
         return jsonify({
             'status': 'error',
@@ -609,14 +620,15 @@ def register_guest_for_payment(party_id):
             pix_qr_code_filename=qr_filename,
             pix_emv_code=charge_data.get('brCode'),
             pix_created_at=datetime.now(BRASILIA_TZ),
-            purchase_link_id=purchase_link_id
+            purchase_link_id=purchase_link_id,
+            purchase_price=party.ticket_price # NOVO: Salva o preço atual da festa
         )
         db.session.add(new_guest)
         db.session.commit()
 
         payment_link = url_for('buy_ticket_owner_invite', purchase_link_id=purchase_link_id, _external=True)
         return jsonify({
-            'status': 'success', 
+            'status': 'success',
             'message': f'Link de pagamento gerado para {guest_name}.',
             'payment_link': payment_link
         })
@@ -640,18 +652,19 @@ def buy_ticket_owner_invite(purchase_link_id):
             qr_filename = save_base64_as_png(charge_data.get('brCodeBase64'), charge_data['id'])
             if not qr_filename:
                 raise ValueError("Falha ao criar o arquivo PNG do QR Code.")
-            
+
             guest.payment_charge_id = charge_data['id']
             guest.payment_status = 'pending_owner_invite'
             guest.pix_qr_code_filename = qr_filename
             guest.pix_emv_code = charge_data.get('brCode')
             guest.pix_created_at = datetime.now(BRASILIA_TZ)
+            guest.purchase_price = party.ticket_price # NOVO: Salva o preço atual da festa
             db.session.commit()
         except Exception as e:
             app.logger.error(f"Erro na API ao gerar PIX para convite: {e}")
             flash('Não foi possível gerar a cobrança PIX. Tente novamente.', 'danger')
             return render_template('show_ticket_payment.html', guest=guest, payment_pending=False, error_message="Falha ao gerar Pix.")
-    
+
     return redirect(url_for('show_ticket_payment', payment_charge_id=guest.payment_charge_id))
 
 @app.route('/buy_ticket/party/<int:party_id>', methods=['GET', 'POST'])
@@ -684,7 +697,8 @@ def buy_ticket_public(party_id):
             party_id=party_id,
             added_by_user_id=current_user.id,
             payment_status='paid',
-            purchased_by_user_id=current_user.id
+            purchased_by_user_id=current_user.id,
+            purchase_price=0.0 # NOVO: Preço 0.0 para ingresso gratuito
         )
         db.session.add(new_guest)
         db.session.commit()
@@ -725,6 +739,7 @@ def buy_ticket_public(party_id):
             guest_to_update.pix_qr_code_filename = qr_filename
             guest_to_update.pix_emv_code = charge_data.get('brCode')
             guest_to_update.pix_created_at = datetime.now(BRASILIA_TZ)
+            guest_to_update.purchase_price = party.ticket_price # NOVO: Salva o preço atual da festa
             db.session.commit()
             return redirect(url_for('show_ticket_payment', payment_charge_id=charge_data['id']))
         except Exception as e:
@@ -742,14 +757,14 @@ def show_ticket_payment(payment_charge_id):
 
     if guest_ticket_payment.payment_status == 'paid':
         flash(f"Seu ingresso para {guest_ticket_payment.party.name} já foi pago!", "success")
-        return render_template('show_ticket_payment.html', 
-                               guest=guest_ticket_payment, 
+        return render_template('show_ticket_payment.html',
+                               guest=guest_ticket_payment,
                                payment_pending=False,
                                pix_creation_iso=pix_creation_iso)
 
     elif guest_ticket_payment.payment_status in ['pending', 'pending_owner_invite']:
-        return render_template('show_ticket_payment.html', 
-                               guest=guest_ticket_payment, 
+        return render_template('show_ticket_payment.html',
+                               guest=guest_ticket_payment,
                                payment_pending=True,
                                pix_creation_iso=pix_creation_iso)
     else:
@@ -865,6 +880,11 @@ def check_payment_status(pix_id):
         if status == 'PAID':
             if is_guest_ticket_payment.payment_status != 'paid':
                 is_guest_ticket_payment.payment_status = 'paid'
+                # NOVO: Garante que purchase_price esteja definido no momento do pagamento
+                if is_guest_ticket_payment.purchase_price is None:
+                    # Este caso idealmente não deveria ocorrer se o preço é definido na criação da cobrança,
+                    # mas serve como fallback de segurança.
+                    is_guest_ticket_payment.purchase_price = is_guest_ticket_payment.party.ticket_price
                 db.session.commit()
                 delete_pix_qr_code_file(is_guest_ticket_payment)
                 return jsonify({'status': 'PAID', 'type': 'ticket_purchase', 'guest_name': is_guest_ticket_payment.name, 'qr_image_url': is_guest_ticket_payment.qr_image_url})
@@ -899,6 +919,11 @@ def abacatepay_webhook():
         guest = Guest.query.filter_by(payment_charge_id=transaction_id).first()
         if guest and guest.payment_status != 'paid':
             guest.payment_status = 'paid'
+            # NOVO: Garante que purchase_price esteja definido no momento do pagamento
+            if guest.purchase_price is None:
+                # Este caso idealmente não deveria ocorrer se o preço é definido na criação da cobrança,
+                # mas serve como fallback de segurança.
+                guest.purchase_price = guest.party.ticket_price
             db.session.commit()
             delete_pix_qr_code_file(guest)
             app.logger.info(f"Pagamento de ingresso confirmado via webhook para {guest.name} (Festa: {guest.party.name})")
@@ -916,6 +941,13 @@ def get_party_stats_data(party_id):
     total_invited = Guest.query.filter_by(party_id=party_id).count()
     entered_count = Guest.query.filter_by(party_id=party_id, entered=True).count()
     party = Party.query.get(party_id)
+
+    # NOVO: Calcular faturamento total de ingressos pagos
+    total_revenue = db.session.query(db.func.sum(Guest.purchase_price)).filter(
+        Guest.party_id == party_id,
+        Guest.payment_status == 'paid'
+    ).scalar() or 0.0 # Garante que seja 0.0 se não houver vendas ou preço for nulo
+
     if party and party.ticket_price > 0:
         total_paid_guests = Guest.query.filter_by(party_id=party_id, payment_status='paid').count()
         entered_paid_guests = Guest.query.filter_by(party_id=party_id, payment_status='paid', entered=True).count()
@@ -924,7 +956,8 @@ def get_party_stats_data(party_id):
             'total_paid_tickets': total_paid_guests,
             'entered_count': entered_paid_guests,
             'not_entered_count': total_paid_guests - entered_paid_guests,
-            'percentage_entered': round((entered_paid_guests / total_paid_guests) * 100, 2) if total_paid_guests > 0 else 0.0
+            'percentage_entered': round((entered_paid_guests / total_paid_guests) * 100, 2) if total_paid_guests > 0 else 0.0,
+            'total_revenue': total_revenue # Adiciona o faturamento
         }
     else:
         return {
@@ -932,7 +965,8 @@ def get_party_stats_data(party_id):
             'total_paid_tickets': 0,
             'entered_count': entered_count,
             'not_entered_count': total_invited - entered_count,
-            'percentage_entered': round((entered_count / total_invited) * 100, 2) if total_invited > 0 else 0.0
+            'percentage_entered': round((entered_count / total_invited) * 100, 2) if total_invited > 0 else 0.0,
+            'total_revenue': total_revenue # Adiciona o faturamento (mesmo para festas gratuitas, será 0)
         }
 
 @app.route('/api/party/<int:party_id>/stats', methods=['GET'])
@@ -955,7 +989,8 @@ def handle_guests(party_id):
             qr_hash=generate_unique_code(Guest, 'qr_hash', 32, string.ascii_letters + string.digits),
             party_id=party_id,
             added_by_user_id=current_user.id,
-            payment_status='not_applicable'
+            payment_status='not_applicable',
+            purchase_price=0.0 # NOVO: Preço 0.0 para convidado gratuito
         )
         db.session.add(new_guest)
         db.session.commit()
@@ -987,7 +1022,8 @@ def handle_guests(party_id):
         guests_data.append({
             'id': g.id, 'name': g.name, 'qr_hash': g.qr_hash, 'entered': g.entered, 'qr_image_url': g.qr_image_url,
             'check_in_time': g.get_check_in_time_str(), 'added_by': g.adder.username if g.adder else 'N/A',
-            'payment_status': g.payment_status, 'purchased_by': purchased_by_name, 'purchase_link_id': g.purchase_link_id
+            'payment_status': g.payment_status, 'purchased_by': purchased_by_name, 'purchase_link_id': g.purchase_link_id,
+            'purchase_price': g.purchase_price # NOVO: Inclui o preço de compra na API
         })
 
     return jsonify({
@@ -1053,7 +1089,7 @@ def delete_guest(party_id, qr_hash):
 
     if guest.payment_status == 'paid':
         flash(f"Atenção: Você está deletando um ingresso que JÁ FOI PAGO por {guest_name}.", "warning")
-    
+
     delete_pix_qr_code_file(guest)
 
     db.session.delete(guest)
@@ -1103,7 +1139,8 @@ class PDF(FPDF):
             ("Ingressos Pagos:", str(stats_data['total_paid_tickets'])),
             ("Entraram:", str(stats_data['entered_count'])),
             ("Não Entraram:", str(stats_data['not_entered_count'])),
-            ("Comparecimento:", f"{stats_data['percentage_entered']:.2f}%")
+            ("Comparecimento:", f"{stats_data['percentage_entered']:.2f}%"),
+            ("Faturamento Total:", f"R$ {stats_data['total_revenue']:.2f}") # NOVO: Adiciona faturamento
         ]
 
         for i, (label, value) in enumerate(stats_items):
@@ -1120,14 +1157,23 @@ class PDF(FPDF):
 
             y_pos_value = y_pos_label + line_height_label
             self.set_xy(current_x, y_pos_value)
-            self.set_text_color(0, 100, 200)
+            self.set_text_color(0, 100, 200) # Mantém a cor para valores
+            # Cor específica para faturamento
+            if label == "Faturamento Total:":
+                self.set_text_color(0, 150, 0) # Verde para faturamento
             self.set_font(self.current_font_family, 'B', 10)
             self.cell(col_width_stat, line_height_value, value, border=0, align='C')
-            self.set_text_color(0, 0, 0)
+            self.set_text_color(0, 0, 0) # Reseta a cor
 
             current_x += col_width_stat
+            # Quebra de linha após 4 colunas ou no final
+            if (i + 1) % 4 == 0 and (i + 1) < len(stats_items):
+                current_x = self.l_margin
+                base_y += stat_box_height + 5 # Ajusta espaço para próxima linha
+                self.ln(5) # Linha vazia para separar
         self.set_y(base_y + stat_box_height)
         self.ln(5)
+
 
     def draw_pie_chart(self, stats_data, y_offset, chart_size_mm=70):
         labels, sizes, colors = ('Entraram', 'Não Entraram'), [stats_data['entered_count'], stats_data['not_entered_count']], ['#4BC0C0', '#FF6384']
@@ -1159,13 +1205,15 @@ class PDF(FPDF):
         self.set_font(self.current_font_family, 'B', 9)
         self.set_fill_color(230, 230, 230)
 
-        col_widths = {"name": 70, "payment_status": 25, "purchased_by": 30, "status": 25, "check_in": 35, "added_by": 25}
+        # Adicionar coluna "Preço Pago" ao cabeçalho da tabela
+        col_widths = {"name": 55, "payment_status": 22, "purchase_price": 20, "purchased_by": 28, "status": 20, "check_in": 30, "added_by": 25}
         total_width = sum(col_widths.values())
         start_x = self.l_margin + (self.w - 2 * self.l_margin - total_width) / 2
 
         self.set_x(start_x)
         self.cell(col_widths["name"], 8, 'Nome', 1, 0, 'C', 1)
         self.cell(col_widths["payment_status"], 8, 'Pagamento', 1, 0, 'C', 1)
+        self.cell(col_widths["purchase_price"], 8, 'Preço Pago', 1, 0, 'C', 1) # NOVO
         self.cell(col_widths["purchased_by"], 8, 'Comprado Por', 1, 0, 'C', 1)
         self.cell(col_widths["status"], 8, 'Entrou?', 1, 0, 'C', 1)
         self.cell(col_widths["check_in"], 8, 'Data Check-in', 1, 0, 'C', 1)
@@ -1184,12 +1232,16 @@ class PDF(FPDF):
                 'failed': 'Falhou'
             }.get(guest_obj.payment_status, guest_obj.payment_status)
 
+            # Formatação do preço de compra
+            purchase_price_display = f"R$ {guest_obj.purchase_price:.2f}" if guest_obj.purchase_price is not None else 'N/A'
+
             purchased_by_name = guest_obj.purchaser.username if guest_obj.purchaser else 'N/A'
             added_by_name = guest_obj.adder.username if guest_obj.adder else 'N/A'
 
 
             self.cell(col_widths["name"], 7, guest_obj.name, 1, 0, 'L', fill)
             self.cell(col_widths["payment_status"], 7, payment_status_display, 1, 0, 'C', fill)
+            self.cell(col_widths["purchase_price"], 7, purchase_price_display, 1, 0, 'C', fill) # NOVO
             self.cell(col_widths["purchased_by"], 7, purchased_by_name, 1, 0, 'C', fill)
             self.cell(col_widths["status"], 7, 'Sim' if guest_obj.entered else 'Não', 1, 0, 'C', fill)
             self.cell(col_widths["check_in"], 7, guest_obj.get_check_in_time_str(), 1, 0, 'C', fill)
@@ -1204,7 +1256,8 @@ def export_guests_csv(party_id):
     si = io.StringIO()
     cw = csv.writer(si)
 
-    cw.writerow(['Nome', 'Status Entrada', 'Data Check-in', 'Status Pagamento', 'Comprado Por', 'Adicionado Por'])
+    # NOVO: Adiciona "Preço Pago" ao cabeçalho do CSV
+    cw.writerow(['Nome', 'Status Entrada', 'Data Check-in', 'Status Pagamento', 'Preço Pago', 'Comprado Por', 'Adicionado Por'])
 
     for guest in guests_data:
         payment_status_display = {
@@ -1215,6 +1268,9 @@ def export_guests_csv(party_id):
             'failed': 'Pagamento Falhou'
         }.get(guest.payment_status, guest.payment_status)
 
+        # Formatação do preço de compra
+        purchase_price_export = f"{guest.purchase_price:.2f}".replace('.', ',') if guest.purchase_price is not None else 'N/A'
+
         purchased_by_name = guest.purchaser.username if guest.purchaser else 'N/A'
         added_by_name = guest.adder.username if guest.adder else 'N/A'
 
@@ -1223,6 +1279,7 @@ def export_guests_csv(party_id):
             'Sim' if guest.entered else 'Não',
             guest.get_check_in_time_str(),
             payment_status_display,
+            purchase_price_export, # NOVO
             purchased_by_name,
             added_by_name
         ])
@@ -1242,7 +1299,8 @@ def export_guests_pdf(party_id):
     pdf.add_page()
 
     pdf.draw_stats_summary(stats_for_chart)
-    pdf.draw_pie_chart(stats_for_chart, y_offset=0, chart_size_mm=70)
+    # Reajustar o Y do gráfico se a tabela de stats cresceu
+    # pdf.draw_pie_chart(stats_for_chart, y_offset=pdf.get_y(), chart_size_mm=70) # Remover y_offset, já está no get_y()
 
     if guests_for_table:
         pdf.chapter_body(guests_for_table)
