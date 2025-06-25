@@ -31,6 +31,10 @@
          <a href="{{ url_for('dashboard') }}" class="text-primary hover:underline">Voltar ao Dashboard</a>
     </div>
 </div>
+
+<form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    </form>
 {% endblock %}
 
 {% block scripts %}

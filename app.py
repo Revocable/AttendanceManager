@@ -1,5 +1,6 @@
 import os
 import hashlib
+import hmac
 import qrcode
 import requests
 import random
@@ -12,6 +13,8 @@ import csv
 import colorsys
 import base64
 
+from urllib.parse import urlparse, urljoin
+
 from fpdf import FPDF, XPos, YPos
 from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont as PILImageFont, ImageOps
@@ -21,6 +24,10 @@ from werkzeug.utils import secure_filename
 from flask import (Flask, request, jsonify, render_template, url_for, Response,
                    send_from_directory, redirect, flash, abort, make_response)
 from flask_sqlalchemy import SQLAlchemy
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField
+from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError
+from flask_wtf.csrf import CSRFProtect
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from dotenv import load_dotenv
 import matplotlib
@@ -31,13 +38,36 @@ load_dotenv()
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
-# --- Configuração do Caminho de Armazenamento Persistente ---
+# --- Configuração de Caminhos e Pastas Persistentes ---
 # Na Render, defina uma variável de ambiente STORAGE_BASE_PATH como '/var/data/qrpass_data'
 # Localmente, se a variável não estiver definida, usará './data' no diretório do projeto.
 STORAGE_BASE_PATH = os.environ.get('STORAGE_BASE_PATH')
 if not STORAGE_BASE_PATH:
     STORAGE_BASE_PATH = os.path.join(basedir, 'data')
-    print(f"AVISO: Variável de ambiente 'STORAGE_BASE_PATH' não definida. Usando: {STORAGE_BASE_PATH} (para testes locais).")
+
+# Garante que o caminho de armazenamento seja absoluto para evitar erros do SQLite.
+if not os.path.isabs(STORAGE_BASE_PATH):
+    STORAGE_BASE_PATH = os.path.join(basedir, STORAGE_BASE_PATH)
+
+# Define os nomes das subpastas para uma gestão centralizada
+DB_FOLDER_NAME = 'database'
+PARTY_LOGOS_FOLDER_NAME = 'party_logos'
+PAYMENT_QRCODES_FOLDER_NAME = 'payment_qrcodes'
+
+# Constrói os caminhos completos para os artefatos persistentes
+DB_FULL_PATH = os.path.join(STORAGE_BASE_PATH, DB_FOLDER_NAME, 'party.db')
+PARTY_LOGOS_SAVE_PATH = os.path.join(STORAGE_BASE_PATH, PARTY_LOGOS_FOLDER_NAME)
+PAYMENT_QRCODES_SAVE_PATH = os.path.join(STORAGE_BASE_PATH, PAYMENT_QRCODES_FOLDER_NAME)
+
+# Garante que todos os diretórios de armazenamento necessários existam ANTES de a aplicação iniciar.
+# Isso previne erros de 'arquivo não encontrado' durante a inicialização.
+os.makedirs(os.path.dirname(DB_FULL_PATH), exist_ok=True)
+os.makedirs(PARTY_LOGOS_SAVE_PATH, exist_ok=True)
+os.makedirs(PAYMENT_QRCODES_SAVE_PATH, exist_ok=True)
+# A pasta 'instance' é mantida por segurança, caso alguma extensão a utilize.
+os.makedirs(os.path.join(basedir, 'instance'), exist_ok=True)
+print(f"Diretórios de armazenamento verificados/criados em: {STORAGE_BASE_PATH}")
+
 
 # Inicializa o Flask.
 app = Flask(__name__)
@@ -51,19 +81,18 @@ ABACATE_API_KEY = os.environ.get('ABACATE_API_KEY')
 if not ABACATE_API_KEY:
     raise ValueError("ABACATE_API_KEY não definida no .env")
 
-# --- NOVO: Definir caminho para o banco de dados dentro do STORAGE_BASE_PATH ---
-DB_FOLDER_NAME = 'database'
-DB_FULL_PATH = os.path.join(STORAGE_BASE_PATH, DB_FOLDER_NAME, 'party.db')
+ABACATE_WEBHOOK_SECRET = os.environ.get('ABACATE_WEBHOOK_SECRET')
+if not ABACATE_WEBHOOK_SECRET:
+    raise ValueError("ABACATE_WEBHOOK_SECRET não definida no .env")
 
-# ##################################################################################
-# ## CORREÇÃO APLICADA AQUI ##
-# ##################################################################################
 # Converte as barras invertidas do Windows para barras normais para a URI
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + DB_FULL_PATH.replace('\\', '/')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB
 
 # --- Inicializações ---
 db = SQLAlchemy(app)
+csrf = CSRFProtect(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -71,45 +100,16 @@ login_manager.login_message = "Por favor, faça login para acessar esta página.
 login_manager.login_message_category = "info"
 
 # --- Constantes e Pastas ---
-# Nomes das subpastas dentro do STORAGE_BASE_PATH para arquivos persistentes
-PARTY_LOGOS_FOLDER_NAME = 'party_logos'
-PAYMENT_QRCODES_FOLDER_NAME = 'payment_qrcodes'
-
-# Caminhos completos para SALVAR os arquivos, agora baseados em STORAGE_BASE_PATH
-PARTY_LOGOS_SAVE_PATH = os.path.join(STORAGE_BASE_PATH, PARTY_LOGOS_FOLDER_NAME)
-PAYMENT_QRCODES_SAVE_PATH = os.path.join(STORAGE_BASE_PATH, PAYMENT_QRCODES_FOLDER_NAME)
-
 # A fonte é um recurso da aplicação, não precisa ser persistente no disco de dados
 FONT_PATH = os.path.join(basedir, "Montserrat-Regular.ttf")
 BRASILIA_TZ = pytz.timezone('America/Sao_Paulo')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
-# --- Criação de Pastas ---
-# Criar o diretório base de armazenamento se não existir
-if not os.path.exists(STORAGE_BASE_PATH):
-    os.makedirs(STORAGE_BASE_PATH)
-    print(f"Criado diretório de armazenamento base: {STORAGE_BASE_PATH}")
 
-# Criar a pasta do banco de dados dentro do STORAGE_BASE_PATH
-if not os.path.exists(os.path.dirname(DB_FULL_PATH)):
-    os.makedirs(os.path.dirname(DB_FULL_PATH))
-    print(f"Criada pasta para o banco de dados: {os.path.dirname(DB_FULL_PATH)}")
-
-# Criar as subpastas para logos e QR codes dentro do diretório base de armazenamento
-if not os.path.exists(PARTY_LOGOS_SAVE_PATH):
-    os.makedirs(PARTY_LOGOS_SAVE_PATH)
-    print(f"Criada pasta para logos de festas: {PARTY_LOGOS_SAVE_PATH}")
-if not os.path.exists(PAYMENT_QRCODES_SAVE_PATH):
-    os.makedirs(PAYMENT_QRCODES_SAVE_PATH)
-    print(f"Criada pasta para QR Codes de pagamento: {PAYMENT_QRCODES_SAVE_PATH}")
-
-# A pasta 'instance' no diretório do projeto agora é opcional,
-# já que o banco de dados não está mais lá. Se ela não for usada para mais nada, pode ser removida.
-# Por segurança, vamos mantê-la, caso você tenha outros arquivos temporários sendo salvos lá.
-if not os.path.exists(os.path.join(basedir, 'instance')):
-    os.makedirs(os.path.join(basedir, 'instance'))
-    print(f"Criada pasta 'instance' no diretório do projeto: {os.path.join(basedir, 'instance')}")
-
+def is_safe_url(target):
+    ref_url = urlparse(request.host_url)
+    test_url = urlparse(urljoin(request.host_url, target))
+    return test_url.scheme in ('http', 'https') and ref_url.netloc == test_url.netloc
 
 @app.context_processor
 def inject_current_year():
@@ -127,6 +127,10 @@ def serve_persistent_file(filename):
     Ex: /persistent/party_logos/meu_logo.png
     """
     try:
+        # Sanitize o filename para previnir Path Traversal
+        if '..' in filename or filename.startswith('/'):
+            abort(404)
+
         # Importante: filename pode conter subdiretórios (ex: 'party_logos/meu_logo.png')
         # send_from_directory lida com isso automaticamente.
         return send_from_directory(STORAGE_BASE_PATH, filename)
@@ -378,50 +382,82 @@ def check_collaboration_permission(party):
     if party.user_id != current_user.id and current_user not in party.collaborators:
         abort(403)
 
+# --- Formulários WTForms ---
+class SignupForm(FlaskForm):
+    username = StringField('Nome de Usuário', validators=[DataRequired(), Length(min=4, max=80)])
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('Senha', validators=[DataRequired(), Length(min=6)])
+    confirm_password = PasswordField('Confirmar Senha', validators=[DataRequired(), EqualTo('password')])
+
+    def validate_username(self, username):
+        if User.query.filter_by(username=username.data).first():
+            raise ValidationError('Este nome de usuário já existe.')
+
+    def validate_email(self, email):
+        if User.query.filter_by(email=email.data).first():
+            raise ValidationError('Este email já está em uso.')
+
+class LoginForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('Senha', validators=[DataRequired()])
+
+class PartyForm(FlaskForm):
+    party_name = StringField('Nome da Festa', validators=[DataRequired(), Length(max=120)])
+
+class CollaborationForm(FlaskForm):
+    share_code = StringField('Código de Compartilhamento', validators=[DataRequired()])
+
+class PartyDetailsForm(FlaskForm):
+    public_description = StringField('Descrição Pública')
+    ticket_price = StringField('Preço do Ingresso')
+    allow_public_purchase = StringField('Permitir Compra Pública')
+
+class GuestForm(FlaskForm):
+    name = StringField('Nome do Convidado', validators=[DataRequired(), Length(max=100)])
+
+class CompleteProfileForm(FlaskForm):
+    tax_id = StringField('CPF/CNPJ', validators=[DataRequired(), Length(min=11, max=14)])
+    cellphone = StringField('Telefone', validators=[DataRequired(), Length(min=10, max=13)])
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
-
-    next_page = request.args.get('next')
-
-    if request.method == 'POST':
-        user = User.query.filter_by(email=request.form.get('email')).first()
-        if user and user.check_password(request.form.get('password')):
+    
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
+        if user and user.check_password(form.password.data):
             login_user(user, remember=True)
+            next_page = request.args.get('next')
+            if not is_safe_url(next_page):
+                return abort(400)
             return redirect(next_page or url_for('dashboard'))
-        flash('Email ou senha inválidos.', 'danger')
-    return render_template('login.html')
+        else:
+            flash('Login inválido. Verifique seu email e senha.', 'danger')
+    
+    return render_template('login.html', form=form)
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
 
-    next_page = request.args.get('next')
-
-    if request.method == 'POST':
-        username = request.form.get('username')
-        email = request.form.get('email')
-        password = request.form.get('password')
-
-        if User.query.filter_by(username=username).first():
-            flash('Este nome de usuário já existe.', 'danger')
-            return redirect(url_for('signup', next=next_page))
-
-        if User.query.filter_by(email=email).first():
-            flash('Este email já está em uso.', 'danger')
-            return redirect(url_for('signup', next=next_page))
-
-        new_user = User(username=username, email=email)
-        new_user.set_password(password)
+    form = SignupForm()
+    if form.validate_on_submit():
+        new_user = User(username=form.username.data, email=form.email.data)
+        new_user.set_password(form.password.data)
         db.session.add(new_user)
         db.session.commit()
 
         login_user(new_user)
         flash('Conta criada com sucesso!', 'success')
+        next_page = request.args.get('next')
+        if not is_safe_url(next_page):
+            return abort(400)
         return redirect(next_page or url_for('dashboard'))
-    return render_template('signup.html')
+
+    return render_template('signup.html', form=form)
 
 @app.route('/logout')
 @login_required
@@ -444,7 +480,15 @@ def about():
 def dashboard():
     owned_parties = current_user.parties
     collaborated_parties = current_user.collaborations
-    return render_template('dashboard.html', owned_parties=owned_parties, collaborated_parties=collaborated_parties)
+    party_form = PartyForm()
+    collaboration_form = CollaborationForm()
+    return render_template(
+        'dashboard.html',
+        owned_parties=owned_parties,
+        collaborated_parties=collaborated_parties,
+        party_form=party_form,
+        collaboration_form=collaboration_form
+    )
 
 def generate_unique_code(model, field, length=8, chars=string.ascii_uppercase + string.digits):
     while True:
@@ -455,34 +499,38 @@ def generate_unique_code(model, field, length=8, chars=string.ascii_uppercase + 
 @app.route('/party/create', methods=['POST'])
 @login_required
 def create_party():
-    party_name = request.form.get('party_name')
-    if not party_name or not party_name.strip():
+    form = PartyForm()
+    if form.validate_on_submit():
+        party_name = form.party_name.data
+        new_party = Party(name=party_name, owner=current_user, party_code=generate_unique_code(Party, 'party_code', 6), share_code=generate_unique_code(Party, 'share_code', 8), shareable_link_id=secrets.token_urlsafe(12))
+        db.session.add(new_party)
+        db.session.commit()
+        flash(f'Festa "{party_name}" criada!', 'success')
+        return redirect(url_for('party_manager', party_id=new_party.id))
+    else:
         flash('O nome da festa não pode ser vazio.', 'danger')
         return redirect(url_for('dashboard'))
-
-    new_party = Party(name=party_name, owner=current_user, party_code=generate_unique_code(Party, 'party_code', 6), share_code=generate_unique_code(Party, 'share_code', 8), shareable_link_id=secrets.token_urlsafe(12))
-    db.session.add(new_party)
-    db.session.commit()
-
-    flash(f'Festa "{party_name}" criada!', 'success')
-    return redirect(url_for('party_manager', party_id=new_party.id))
 
 @app.route('/party/add_collaboration', methods=['POST'])
 @login_required
 def add_collaboration():
-    share_code = request.form.get('share_code')
-    party = Party.query.filter_by(share_code=share_code).first()
+    form = CollaborationForm()
+    if form.validate_on_submit():
+        share_code = form.share_code.data
+        party = Party.query.filter_by(share_code=share_code).first()
 
-    if not party:
-        flash('Código de compartilhamento inválido.', 'danger')
-    elif party.owner == current_user:
-        flash('Você não pode se adicionar como colaborador da sua própria festa.', 'warning')
-    elif current_user in party.collaborators:
-        flash('Você já é um colaborador desta festa.', 'info')
+        if not party:
+            flash('Código de compartilhamento inválido.', 'danger')
+        elif party.owner == current_user:
+            flash('Você não pode se adicionar como colaborador da sua própria festa.', 'warning')
+        elif current_user in party.collaborators:
+            flash('Você já é um colaborador desta festa.', 'info')
+        else:
+            party.collaborators.append(current_user)
+            db.session.commit()
+            flash(f'Você agora é um colaborador da festa "{party.name}"!', 'success')
     else:
-        party.collaborators.append(current_user)
-        db.session.commit()
-        flash(f'Você agora é um colaborador da festa "{party.name}"!', 'success')
+        flash('Código de compartilhamento inválido.', 'danger')
 
     return redirect(url_for('dashboard'))
 
@@ -544,22 +592,23 @@ def upload_logo(party_id):
 def update_party_details(party_id):
     party = db.session.get(Party, party_id) or abort(404)
     check_collaboration_permission(party)
+    form = PartyDetailsForm()
+    if form.validate_on_submit():
+        party.public_description = form.public_description.data
 
-    party.public_description = request.form.get('public_description')
+        try:
+            ticket_price_str = form.ticket_price.data.replace(',', '.')
+            party.ticket_price = float(ticket_price_str)
+            if party.ticket_price < 0:
+                raise ValueError("Preço do ingresso não pode ser negativo.")
+        except (ValueError, AttributeError):
+            flash('Preço do ingresso inválido. Use um número (ex: 50.00).', 'danger')
+            return redirect(url_for('party_manager', party_id=party_id))
 
-    try:
-        ticket_price_str = request.form.get('ticket_price', '0.0').replace(',', '.')
-        party.ticket_price = float(ticket_price_str)
-        if party.ticket_price < 0:
-            raise ValueError("Preço do ingresso não pode ser negativo.")
-    except ValueError:
-        flash('Preço do ingresso inválido. Use um número (ex: 50.00).', 'danger')
-        return redirect(url_for('party_manager', party_id=party_id))
+        party.allow_public_purchase = 'allow_public_purchase' in request.form
 
-    party.allow_public_purchase = 'allow_public_purchase' in request.form
-
-    db.session.commit()
-    flash('Informações da festa atualizadas!', 'success')
+        db.session.commit()
+        flash('Informações da festa atualizadas!', 'success')
     return redirect(url_for('party_manager', party_id=party_id))
 
 @app.route('/party/<int:party_id>/toggle_guest_count', methods=['POST'])
@@ -785,7 +834,15 @@ def create_abacatepay_charge(amount, description, customer_info):
         "description": description,
         "customer": customer_info
     }
-    app.logger.info(f"Chamando AbacatePay create com payload: {payload}")
+    masked_payload = payload.copy()
+    if 'customer' in masked_payload:
+        masked_payload['customer'] = {
+            'name': masked_payload['customer'].get('name'),
+            'email': '***',
+            'taxId': '***',
+            'cellphone': '***'
+        }
+    app.logger.info(f"Chamando AbacatePay create com payload: {masked_payload}")
     response = requests.post(url, json=payload, headers=headers)
     response.raise_for_status()
     data = response.json().get('data', {})
@@ -839,23 +896,21 @@ def forget_scanner():
 @app.route('/complete_profile', methods=['GET', 'POST'])
 @login_required
 def complete_profile():
-    if request.method == 'POST':
-        tax_id = request.form.get('tax_id', '').strip()
-        cellphone = request.form.get('cellphone', '').strip()
-        if not tax_id or not cellphone:
-            flash("CPF e Telefone são obrigatórios.", 'danger')
-            return render_template('complete_profile.html')
+    form = CompleteProfileForm()
+    if form.validate_on_submit():
+        tax_id = form.tax_id.data.strip()
+        cellphone = form.cellphone.data.strip()
 
         if not tax_id.isdigit() or len(tax_id) not in [11, 14]:
             flash("CPF/CNPJ inválido. Digite apenas números.", 'danger')
-            return render_template('complete_profile.html')
+            return render_template('complete_profile.html', form=form)
         if not cellphone.isdigit() or len(cellphone) not in [10, 11, 12, 13]:
              flash("Telefone inválido. Digite apenas números.", 'danger')
-             return render_template('complete_profile.html')
+             return render_template('complete_profile.html', form=form)
 
         if User.query.filter(User.tax_id == tax_id, User.id != current_user.id).first():
             flash("Este CPF/CNPJ já está associado a outra conta.", 'danger')
-            return render_template('complete_profile.html')
+            return render_template('complete_profile.html', form=form)
 
         current_user.tax_id, current_user.cellphone = tax_id, cellphone
         db.session.commit()
@@ -864,7 +919,7 @@ def complete_profile():
         next_page = request.args.get('next')
         return redirect(next_page or url_for('dashboard'))
 
-    return render_template('complete_profile.html')
+    return render_template('complete_profile.html', form=form)
 
 @app.route('/payment/check_status/<pix_id>')
 def check_payment_status(pix_id):
@@ -903,10 +958,32 @@ def check_payment_status(pix_id):
         app.logger.error(f"Erro ao verificar status do pagamento via API: {e}")
         return jsonify({'status': 'error', 'message': 'Erro ao consultar status do pagamento.'}), 500
 
+@csrf.exempt
 @app.route('/webhooks/abacatepay', methods=['POST'])
 def abacatepay_webhook():
+    # 1. Verificação da Assinatura (Segurança)
+    signature_header = request.headers.get('Abacate-Signature')
+    if not signature_header:
+        app.logger.warning("Webhook AbacatePay recebido sem assinatura.")
+        return jsonify({'status': 'error', 'message': 'Signature missing'}), 400
+
+    try:
+        # O corpo do request precisa ser lido como bytes
+        payload_bytes = request.get_data()
+        # Cria a assinatura esperada usando o segredo do webhook
+        expected_signature = hmac.new(ABACATE_WEBHOOK_SECRET.encode('utf-8'), payload_bytes, hashlib.sha256).hexdigest()
+
+        # Compara a assinatura recebida com a esperada de forma segura
+        if not hmac.compare_digest(signature_header, expected_signature):
+            app.logger.warning("Webhook AbacatePay com assinatura inválida.")
+            return jsonify({'status': 'error', 'message': 'Invalid signature'}), 403
+    except Exception as e:
+        app.logger.error(f"Erro ao verificar a assinatura do webhook: {e}")
+        return jsonify({'status': 'error', 'message': 'Signature verification failed'}), 500
+
+    # 2. Processamento do Payload (após validação)
     payload = request.get_json()
-    app.logger.info(f"Webhook recebido: {payload}")
+    app.logger.info(f"Webhook recebido e validado: {payload}")
 
     if not payload or 'event' not in payload or 'data' not in payload:
         app.logger.warning("Webhook AbacatePay com payload inválido.")

@@ -6,6 +6,7 @@
 <div class="flex justify-center items-center py-12">
     <div class="w-full max-w-md">
         <form method="POST" action="{{ url_for('public_scanner') }}" class="glass-card rounded-2xl shadow-2xl p-8 space-y-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <h2 class="text-center text-3xl font-bold text-gray-900 dark:text-white">Acessar Scanner da Festa</h2>
             <p class="text-center text-gray-600 dark:text-gray-400 !mt-2">
                 Digite o código de 6 dígitos da festa fornecido pelo organizador.

@@ -148,6 +148,7 @@
             <div class="space-y-2"><label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Link da Página Pública:</label><div class="relative"><input type="text" id="shareableLink" value="{{ url_for('public_party_page', shareable_link_id=party.shareable_link_id, _external=True) }}" readonly class="w-full text-xs px-2 py-2 bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 break-all"><button onclick="copyToClipboard('#shareableLink', '#copyBtnIcon')" class="absolute right-1 top-1/2 -translate-y-1/2 bg-primary text-white p-2 rounded-md hover:bg-secondary transition-colors text-xs"><i id="copyBtnIcon" class="fas fa-copy"></i></button></div><a href="{{ url_for('public_party_page', shareable_link_id=party.shareable_link_id) }}" target="_blank" class="text-xs text-primary hover:underline">Abrir link em nova aba</a></div>
             
             <form action="{{ url_for('upload_logo', party_id=party.id) }}" method="POST" enctype="multipart/form-data" class="mt-4 border-t pt-4">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <label for="party_logo" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Logo da Festa:</label>
                 {% if party.logo_filename %}
                 <!-- ALTERADO AQUI: Usar a nova rota para arquivos persistentes -->
@@ -158,6 +159,7 @@
             </form>
 
             <form action="{{ url_for('update_party_details', party_id=party.id) }}" method="POST" class="mt-4 border-t pt-4">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <label for="public_description" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Descrição Pública:</label>
                 <textarea name="public_description" id="public_description" rows="4" class="mt-1 w-full text-sm glass-effect rounded-lg p-2 focus:ring-primary focus:border-primary">{{ party.public_description or '' }}</textarea>
                 
@@ -173,7 +175,10 @@
 
                 <button type="submit" class="mt-4 w-full text-xs bg-primary text-white py-1 px-3 rounded-lg hover:bg-secondary">Salvar Informações</button>
             </form>
-            <form action="{{ url_for('toggle_guest_count', party_id=party.id) }}" method="POST" class="mt-4 border-t pt-4"><label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Contagem de Convidados na Página:</label><div class="flex items-center space-x-3 mt-1"><span class="text-sm font-bold {{ 'text-green-500' if party.show_guest_count else 'text-red-500' }}">{% if party.show_guest_count %} Visível {% else %} Oculto {% endif %}</span><button type="submit" class="text-xs bg-gray-500 text-white py-1 px-3 rounded-lg hover:bg-gray-600">{% if party.show_guest_count %} Ocultar {% else %} Mostrar {% endif %}</button></div></form>
+            <form action="{{ url_for('toggle_guest_count', party_id=party.id) }}" method="POST" class="mt-4 border-t pt-4">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Contagem de Convidados na Página:</label>
+                <div class="flex items-center space-x-3 mt-1"><span class="text-sm font-bold {{ 'text-green-500' if party.show_guest_count else 'text-red-500' }}">{% if party.show_guest_count %} Visível {% else %} Oculto {% endif %}</span><button type="submit" class="text-xs bg-gray-500 text-white py-1 px-3 rounded-lg hover:bg-gray-600">{% if party.show_guest_count %} Ocultar {% else %} Mostrar {% endif %}</button></div></form>
         </div>
     </div>
 </div>

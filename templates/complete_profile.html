@@ -7,6 +7,7 @@
     <div class="w-full max-w-md">
         {# ATENÇÃO AQUI: next=request.args.get('next') foi adicionado ao action #}
         <form method="POST" action="{{ url_for('complete_profile', next=request.args.get('next')) }}" class="glass-card rounded-2xl shadow-2xl p-8 space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <h2 class="text-center text-3xl font-bold text-gray-900 dark:text-white">Complete seu Perfil</h2>
             <p class="text-center text-gray-600 dark:text-gray-400 !mt-2 !mb-6">
                 Precisamos de mais algumas informações para processar seu pagamento com segurança.

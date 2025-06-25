@@ -15,6 +15,7 @@
     <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">Por favor, confirme seu nome para o ingresso. Se você já está logado, seu nome de usuário será sugerido.</p>
 
     <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <div class="mb-4">
             <label for="guest_name" class="sr-only">Seu Nome para o Ingresso</label>
             <input type="text" id="guest_name" name="guest_name" placeholder="Seu Nome para o Ingresso"

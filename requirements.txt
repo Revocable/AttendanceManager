@@ -7,10 +7,12 @@ click
 contourpy
 cycler
 defusedxml
+email_validator
 Faker
 Flask
 Flask-Login
 Flask-SQLAlchemy
+Flask-WTF
 fonttools
 fpdf2
 greenlet
