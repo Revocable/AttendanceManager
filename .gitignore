@@ -5,3 +5,4 @@ static/payment_qrcodes/
 __pycache__/
 data/
 .env
+venv
