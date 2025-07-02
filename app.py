@@ -1102,6 +1102,33 @@ def mark_entered(party_id, qr_hash):
     db.session.commit()
     return jsonify({'id': guest.id, 'name': guest.name, 'qr_hash': guest.qr_hash, 'entered': True, 'message': f'Entrada liberada! Bem-vindo(a), {guest.name}!', 'is_new_entry': True, 'check_in_time': guest.get_check_in_time_str()})
 
+@app.route('/api/party/<int:party_id>/checkin_data', methods=['GET'])
+@login_required
+def get_checkin_data(party_id):
+    """
+    Retorna uma lista de todos os timestamps de check-in (em formato ISO)
+    para uma festa, a fim de construir o gráfico de check-in por hora.
+    """
+    party = db.session.get(Party, party_id) or abort(404)
+    check_collaboration_permission(party)
+
+    # Consulta ao banco para pegar apenas os timestamps de check-in
+    # de convidados que realmente entraram.
+    check_ins = db.session.query(Guest.check_in_time).filter(
+        Guest.party_id == party_id,
+        Guest.entered == True,
+        Guest.check_in_time.isnot(None)
+    ).all()
+
+    # Extrai os timestamps da tupla retornada pela query e converte para string ISO
+    # O formato ISO é ideal para ser parseado pelo JavaScript
+    timestamps = [
+        check_in_time[0].astimezone(BRASILIA_TZ).isoformat()
+        for check_in_time in check_ins
+    ]
+
+    return jsonify({'check_ins': timestamps})
+
 @app.route('/api/party/<int:party_id>/guests/<qr_hash>/edit', methods=['PUT'])
 @login_required
 def edit_guest_name(party_id, qr_hash):

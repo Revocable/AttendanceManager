@@ -46,15 +46,19 @@
             <button class="tab-button flex-1 py-3 text-center text-lg font-semibold text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors duration-200 border-b-2 border-transparent data-[active=true]:border-primary data-[active=true]:text-primary dark:data-[active=true]:text-primary" data-tab="dashboard">
                 <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
             </button>
-            <!-- ABA 2: Lista de Convidados -->
+            <!-- ABA 2: Análise de Check-in (NOVA ABA) -->
+            <button class="tab-button flex-1 py-3 text-center text-lg font-semibold text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors duration-200 border-b-2 border-transparent data-[active=true]:border-primary data-[active=true]:text-primary dark:data-[active=true]:text-primary" data-tab="checkin-analytics">
+                <i class="fas fa-chart-line mr-2"></i>Análise de Check-in
+            </button>
+            <!-- ABA 3: Lista de Convidados -->
             <button class="tab-button flex-1 py-3 text-center text-lg font-semibold text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors duration-200 border-b-2 border-transparent data-[active=true]:border-primary data-[active=true]:text-primary dark:data-[active=true]:text-primary" data-tab="guest-list">
                 <i class="fas fa-users mr-2"></i>Lista de Convidados
             </button>
-            <!-- ABA 3: Adicionar e Convidar -->
+            <!-- ABA 4: Adicionar e Convidar -->
             <button class="tab-button flex-1 py-3 text-center text-lg font-semibold text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors duration-200 border-b-2 border-transparent data-[active=true]:border-primary data-[active=true]:text-primary dark:data-[active=true]:text-primary" data-tab="add-invite">
                 <i class="fas fa-user-plus mr-2"></i>Adicionar & Convidar
             </button>
-            <!-- ABA 4: Configurações -->
+            <!-- ABA 5: Configurações -->
             <button class="tab-button flex-1 py-3 text-center text-lg font-semibold text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors duration-200 border-b-2 border-transparent data-[active=true]:border-primary data-[active=true]:text-primary dark:data-[active=true]:text-primary" data-tab="settings">
                 <i class="fas fa-cog mr-2"></i>Configurações
             </button>
@@ -96,8 +100,26 @@
                 </div>
             </div>
         </div>
+        
+        <!-- ABA 2: CONTEÚDO DA ANÁLISE DE CHECK-IN -->
+        <div id="tab-checkin-analytics" class="tab-content pt-6 hidden fade-in">
+            <div class="glass-card rounded-2xl shadow-inner p-6">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center mb-2 sm:mb-0">
+                        <i class="fas fa-chart-line text-primary mr-3"></i>Check-ins por Período
+                    </h2>
+                    <div class="text-sm text-gray-600 dark:text-gray-400 bg-blue-100 dark:bg-gray-700/50 px-3 py-1 rounded-full">
+                        <i class="fas fa-mouse-pointer mr-2"></i>Use o scroll do mouse no gráfico para ajustar o zoom
+                    </div>
+                </div>
+                <div id="checkinChartContainer" class="relative h-96 w-full mt-4">
+                    <canvas id="checkinHourlyChart"></canvas>
+                </div>
+                <div id="checkinChartInfo" class="text-center mt-2 text-sm font-semibold text-primary dark:text-secondary"></div>
+            </div>
+        </div>
 
-        <!-- ABA 2: CONTEÚDO DA LISTA DE CONVIDADOS -->
+        <!-- ABA 3: CONTEÚDO DA LISTA DE CONVIDADOS -->
         <div id="tab-guest-list" class="tab-content pt-6 hidden fade-in">
             <div class="glass-card rounded-2xl shadow-inner p-6">
                 <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6">
@@ -129,7 +151,7 @@
             </div>
         </div>
 
-        <!-- ABA 3: CONTEÚDO DE ADICIONAR & CONVIDAR -->
+        <!-- ABA 4: CONTEÚDO DE ADICIONAR & CONVIDAR -->
         <div id="tab-add-invite" class="tab-content pt-6 hidden fade-in">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <!-- Card: Adicionar Convidado Gratuito -->
@@ -172,7 +194,7 @@
             </div>
         </div>
 
-        <!-- ABA 4: CONTEÚDO DAS CONFIGURAÇÕES -->
+        <!-- ABA 5: CONTEÚDO DAS CONFIGURAÇÕES -->
         <div id="tab-settings" class="tab-content pt-6 hidden fade-in">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <!-- Coluna Principal (2/3) -->
@@ -236,6 +258,8 @@
 {% block scripts %}
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js"></script>
 
 <script type="text/javascript">
     function fallbackCopyTextToClipboard(text, iconSelector) {
@@ -302,13 +326,21 @@
     }
 
 
+    // --- VARIÁVEIS GLOBAIS ---
     const partyId = document.body.getAttribute('data-party-id');
     const API_URL = `/api/party/${partyId}`;
-    let attendanceChartInstance = null;
     const SEARCH_DEBOUNCE_MS = 300;
     const GUESTS_PER_PAGE = 50;
-
     let appState = { currentPage: 1, totalPages: 1, sortBy: 'name', sortDir: 'asc', searchTerm: '' };
+
+    // --- VARIÁVEIS PARA OS GRÁFICOS ---
+    let attendanceChartInstance = null;
+    let checkinChartInstance = null;
+    let rawCheckinData = []; // Armazena os dados brutos para evitar novas chamadas de API
+    const zoomLevels = [60, 30, 15, 10, 5, 1]; // Intervalos em minutos
+    let currentZoomLevelIndex = 0; // Começa com 60 minutos
+    let isCheckinChartInitialized = false; // Flag para inicializar apenas uma vez
+
 
     function debounce(func, delay) { let timeout; return function(...args) { clearTimeout(timeout); timeout = setTimeout(() => func.apply(this, args), delay); }; }
     
@@ -330,19 +362,15 @@
         if (inviteForPaymentForm) { inviteForPaymentForm.addEventListener('submit', (e) => { e.preventDefault(); inviteGuestForPayment(); }); }
 
         document.getElementById('searchInput').addEventListener('input', debounce(handleSearch, SEARCH_DEBOUNCE_MS));
-        
-        // Animate main sections after initial tab is shown
-        animateElements('.glass-card', 200);
     });
 
-    // New function to animate elements on load/visibility
-    function animateElements(selector, delay = 0) {
+    function animateElements(selector) {
         anime({
             targets: selector,
             opacity: [0, 1],
             translateY: [20, 0],
-            duration: 800,
-            delay: anime.stagger(100, { start: delay }), // Stagger animation for multiple elements
+            duration: 600,
+            delay: anime.stagger(80),
             easing: 'easeOutQuad'
         });
     }
@@ -355,11 +383,17 @@
             button.dataset.active = 'false';
         });
 
-        document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+        const tabContent = document.getElementById(`tab-${tabId}`);
+        tabContent.classList.remove('hidden');
         document.querySelector(`.tab-button[data-tab="${tabId}"]`).dataset.active = 'true';
+        
+        // Anima os elementos da aba que acabou de se tornar visível
+        animateElements(`#tab-${tabId} .glass-effect, #tab-${tabId} .glass-card`);
 
         if (tabId === 'dashboard') {
             fetchStats();
+        } else if (tabId === 'checkin-analytics' && !isCheckinChartInitialized) {
+            initCheckinAnalyticsChart();
         }
     }
 
@@ -384,6 +418,138 @@
         show();
     }
     
+    // --- LÓGICA DO NOVO GRÁFICO DE CHECK-IN ---
+    async function initCheckinAnalyticsChart() {
+        if (isCheckinChartInitialized) return;
+        isCheckinChartInitialized = true;
+
+        const chartContainer = document.getElementById('checkinChartContainer');
+        chartContainer.innerHTML = `<div class="flex items-center justify-center h-full"><i class="fas fa-spinner fa-spin text-3xl text-primary"></i></div>`;
+        
+        try {
+            const response = await fetch(`${API_URL}/checkin_data`);
+            if (!response.ok) throw new Error('Falha ao buscar dados de check-in.');
+            const data = await response.json();
+            rawCheckinData = data.check_ins.map(ts => new Date(ts)); // Converte strings ISO para Objetos Date
+
+            if (rawCheckinData.length === 0) {
+                 chartContainer.innerHTML = `<div class="flex items-center justify-center h-full text-center text-gray-500 dark:text-gray-400 font-semibold">Nenhum dado de check-in disponível ainda.</div>`;
+                 return;
+            }
+            
+            chartContainer.innerHTML = `<canvas id="checkinHourlyChart"></canvas>`;
+            const debouncedScrollHandler = debounce(handleChartScroll, 100);
+            document.getElementById('checkinHourlyChart').addEventListener('wheel', debouncedScrollHandler, { passive: false });
+            
+            updateCheckinChart();
+
+        } catch (error) {
+            chartContainer.innerHTML = `<div class="flex items-center justify-center h-full text-center text-danger font-semibold">${error.message}</div>`;
+            showToast(error.message, 'error');
+        }
+    }
+
+    function handleChartScroll(event) {
+        event.preventDefault(); // Impede o scroll da página
+        const delta = Math.sign(event.deltaY);
+
+        if (delta > 0) { // Scroll para baixo (zoom out)
+            currentZoomLevelIndex = Math.max(0, currentZoomLevelIndex - 1);
+        } else { // Scroll para cima (zoom in)
+            currentZoomLevelIndex = Math.min(zoomLevels.length - 1, currentZoomLevelIndex + 1);
+        }
+        updateCheckinChart();
+    }
+    
+    function processCheckinData(intervalMinutes) {
+        if (rawCheckinData.length === 0) return { labels: [], data: [] };
+        const counts = new Map();
+        
+        rawCheckinData.forEach(date => {
+            const roundedDate = new Date(date);
+            roundedDate.setSeconds(0, 0);
+            roundedDate.setMinutes(Math.floor(roundedDate.getMinutes() / intervalMinutes) * intervalMinutes);
+            const key = roundedDate.getTime();
+            counts.set(key, (counts.get(key) || 0) + 1);
+        });
+
+        const sortedKeys = Array.from(counts.keys()).sort((a, b) => a - b);
+        const labels = sortedKeys.map(key => new Date(key));
+        const data = sortedKeys.map(key => counts.get(key));
+        return { labels, data };
+    }
+
+    function updateCheckinChart() {
+        const interval = zoomLevels[currentZoomLevelIndex];
+        const { labels, data } = processCheckinData(interval);
+        const ctx = document.getElementById('checkinHourlyChart').getContext('2d');
+        if (!ctx) return;
+
+        const isDark = document.documentElement.classList.contains('dark');
+        const textColor = isDark ? '#e5e7eb' : '#374151';
+        const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+        
+        document.getElementById('checkinChartInfo').textContent = `Intervalos de ${interval} minuto(s)`;
+
+        const chartData = {
+            labels: labels,
+            datasets: [{
+                label: 'Check-ins',
+                data: data,
+                backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                borderColor: 'rgba(59, 130, 246, 1)',
+                borderWidth: 1,
+                borderRadius: 5,
+                hoverBackgroundColor: 'rgba(59, 130, 246, 0.9)'
+            }]
+        };
+
+        const config = {
+            type: 'bar',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: function(context) {
+                                const date = new Date(context[0].label);
+                                return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ' ' + date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                            },
+                            label: function(context) { return `Check-ins: ${context.parsed.y}`; }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: { unit: 'minute', stepSize: interval, tooltipFormat: 'dd/MM HH:mm', displayFormats: { minute: 'HH:mm' } },
+                        ticks: { color: textColor },
+                        grid: { color: gridColor }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: { color: textColor, precision: 0 },
+                        grid: { color: gridColor }
+                    }
+                }
+            }
+        };
+
+        if (checkinChartInstance) {
+            checkinChartInstance.data.labels = labels;
+            checkinChartInstance.data.datasets[0].data = data;
+            checkinChartInstance.options.scales.x.time.stepSize = interval;
+            checkinChartInstance.update('none');
+        } else {
+            checkinChartInstance = new Chart(ctx, config);
+        }
+    }
+
+
+    // --- LÓGICA PRINCIPAL DA PÁGINA ---
     async function fetchData() { await fetchGuests(); await fetchStats(); }
     
     async function fetchGuests() {
@@ -430,54 +596,24 @@
         guests.forEach(guest => {
             const guestNameJs = guest.name.replace(/'/g, "\\'");
             const statusBadge = guest.entered ? '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"><i class="fas fa-check mr-1"></i>Entrou</span>' : '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200"><i class="fas fa-times mr-1"></i>Não Entrou</span>';
-            
-            let paymentStatusBadge;
-            let qrButtonHtml;
-
+            let paymentStatusBadge; let qrButtonHtml;
             if (guest.payment_status === 'paid') {
                 paymentStatusBadge = '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200"><i class="fas fa-dollar-sign mr-1"></i>Pago</span>';
                 qrButtonHtml = `<button onclick="showQrCodeModal('${guestNameJs}', '${guest.qr_image_url}')" class="bg-blue-500 text-white p-2 rounded-md text-xs hover:bg-blue-600 transition-colors" title="Ver QR Code"><i class="fas fa-qrcode"></i></button>`;
             } else if (guest.payment_status === 'pending' || guest.payment_status === 'pending_owner_invite') {
                 paymentStatusBadge = '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200"><i class="fas fa-hourglass-half mr-1"></i>Aguardando</span>';
-                qrButtonHtml = guest.purchase_link_id 
-                    ? `<a href="${window.location.origin}/buy_ticket/owner_invite/${guest.purchase_link_id}" target="_blank" class="bg-yellow-500 text-white p-2 rounded-md text-xs hover:bg-yellow-600 transition-colors" title="Ver Página de Pagamento"><i class="fas fa-link"></i></a>`
-                    : `<button class="bg-gray-400 text-white p-2 rounded-md text-xs cursor-not-allowed" title="QR Code indisponível" disabled><i class="fas fa-qrcode"></i></button>`;
+                qrButtonHtml = guest.purchase_link_id ? `<a href="${window.location.origin}/buy_ticket/owner_invite/${guest.purchase_link_id}" target="_blank" class="bg-yellow-500 text-white p-2 rounded-md text-xs hover:bg-yellow-600 transition-colors" title="Ver Página de Pagamento"><i class="fas fa-link"></i></a>` : `<button class="bg-gray-400 text-white p-2 rounded-md text-xs cursor-not-allowed" title="QR Code indisponível" disabled><i class="fas fa-qrcode"></i></button>`;
             } else if (guest.payment_status === 'failed') {
                 paymentStatusBadge = '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200"><i class="fas fa-exclamation-triangle mr-1"></i>Falhou</span>';
                 qrButtonHtml = `<button class="bg-gray-400 text-white p-2 rounded-md text-xs cursor-not-allowed" title="Pagamento falhou" disabled><i class="fas fa-qrcode"></i></button>`;
-            } else { // not_applicable (convidado gratuito)
+            } else {
                 paymentStatusBadge = '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300"><i class="fas fa-ticket-alt mr-1"></i>Gratuito</span>';
-                qrButtonHtml = guest.qr_image_url 
-                    ? `<button onclick="showQrCodeModal('${guestNameJs}', '${guest.qr_image_url}')" class="bg-blue-500 text-white p-2 rounded-md text-xs hover:bg-blue-600 transition-colors" title="Ver QR Code"><i class="fas fa-qrcode"></i></button>`
-                    : `<button class="bg-gray-400 text-white p-2 rounded-md text-xs cursor-not-allowed" title="QR Code indisponível" disabled><i class="fas fa-qrcode"></i></button>`;
+                qrButtonHtml = guest.qr_image_url ? `<button onclick="showQrCodeModal('${guestNameJs}', '${guest.qr_image_url}')" class="bg-blue-500 text-white p-2 rounded-md text-xs hover:bg-blue-600 transition-colors" title="Ver QR Code"><i class="fas fa-qrcode"></i></button>` : `<button class="bg-gray-400 text-white p-2 rounded-md text-xs cursor-not-allowed" title="QR Code indisponível" disabled><i class="fas fa-qrcode"></i></button>`;
             }
-
-            const actionsHtml = `
-                <div class="flex space-x-2">
-                    ${qrButtonHtml}
-                    <button onclick="showEditModal({ currentName: '${guestNameJs}', onConfirm: (newName) => editGuest('${guest.qr_hash}', newName) })" class="bg-yellow-500 text-white p-2 rounded-md text-xs hover:bg-yellow-600 transition-colors" title="Editar"><i class="fas fa-edit"></i></button>
-                    <button onclick="toggleGuestEntry('${guest.qr_hash}')" class="${guest.entered ? 'bg-orange-500 hover:bg-orange-600' : 'bg-green-500 hover:bg-green-600'} text-white p-2 rounded-md text-xs transition-colors" title="${guest.entered ? 'Marcar Saída' : 'Marcar Entrada'}"><i class="fas fa-${guest.entered ? 'user-minus' : 'user-check'}"></i></button>
-                    <button onclick="confirmDeleteGuest('${guest.qr_hash}', '${guestNameJs}')" class="bg-red-500 text-white p-2 rounded-md text-xs hover:bg-red-600 transition-colors" title="Remover"><i class="fas fa-trash"></i></button>
-                </div>`;
-            
-            const row = `<tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white truncate" title="${guest.name}">${guest.name}</td>
-                <td class="px-4 py-3 text-sm">${paymentStatusBadge}</td>
-                <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">${guest.purchased_by || 'N/A'}</td>
-                <td class="px-4 py-3 text-sm">${statusBadge}</td>
-                <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">${guest.check_in_time || 'N/A'}</td>
-                <td class="px-4 py-3 text-sm font-medium">${actionsHtml}</td>
-            </tr>`;
+            const actionsHtml = `<div class="flex space-x-2">${qrButtonHtml}<button onclick="showEditModal({ currentName: '${guestNameJs}', onConfirm: (newName) => editGuest('${guest.qr_hash}', newName) })" class="bg-yellow-500 text-white p-2 rounded-md text-xs hover:bg-yellow-600 transition-colors" title="Editar"><i class="fas fa-edit"></i></button><button onclick="toggleGuestEntry('${guest.qr_hash}')" class="${guest.entered ? 'bg-orange-500 hover:bg-orange-600' : 'bg-green-500 hover:bg-green-600'} text-white p-2 rounded-md text-xs transition-colors" title="${guest.entered ? 'Marcar Saída' : 'Marcar Entrada'}"><i class="fas fa-${guest.entered ? 'user-minus' : 'user-check'}"></i></button><button onclick="confirmDeleteGuest('${guest.qr_hash}', '${guestNameJs}')" class="bg-red-500 text-white p-2 rounded-md text-xs hover:bg-red-600 transition-colors" title="Remover"><i class="fas fa-trash"></i></button></div>`;
+            const row = `<tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"><td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white truncate" title="${guest.name}">${guest.name}</td><td class="px-4 py-3 text-sm">${paymentStatusBadge}</td><td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">${guest.purchased_by || 'N/A'}</td><td class="px-4 py-3 text-sm">${statusBadge}</td><td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">${guest.check_in_time || 'N/A'}</td><td class="px-4 py-3 text-sm font-medium">${actionsHtml}</td></tr>`;
             tableBody.innerHTML += row;
-            
-            const card = `<div class="glass-effect rounded-xl p-4">
-                <div class="flex justify-between items-start"><h3 class="font-bold text-lg text-gray-900 dark:text-white">${guest.name}</h3>${statusBadge}</div>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Status Pagamento: ${paymentStatusBadge}</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Comprado por: ${guest.purchased_by || 'N/A'}</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Check-in: ${guest.check_in_time || 'N/A'}</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Adicionado por: ${guest.added_by || 'N/A'}</p>
-                <div class="mt-4 flex justify-end items-center">${actionsHtml}</div>
-            </div>`;
+            const card = `<div class="glass-effect rounded-xl p-4"><div class="flex justify-between items-start"><h3 class="font-bold text-lg text-gray-900 dark:text-white">${guest.name}</h3>${statusBadge}</div><p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Status Pagamento: ${paymentStatusBadge}</p><p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Comprado por: ${guest.purchased_by || 'N/A'}</p><p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Check-in: ${guest.check_in_time || 'N/A'}</p><p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Adicionado por: ${guest.added_by || 'N/A'}</p><div class="mt-4 flex justify-end items-center">${actionsHtml}</div></div>`;
             cardsContainer.innerHTML += card;
         });
     }
@@ -487,90 +623,47 @@
     async function addGuest() {
         const name = document.getElementById('guestName').value.trim();
         if (!name) { showToast('Nome do convidado é obrigatório.', 'error'); return; }
-        const qrCodeArea = document.getElementById('newQrCodeArea');
-        const guestAddedInfo = document.getElementById('guestAddedInfo');
-        const newGuestQrImage = document.getElementById('newGuestQrImage');
-        const downloadQrLink = document.getElementById('downloadQrLink');
-        qrCodeArea.style.display = 'block';
-        guestAddedInfo.textContent = 'Adicionando...';
-        guestAddedInfo.className = 'font-semibold mb-4 text-blue-600 dark:text-blue-400';
-        newGuestQrImage.style.display = 'none';
-        downloadQrLink.style.display = 'none';
+        const qrCodeArea = document.getElementById('newQrCodeArea'); const guestAddedInfo = document.getElementById('guestAddedInfo'); const newGuestQrImage = document.getElementById('newGuestQrImage'); const downloadQrLink = document.getElementById('downloadQrLink');
+        qrCodeArea.style.display = 'block'; guestAddedInfo.textContent = 'Adicionando...'; guestAddedInfo.className = 'font-semibold mb-4 text-blue-600 dark:text-blue-400'; newGuestQrImage.style.display = 'none'; downloadQrLink.style.display = 'none';
         try {
             const response = await fetch(`${API_URL}/guests`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.error);
-            guestAddedInfo.textContent = `Convidado "${result.name}" adicionado!`;
-            guestAddedInfo.className = 'font-semibold mb-4 text-green-700 dark:text-green-400';
-            newGuestQrImage.src = result.qr_image_url;
-            newGuestQrImage.alt = `QR Code para ${result.name}`;
-            downloadQrLink.href = result.qr_image_url;
-            downloadQrLink.download = `QRCode-${result.name.replace(/ /g, '_')}.png`;
-            newGuestQrImage.style.display = 'block';
-            downloadQrLink.style.display = 'inline-flex';
+            const result = await response.json(); if (!response.ok) throw new Error(result.error);
+            guestAddedInfo.textContent = `Convidado "${result.name}" adicionado!`; guestAddedInfo.className = 'font-semibold mb-4 text-green-700 dark:text-green-400'; newGuestQrImage.src = result.qr_image_url; newGuestQrImage.alt = `QR Code para ${result.name}`; downloadQrLink.href = result.qr_image_url; downloadQrLink.download = `QRCode-${result.name.replace(/ /g, '_')}.png`;
+            newGuestQrImage.style.display = 'block'; downloadQrLink.style.display = 'inline-flex';
             downloadQrLink.onclick = () => { setTimeout(() => { qrCodeArea.style.display = 'none'; }, 500); };
-            document.getElementById('guestName').value = '';
-            fetchData();
-        } catch (error) {
-            guestAddedInfo.textContent = `Erro: ${error.message}`;
-            guestAddedInfo.className = 'font-semibold mb-4 text-red-600 dark:text-red-400';
-            showToast(error.message, 'error');
-        }
+            document.getElementById('guestName').value = ''; fetchData();
+        } catch (error) { guestAddedInfo.textContent = `Erro: ${error.message}`; guestAddedInfo.className = 'font-semibold mb-4 text-red-600 dark:text-red-400'; showToast(error.message, 'error'); }
     }
     
     async function editGuest(qrHash, newName) { try { const response = await fetch(`${API_URL}/guests/${qrHash}/edit`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName }) }); const result = await response.json(); if (!response.ok) throw new Error(result.error); showToast(result.message, 'success'); fetchGuests(); } catch (error) { showToast(error.message, 'error'); } }
     function confirmDeleteGuest(qrHash, guestName) { showConfirmationModal({ title: 'Confirmar Remoção', message: `Tem certeza que deseja remover "${guestName}"?`, confirmText: 'Deletar', onConfirm: () => { deleteGuest(qrHash); } }); }
     async function deleteGuest(qrHash) { try { const response = await fetch(`${API_URL}/guests/${qrHash}`, { method: 'DELETE' }); const result = await response.json(); if (!response.ok) throw new Error(result.error); showToast(result.message, 'success'); fetchData(); } catch (error) { showToast(error.message, 'error'); } }
-    async function toggleGuestEntry(qrHash) { try { const response = await fetch(`${API_URL}/guests/${qrHash}/toggle_entry`, { method: 'PUT' }); const result = await response.json(); if (!response.ok) throw new Error(result.error); showToast(result.message, 'success'); fetchGuests(); } catch (error) { showToast(error.message, 'error');} }
+    async function toggleGuestEntry(qrHash) { try { const response = await fetch(`${API_URL}/guests/${qrHash}/toggle_entry`, { method: 'PUT' }); const result = await response.json(); if (!response.ok) throw new Error(result.error); showToast(result.message, 'success'); fetchData(); } catch (error) { showToast(error.message, 'error');} }
     function exportGuests(format) { const exportUrl = `${API_URL}/export/${format}`; window.location.href = exportUrl; }
     
     async function inviteGuestForPayment() {
         const guestNameForPayment = document.getElementById('guestNameForPayment').value.trim();
-        if (!guestNameForPayment) {
-            showToast('Nome do convidado para pagamento é obrigatório.', 'error');
-            return;
-        }
-
-        const paymentLinkArea = document.getElementById('paymentLinkArea');
-        const paymentLinkInfo = document.getElementById('paymentLinkInfo');
-        const generatedPaymentLinkInput = document.getElementById('generatedPaymentLink');
-
-        paymentLinkArea.style.display = 'block';
-        paymentLinkInfo.textContent = 'Gerando link...';
-        paymentLinkInfo.className = 'font-semibold mb-4 text-blue-600 dark:text-blue-400';
-        generatedPaymentLinkInput.value = '';
-
+        if (!guestNameForPayment) { showToast('Nome do convidado para pagamento é obrigatório.', 'error'); return; }
+        const paymentLinkArea = document.getElementById('paymentLinkArea'); const paymentLinkInfo = document.getElementById('paymentLinkInfo'); const generatedPaymentLinkInput = document.getElementById('generatedPaymentLink');
+        paymentLinkArea.style.display = 'block'; paymentLinkInfo.textContent = 'Gerando link...'; paymentLinkInfo.className = 'font-semibold mb-4 text-blue-600 dark:text-blue-400'; generatedPaymentLinkInput.value = '';
         try {
-            const response = await fetch(`/party/${partyId}/register_guest_for_payment`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ guest_name_for_payment: guestNameForPayment })
-            });
-            
+            const response = await fetch(`/party/${partyId}/register_guest_for_payment`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ guest_name_for_payment: guestNameForPayment }) });
             const result = await response.json();
-
             if (response.ok) {
-                paymentLinkInfo.textContent = `Link de pagamento gerado para "${result.guest_name || guestNameForPayment}"!`;
+                paymentLinkInfo.textContent = `Link de pagamento gerado para "${guestNameForPayment}"!`;
                 paymentLinkInfo.className = 'font-semibold mb-4 text-green-700 dark:text-green-400';
                 generatedPaymentLinkInput.value = result.payment_link;
-                showToast(result.message, 'success');
-                document.getElementById('guestNameForPayment').value = '';
-                fetchGuests();
+                showToast(result.message, 'success'); document.getElementById('guestNameForPayment').value = ''; fetchGuests();
             } else {
                 if (result.action === 'redirect' && result.url) {
                     showToast(result.message, 'warning');
-                    setTimeout(() => {
-                        window.location.href = result.url;
-                    }, 2500);
+                    setTimeout(() => { window.location.href = result.url; }, 2500);
                     throw new Error(result.message);
                 } else {
                     throw new Error(result.message || 'Ocorreu um erro desconhecido.');
                 }
             }
-        } catch (error) {
-            paymentLinkInfo.textContent = `Erro: ${error.message}`;
-            paymentLinkInfo.className = 'font-semibold mb-4 text-red-600 dark:text-red-400';
-        }
+        } catch (error) { paymentLinkInfo.textContent = `Erro: ${error.message}`; paymentLinkInfo.className = 'font-semibold mb-4 text-red-600 dark:text-red-400'; }
     }
 
 
@@ -579,78 +672,30 @@
             const response = await fetch(`/api/party/${partyId}/stats`);
             if (!response.ok) throw new Error('Falha ao buscar estatísticas.');
             const stats = await response.json();
-            
             document.getElementById('statsTotalInvited').textContent = stats.total_invited;
-            
             const totalPaidTicketsElement = document.getElementById('statsTotalPaidTickets');
-            if (totalPaidTicketsElement) {
-                totalPaidTicketsElement.textContent = stats.total_paid_tickets;
-            }
-
+            if (totalPaidTicketsElement) { totalPaidTicketsElement.textContent = stats.total_paid_tickets; }
             document.getElementById('statsEnteredCount').textContent = stats.entered_count;
             document.getElementById('statsNotEnteredCount').textContent = stats.not_entered_count;
             document.getElementById('statsPercentageEntered').textContent = stats.percentage_entered.toFixed(2) + "%";
             document.getElementById('statsTotalRevenue').textContent = `R$ ${stats.total_revenue.toFixed(2).replace('.', ',')}`;
-            
             updateAttendanceChart(stats.entered_count, stats.not_entered_count, stats.total_paid_tickets);
-        } catch (error) {
-            console.error('Erro ao buscar stats:', error);
-            showToast('Erro ao carregar estatísticas.', 'error');
-        }
+        } catch (error) { console.error('Erro ao buscar stats:', error); showToast('Erro ao carregar estatísticas.', 'error'); }
     }
 
     function updateAttendanceChart(entered, notEntered, totalPaidTickets) {
         const ctx = document.getElementById('attendanceChart').getContext('2d');
         if (!ctx) return;
-
         const isDark = document.documentElement.classList.contains('dark');
         const textColor = isDark ? '#e5e7eb' : '#374151';
         const borderColor = isDark ? '#0f172a' : '#fff';
-
-        let dataToChart;
-        let labelsToChart;
-
-        if (totalPaidTickets > 0) {
-            dataToChart = [entered, notEntered];
-            labelsToChart = ['Entraram', 'Não Entraram'];
-        } else {
-            dataToChart = [entered, notEntered];
-            labelsToChart = ['Entraram', 'Não Entraram'];
-        }
-
+        let dataToChart = [entered, notEntered];
+        let labelsToChart = ['Entraram', 'Não Entraram'];
         const data = {
             labels: labelsToChart,
-            datasets: [{
-                data: dataToChart,
-                backgroundColor: ['#10b981', '#ef4444'],
-                borderColor: borderColor,
-                borderWidth: 2,
-                hoverOffset: 4
-            }]
+            datasets: [{ data: dataToChart, backgroundColor: ['#10b981', '#ef4444'], borderColor: borderColor, borderWidth: 2, hoverOffset: 4 }]
         };
-
-        const config = {
-            type: 'doughnut',
-            data: data,
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '70%',
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: textColor,
-                            usePointStyle: true
-                        }
-                    },
-                    title: {
-                        display: false
-                    }
-                }
-            }
-        };
-
+        const config = { type: 'doughnut', data: data, options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom', labels: { color: textColor, usePointStyle: true } }, title: { display: false } } } };
         if (attendanceChartInstance) {
             attendanceChartInstance.data.datasets[0].data = dataToChart;
             attendanceChartInstance.data.labels = labelsToChart;
