@@ -269,10 +269,7 @@ class Guest(db.Model):
             return self.check_in_time.astimezone(BRASILIA_TZ).strftime('%d/%m/%Y %H:%M:%S')
         return "N/A"
 
-with app.app_context():
-    # Este comando agora se conectará ao seu banco de dados PostgreSQL
-    # e criará as tabelas se elas ainda não existirem.
-    db.create_all()
+
 
 # O restante do seu código (rotas, funções, etc.) permanece exatamente o mesmo,
 # pois ele interage com o `db` (SQLAlchemy), que agora está configurado para o PostgreSQL.

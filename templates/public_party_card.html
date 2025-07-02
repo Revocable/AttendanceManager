@@ -17,12 +17,10 @@
     <!-- Scripts e Estilos -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <script src="https://html2canvas.hertzen.com/dist/html2canvas.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.0/color-thief.umd.js"></script>
 
     <script>
-        // Configuração do Tailwind com cores primárias e secundárias para fallback
-        // O script dinâmico irá sobrescrever estas cores com base na imagem do evento.
         tailwind.config = {
             darkMode: 'class',
             theme: {
@@ -40,7 +38,6 @@
         }
     </script>
     <style>
-        /* Estilos base para transições suaves e efeito de vidro */
         body, .bg-circle, #download-btn, .btn-action {
             transition: background-color 1s ease, background 1s ease, color 0.3s ease;
         }
@@ -51,19 +48,17 @@
             border: 1px solid rgba(255, 255, 255, 0.3);
         }
         .dark .glass-card {
-            background: rgba(17, 24, 39, 0.6); /* bg-gray-900 com opacidade */
+            background: rgba(17, 24, 39, 0.75);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        /* Pequeno utilitário para animação de pulso dos círculos */
         .animation-delay-2000 { animation-delay: 2s; }
         .animation-delay-4000 { animation-delay: 4s; }
     </style>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 min-h-screen flex items-center justify-center p-4 text-gray-800 dark:text-gray-200 font-sans">
     
-    <!-- Círculos de fundo animados (Mantidos, pois são um bom toque) -->
     <div class="fixed inset-0 overflow-hidden pointer-events-none -z-10">
         <div id="bg-circle-1" class="absolute -top-40 -right-40 w-80 h-80 bg-primary-300 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-50 animate-pulse"></div>
         <div id="bg-circle-2" class="absolute -bottom-40 -left-40 w-80 h-80 bg-secondary-300 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-50 animate-pulse animation-delay-2000"></div>
@@ -74,7 +69,7 @@
         <div id="invitation-card" class="glass-card rounded-3xl shadow-2xl overflow-hidden">
             
             {% if party.logo_filename %}
-            <div class="w-full h-48 bg-gray-200 dark:bg-gray-800">
+            <div id="image-container" class="w-full h-48 bg-gray-200 dark:bg-gray-800">
                  <img id="party-logo-image" src="{{ url_for('serve_persistent_file', filename='party_logos/' + party.logo_filename) }}" 
                      alt="Logo do Evento" 
                      class="w-full h-full object-cover"
@@ -85,23 +80,21 @@
             <div class="p-6 sm:p-8">
                 <h1 class="text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight text-center">{{ party.name }}</h1>
                 
-                <!-- INÍCIO DA SEÇÃO DE DETALHES MELHORADA -->
                 <div class="mt-8 space-y-5 text-left border-t border-gray-200 dark:border-gray-700/50 pt-6">
                     
-                    <!-- NOVO: Item de Data e Hora -->
                     {% if party.event_date %}
                     <div class="flex items-start">
                         <div class="flex-shrink-0 w-8 text-center pt-1">
                             <i class="fas fa-calendar-alt fa-fw text-primary-500 dark:text-primary-400 text-lg"></i>
                         </div>
-                        <div class="flex-1">
+                        <div class="flex-1 ml-4">
                             <p class="font-semibold text-gray-800 dark:text-gray-100">
-                                {{ party.event_date.strftime('%d/%m/%Y') }}
+                                {{ party.event_date.strftime('%d/%m/%Y') if party.event_date else 'Data a confirmar' }}
                                 {% if party.event_time %}
                                     às {{ party.event_time.strftime('%H:%M') }}
                                 {% endif %}
                             </p>
-                            <p id="countdown" class="text-sm text-gray-600 dark:text-gray-400"></p>
+                            <p id="countdown" class="text-sm text-gray-600 dark:text-gray-400">Calculando...</p>
                         </div>
                     </div>
                     {% endif %}
@@ -109,9 +102,9 @@
                     {% if party.location %}
                     <div class="flex items-start">
                         <div class="flex-shrink-0 w-8 text-center pt-1">
-                            <span class="text-lg">📌</span>
+                             <i class="fas fa-map-marker-alt fa-fw text-primary-500 dark:text-primary-400 text-lg"></i>
                         </div>
-                        <div class="flex-1">
+                        <div class="flex-1 ml-4">
                             <a href="{{ generate_google_maps_url(party.location) }}" target="_blank" class="font-semibold text-gray-800 dark:text-gray-100 hover:underline">
                                 {{ party.location }}
                             </a>
@@ -125,14 +118,13 @@
                         <div class="flex-shrink-0 w-8 text-center pt-1">
                             <i class="fas fa-users fa-fw text-primary-500 dark:text-primary-400 text-lg"></i>
                         </div>
-                        <div class="flex-1">
+                        <div class="flex-1 ml-4">
                             <p class="font-semibold text-gray-800 dark:text-gray-100">{{ stats.total_invited }} Convidados</p>
                             <p class="text-sm text-gray-600 dark:text-gray-400">Confirmados na lista do evento.</p>
                         </div>
                     </div>
                     {% endif %}
                 </div>
-                <!-- FIM DA SEÇÃO DE DETALHES -->
 
                 {% if party.public_description %}
                 <div class="mt-6 border-t border-gray-200 dark:border-gray-700/50 pt-6">
@@ -140,11 +132,11 @@
                 </div>
                 {% endif %}
 
-                <!-- Seção para comprar ingresso (Mantida com leve ajuste de estilo) -->
+                <!-- CORREÇÃO FINAL: Adicionado 'text-base' para aumentar o tamanho da fonte e melhorar o alinhamento vertical -->
                 {% if party.ticket_price > 0 and party.allow_public_purchase %}
                 <div class="mt-8 text-center">
                     <a href="{{ url_for('buy_ticket_public', party_id=party.id) }}" 
-                       class="btn-action bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold py-3 px-8 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 inline-flex items-center space-x-2">
+                       class="btn-action bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold py-3 px-8 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 inline-flex items-center justify-center space-x-2 text-base">
                         <i class="fas fa-ticket-alt"></i>
                         <span>Comprar Ingresso (R$ {{ '%.2f' | format(party.ticket_price) }})</span>
                     </a>
@@ -152,7 +144,7 @@
                 {% elif party.ticket_price == 0 and party.allow_public_purchase %}
                 <div class="mt-8 text-center">
                     <a href="{{ url_for('buy_ticket_public', party_id=party.id) }}" 
-                       class="btn-action bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold py-3 px-8 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 inline-flex items-center space-x-2">
+                       class="btn-action bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold py-3 px-8 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 inline-flex items-center justify-center space-x-2 text-base">
                         <i class="fas fa-ticket-alt"></i>
                         <span>Obter Ingresso Gratuito</span>
                     </a>
@@ -167,8 +159,9 @@
             </div>
         </div>
 
+        <!-- CORREÇÃO FINAL: Adicionado 'text-base' para consistência visual -->
         <div class="mt-6 text-center">
-            <button id="download-btn" class="btn-action bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 w-52">
+            <button id="download-btn" class="btn-action bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 w-52 text-base">
                 <i class="fas fa-download mr-2"></i>
                 Salvar Convite
             </button>
@@ -187,17 +180,34 @@
             const downloadButton = document.getElementById('download-btn');
             const invitationCard = document.getElementById('invitation-card');
             
-            // Lógica de Download (Mantida)
             downloadButton.addEventListener('click', () => {
                 downloadButton.disabled = true;
                 downloadButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Salvando...';
                 
-                html2canvas(invitationCard, { 
+                const cardToRender = invitationCard.cloneNode(true);
+                
+                const imageContainer = cardToRender.querySelector('#image-container');
+                const imageElement = cardToRender.querySelector('#party-logo-image');
+                if (imageContainer && imageElement) {
+                    imageContainer.style.backgroundImage = `url(${imageElement.src})`;
+                    imageContainer.style.backgroundSize = 'cover';
+                    imageContainer.style.backgroundPosition = 'center';
+                    imageElement.remove();
+                }
+
+                cardToRender.style.position = 'absolute';
+                cardToRender.style.left = '-9999px';
+                cardToRender.style.top = '0px';
+                cardToRender.style.width = invitationCard.offsetWidth + 'px'; 
+
+                document.body.appendChild(cardToRender);
+
+                html2canvas(cardToRender, { 
                     useCORS: true, 
                     scale: 3,
                     logging: false,
                     allowTaint: true,
-                    backgroundColor: null // Para capturar o fundo transparente do glass-card
+                    backgroundColor: null 
                 }).then(canvas => {
                     const link = document.createElement('a');
                     const partyName = "{{ party.name }}".replace(/[^a-z0-9]/gi, '_').toLowerCase();
@@ -208,41 +218,19 @@
                     console.error('Erro ao gerar imagem:', error);
                     alert('Não foi possível salvar o convite. Tente novamente.');
                 }).finally(() => {
+                    document.body.removeChild(cardToRender);
                     downloadButton.disabled = false;
                     downloadButton.innerHTML = '<i class="fas fa-download mr-2"></i>Salvar Convite';
                 });
             });
 
-            // NOVO: Lógica para copiar o endereço
-            const copyLocationBtn = document.getElementById('copy-location-btn');
-            if (copyLocationBtn) {
-                copyLocationBtn.addEventListener('click', () => {
-                    const locationText = document.getElementById('location-text').innerText;
-                    navigator.clipboard.writeText(locationText).then(() => {
-                        const originalText = copyLocationBtn.innerText;
-                        copyLocationBtn.innerText = 'Copiado!';
-                        setTimeout(() => {
-                            copyLocationBtn.innerText = originalText;
-                        }, 2000);
-                    }).catch(err => {
-                        console.error('Falha ao copiar texto: ', err);
-                        alert('Não foi possível copiar o endereço.');
-                    });
-                });
-            }
-
-            // Contador Regressivo
+            // Contador Regressivo (Lógica mantida)
             const countdownElement = document.getElementById('countdown');
             const eventDateStr = "{{ party.event_date.isoformat() if party.event_date else '' }}";
-            const eventTimeStr = "{{ party.event_time.strftime('%H:%M') if party.event_time else '' }}";
+            const eventTimeStr = "{{ party.event_time.strftime('%H:%M:%S') if party.event_time else '00:00:00' }}";
 
             if (countdownElement && eventDateStr) {
-                let eventDateTime;
-                if (eventTimeStr) {
-                    eventDateTime = new Date(`${eventDateStr}T${eventTimeStr}:00`);
-                } else {
-                    eventDateTime = new Date(eventDateStr);
-                }
+                const eventDateTime = new Date(`${eventDateStr}T${eventTimeStr}`);
 
                 const updateCountdown = () => {
                     const now = new Date().getTime();
@@ -250,7 +238,7 @@
 
                     if (distance < 0) {
                         countdownElement.textContent = "O evento já começou!";
-                        clearInterval(countdownInterval);
+                        if (window.countdownInterval) clearInterval(window.countdownInterval);
                         return;
                     }
 
@@ -263,20 +251,21 @@
                 };
 
                 updateCountdown();
-                const countdownInterval = setInterval(updateCountdown, 1000);
+                window.countdownInterval = setInterval(updateCountdown, 1000);
+            } else if (countdownElement) {
+                countdownElement.style.display = 'none';
             }
         });
     </script>
     
     <script>
-        // Script de Tema Dinâmico (Mantido com pequenos ajustes)
+        // Script de Tema Dinâmico (Lógica mantida)
         document.addEventListener('DOMContentLoaded', () => {
             const partyImage = document.getElementById('party-logo-image');
             if (!partyImage) return;
 
             const colorThief = new ColorThief();
-
-            const toRgbString = (rgbArray) => `rgb(${rgbArray[0]}, ${rgbArray[1]}, ${rgbArray[2]})`;
+            const toRgbString = (rgbArray) => `rgb(${rgbArray.join(',')})`;
             const getLuminance = (rgb) => 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2];
 
             const applyDynamicTheme = () => {
@@ -284,10 +273,10 @@
                     const palette = colorThief.getPalette(partyImage, 8);
                     if (!palette || palette.length < 5) return;
 
-                    palette.sort((a, b) => getLuminance(b) - getLuminance(a)); // Ordena do mais claro para o mais escuro
+                    palette.sort((a, b) => getLuminance(b) - getLuminance(a));
 
-                    const primaryColor = toRgbString(palette[1]); // Um tom vibrante
-                    const secondaryColor = toRgbString(palette[3]); // Um segundo tom vibrante
+                    const primaryColor = toRgbString(palette[1]);
+                    const secondaryColor = toRgbString(palette[3]); 
                     const accentColor = toRgbString(palette[4]);
                     
                     const lightBgStart = toRgbString(palette[0]);
@@ -296,38 +285,22 @@
                     const darkBgStart = toRgbString(palette[palette.length - 1]);
                     const darkBgEnd = `rgb(${palette[palette.length - 1].map(c => Math.min(255, c + 20)).join(',')})`;
 
-                    // Injeta os estilos dinâmicos em uma tag <style> para sobrescrever o Tailwind
                     const dynamicStyles = `
-                        :root {
-                            --primary-color: ${primaryColor};
-                            --secondary-color: ${secondaryColor};
-                        }
-                        body {
-                            background: linear-gradient(to bottom right, ${lightBgStart}, ${lightBgEnd});
-                        }
-                        .dark body {
-                            background: linear-gradient(to bottom right, ${darkBgStart}, ${darkBgEnd});
-                        }
+                        body { background: linear-gradient(to bottom right, ${lightBgStart}, ${lightBgEnd}); }
+                        .dark body { background: linear-gradient(to bottom right, ${darkBgStart}, ${darkBgEnd}); }
                         #bg-circle-1 { background-color: ${primaryColor}; }
                         #bg-circle-2 { background-color: ${secondaryColor}; }
                         #bg-circle-3 { background-color: ${accentColor}; }
-
                         .text-primary-500 { color: ${primaryColor} !important; }
                         .text-primary-600 { color: ${primaryColor} !important; }
                         .dark .text-primary-400 { color: ${secondaryColor} !important; }
-
-                        #download-btn {
-                            background: ${primaryColor};
-                        }
-                        #download-btn:hover {
-                            background: ${secondaryColor};
-                        }
+                        #download-btn { background: ${primaryColor}; }
+                        #download-btn:hover { background: ${secondaryColor}; }
                         #footer-link:hover { color: ${primaryColor} !important; }
                         .dark #footer-link:hover { color: ${secondaryColor} !important; }
+                        .btn-action.bg-gradient-to-r { background-image: linear-gradient(to right, ${primaryColor}, ${secondaryColor}) !important; }
                     `;
-
                     document.getElementById('dynamic-theme-styles').innerHTML = dynamicStyles;
-
                 } catch (error) {
                     console.error("Erro ao aplicar tema dinâmico:", error);
                 }
