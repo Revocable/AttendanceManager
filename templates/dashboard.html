@@ -11,7 +11,7 @@
         </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-        <div class="glass-card rounded-2xl shadow-2xl p-6">
+        <div class="glass-card rounded-2xl shadow-2xl p-6 dashboard-card">
             <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Criar Nova Festa</h2>
             <form action="{{ url_for('create_party') }}" method="POST" class="flex flex-col sm:flex-row gap-4">
                 <input type="text" name="party_name" placeholder="Nome da sua nova festa" required class="flex-grow w-full px-4 py-3 glass-effect rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
@@ -19,7 +19,7 @@
             </form>
         </div>
 
-        <div class="glass-card rounded-2xl shadow-2xl p-6">
+        <div class="glass-card rounded-2xl shadow-2xl p-6 dashboard-card">
             <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Colaborar em Festa</h2>
             <form action="{{ url_for('add_collaboration') }}" method="POST" class="flex flex-col sm:flex-row gap-4">
                 <input type="text" name="share_code" placeholder="Código de Compartilhamento" required class="flex-grow w-full px-4 py-3 glass-effect rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
@@ -28,12 +28,12 @@
         </div>
     </div>
     
-    <div class="glass-card rounded-2xl shadow-2xl p-6">
+    <div class="glass-card rounded-2xl shadow-2xl p-6 dashboard-card">
         <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">Suas Festas</h2>
         {% if owned_parties or collaborated_parties %}
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {% for party in owned_parties %}
-            <div class="glass-effect rounded-xl p-6 flex flex-col justify-between hover-scale shadow-lg border-2 border-primary/50">
+            <div class="glass-effect rounded-xl p-6 flex flex-col justify-between hover-scale shadow-lg border-2 border-primary/50 party-card">
                 <div>
                     <div class="flex justify-between items-start">
                         <h3 class="text-xl font-bold text-gray-900 dark:text-white truncate">{{ party.name }}</h3>
@@ -47,7 +47,7 @@
             </div>
             {% endfor %}
             {% for party in collaborated_parties %}
-            <div class="glass-effect rounded-xl p-6 flex flex-col justify-between hover-scale shadow-lg border-2 border-green-500/50">
+            <div class="glass-effect rounded-xl p-6 flex flex-col justify-between hover-scale shadow-lg border-2 border-green-500/50 party-card">
                 <div>
                     <div class="flex justify-between items-start">
                         <h3 class="text-xl font-bold text-gray-900 dark:text-white truncate">{{ party.name }}</h3>
@@ -66,4 +66,28 @@
         {% endif %}
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        anime.timeline({
+            easing: 'easeOutExpo',
+        })
+        .add({
+            targets: '.dashboard-card',
+            translateY: [-50, 0],
+            opacity: [0, 1],
+            duration: 500,
+            delay: anime.stagger(80)
+        })
+        .add({
+            targets: '.party-card',
+            translateY: [-30, 0],
+            opacity: [0, 1],
+            duration: 400,
+            delay: anime.stagger(50)
+        }, '-=200');
+    });
+</script>
 {% endblock %}

@@ -3,92 +3,163 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ party.name }} - Detalhes do Evento</title>
+
+    <!-- Metatags OG para compartilhamento -->
     <meta property="og:title" content="{{ party.name }}">
     <meta property="og:description" content="{{ party.public_description or 'Detalhes do evento em QRPass.' }}">
     {% if party.logo_filename %}
-    <!-- ALTERADO AQUI: Usar a nova rota para arquivos persistentes -->
     <meta property="og:image" content="{{ url_for('serve_persistent_file', filename='party_logos/' + party.logo_filename, _external=True) }}">
     {% endif %}
     <meta property="og:url" content="{{ url_for('public_party_page', shareable_link_id=party.shareable_link_id, _external=True) }}">
     <meta property="og:type" content="website">
 
-    <title>{{ party.name }} - Detalhes do Evento</title>
+    <!-- Scripts e Estilos -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.0/color-thief.umd.js"></script>
 
     <script>
-        // A configuração do Tailwind é mantida, mas será sobrescrita pelo nosso script
-        tailwind.config = { darkMode: 'class' }
+        // Configuração do Tailwind com cores primárias e secundárias para fallback
+        // O script dinâmico irá sobrescrever estas cores com base na imagem do evento.
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            '50': '#eff6ff', '100': '#dbeafe', '200': '#bfdbfe', '300': '#93c5fd', '400': '#60a5fa', '500': '#3b82f6', '600': '#2563eb', '700': '#1d4ed8', '800': '#1e40af', '900': '#1e3a8a',
+                        },
+                        secondary: {
+                            '50': '#f0f9ff', '100': '#e0f2fe', '200': '#bae6fd', '300': '#7dd3fc', '400': '#38bdf8', '500': '#0ea5e9', '600': '#0284c7', '700': '#0369a1', '800': '#075985', '900': '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
     </script>
     <style>
-        /* Estilos base para garantir a transição suave das cores */
-        body, .bg-circle, #download-btn {
-            transition: background-color 1s ease, background 1s ease;
+        /* Estilos base para transições suaves e efeito de vidro */
+        body, .bg-circle, #download-btn, .btn-action {
+            transition: background-color 1s ease, background 1s ease, color 0.3s ease;
         }
-        /* Style que será preenchido dinamicamente pelo nosso script */
-        #dynamic-theme-styles { }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .dark .glass-card {
+            background: rgba(17, 24, 39, 0.6); /* bg-gray-900 com opacidade */
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        /* Pequeno utilitário para animação de pulso dos círculos */
+        .animation-delay-2000 { animation-delay: 2s; }
+        .animation-delay-4000 { animation-delay: 4s; }
     </style>
 </head>
-<body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900 min-h-screen flex items-center justify-center p-4 text-gray-800 dark:text-gray-200">
+<body class="bg-gray-50 dark:bg-gray-900 min-h-screen flex items-center justify-center p-4 text-gray-800 dark:text-gray-200 font-sans">
+    
+    <!-- Círculos de fundo animados (Mantidos, pois são um bom toque) -->
     <div class="fixed inset-0 overflow-hidden pointer-events-none -z-10">
-        <div id="bg-circle-1" class="absolute -top-40 -right-40 w-80 h-80 bg-purple-300 dark:bg-purple-600 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-50 animate-pulse"></div>
-        <div id="bg-circle-2" class="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-300 dark:bg-blue-600 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-50 animate-pulse animation-delay-2000"></div>
-        <div id="bg-circle-3" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-300 dark:bg-indigo-600 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-50 animate-pulse animation-delay-4000"></div>
+        <div id="bg-circle-1" class="absolute -top-40 -right-40 w-80 h-80 bg-primary-300 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-50 animate-pulse"></div>
+        <div id="bg-circle-2" class="absolute -bottom-40 -left-40 w-80 h-80 bg-secondary-300 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-50 animate-pulse animation-delay-2000"></div>
+        <div id="bg-circle-3" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-300 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-50 animate-pulse animation-delay-4000"></div>
     </div>
 
-    <div class="w-full max-w-lg mx-auto">
+    <main class="w-full max-w-lg mx-auto">
         <div id="invitation-card" class="glass-card rounded-3xl shadow-2xl overflow-hidden">
             
             {% if party.logo_filename %}
-            <div class="w-full bg-gray-200 dark:bg-gray-800">
-                 <!-- ALTERADO AQUI: Usar a nova rota para arquivos persistentes -->
+            <div class="w-full h-48 bg-gray-200 dark:bg-gray-800">
                  <img id="party-logo-image" src="{{ url_for('serve_persistent_file', filename='party_logos/' + party.logo_filename) }}" 
-                     alt="Logo da Festa" 
+                     alt="Logo do Evento" 
                      class="w-full h-full object-cover"
                      crossorigin="anonymous">
             </div>
             {% endif %}
 
-            <div class="p-6 sm:p-8 text-center">
-                <h1 class="text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">{{ party.name }}</h1>
+            <div class="p-6 sm:p-8">
+                <h1 class="text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight text-center">{{ party.name }}</h1>
                 
-                {% if party.show_guest_count %}
-                <div class="my-6">
-                    <span id="guest-count-badge" class="inline-flex items-center bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-lg font-bold px-4 py-2 rounded-full">
-                        <i class="fas fa-users mr-2"></i>
-                        {{ stats.total_invited }} Convidados na Lista
-                    </span>
+                <!-- INÍCIO DA SEÇÃO DE DETALHES MELHORADA -->
+                <div class="mt-8 space-y-5 text-left border-t border-gray-200 dark:border-gray-700/50 pt-6">
+                    
+                    <!-- NOVO: Item de Data e Hora -->
+                    {% if party.event_date %}
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0 w-8 text-center pt-1">
+                            <i class="fas fa-calendar-alt fa-fw text-primary-500 dark:text-primary-400 text-lg"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="font-semibold text-gray-800 dark:text-gray-100">
+                                {{ party.event_date.strftime('%d/%m/%Y') }}
+                                {% if party.event_time %}
+                                    às {{ party.event_time.strftime('%H:%M') }}
+                                {% endif %}
+                            </p>
+                            <p id="countdown" class="text-sm text-gray-600 dark:text-gray-400"></p>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if party.location %}
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0 w-8 text-center pt-1">
+                            <span class="text-lg">📌</span>
+                        </div>
+                        <div class="flex-1">
+                            <a href="{{ generate_google_maps_url(party.location) }}" target="_blank" class="font-semibold text-gray-800 dark:text-gray-100 hover:underline">
+                                {{ party.location }}
+                            </a>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">Clique para abrir no mapa</p>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if party.show_guest_count %}
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0 w-8 text-center pt-1">
+                            <i class="fas fa-users fa-fw text-primary-500 dark:text-primary-400 text-lg"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="font-semibold text-gray-800 dark:text-gray-100">{{ stats.total_invited }} Convidados</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">Confirmados na lista do evento.</p>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
-                {% endif %}
-                
+                <!-- FIM DA SEÇÃO DE DETALHES -->
+
                 {% if party.public_description %}
-                <div class="mt-8 text-left border-t border-gray-200 dark:border-gray-700 pt-6">
+                <div class="mt-6 border-t border-gray-200 dark:border-gray-700/50 pt-6">
                     <p class="text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{{ party.public_description }}</p>
                 </div>
                 {% endif %}
 
-                <!-- NOVO: Seção para comprar ingresso -->
+                <!-- Seção para comprar ingresso (Mantida com leve ajuste de estilo) -->
                 {% if party.ticket_price > 0 and party.allow_public_purchase %}
-                <div class="mt-8">
+                <div class="mt-8 text-center">
                     <a href="{{ url_for('buy_ticket_public', party_id=party.id) }}" 
-                       class="bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 inline-flex items-center space-x-2">
+                       class="btn-action bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold py-3 px-8 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 inline-flex items-center space-x-2">
                         <i class="fas fa-ticket-alt"></i>
                         <span>Comprar Ingresso (R$ {{ '%.2f' | format(party.ticket_price) }})</span>
                     </a>
                 </div>
                 {% elif party.ticket_price == 0 and party.allow_public_purchase %}
-                <div class="mt-8">
+                <div class="mt-8 text-center">
                     <a href="{{ url_for('buy_ticket_public', party_id=party.id) }}" 
-                       class="bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 inline-flex items-center space-x-2">
+                       class="btn-action bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold py-3 px-8 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 inline-flex items-center space-x-2">
                         <i class="fas fa-ticket-alt"></i>
                         <span>Obter Ingresso Gratuito</span>
                     </a>
                 </div>
                 {% elif party.ticket_price > 0 and not party.allow_public_purchase %}
-                <div class="mt-8 p-4 bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300 rounded-lg">
-                    <p class="font-semibold">Ingressos à venda em breve ou por convite direto.</p>
+                <div class="mt-8 p-4 bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200 rounded-lg text-center">
+                    <p class="font-semibold">Ingressos por convite direto.</p>
                     <p class="text-sm">Preço do ingresso: R$ {{ '%.2f' | format(party.ticket_price) }}</p>
                 </div>
                 {% endif %}
@@ -97,18 +168,18 @@
         </div>
 
         <div class="mt-6 text-center">
-            <button id="download-btn" class="bg-gradient-to-r from-primary to-secondary text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 w-48">
+            <button id="download-btn" class="btn-action bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 w-52">
                 <i class="fas fa-download mr-2"></i>
                 Salvar Convite
             </button>
         </div>
         
         <footer class="text-center mt-6">
-            <a id="footer-link" href="{{ url_for('landing') }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-primary">
+            <a id="footer-link" href="{{ url_for('landing') }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
                 Criado com <strong>QRPass</strong>
             </a>
         </footer>
-    </div>
+    </main>
     
     <style id="dynamic-theme-styles"></style>
     <script>
@@ -116,37 +187,18 @@
             const downloadButton = document.getElementById('download-btn');
             const invitationCard = document.getElementById('invitation-card');
             
+            // Lógica de Download (Mantida)
             downloadButton.addEventListener('click', () => {
                 downloadButton.disabled = true;
                 downloadButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Salvando...';
                 
-                const stage = document.createElement('div');
-                stage.style.width = invitationCard.offsetWidth + 'px';
-                stage.style.height = invitationCard.offsetHeight + 'px';
-                stage.style.background = window.getComputedStyle(document.body).background;
-                stage.style.position = 'absolute';
-                stage.style.top = '-9999px';
-                stage.style.left = '-9999px';
-
-                const clonedCard = invitationCard.cloneNode(true);
-                const clonedDownloadBtn = clonedCard.querySelector('#download-btn');
-                if (clonedDownloadBtn) clonedDownloadBtn.remove();
-                
-                const clonedBuyTicketSection = clonedCard.querySelector('.mt-8 a[href*="buy_ticket_public"]');
-                if (clonedBuyTicketSection) clonedBuyTicketSection.parentNode.remove();
-
-                clonedCard.style.margin = '0'; 
-                stage.appendChild(clonedCard);
-                document.body.appendChild(stage);
-
-                const options = { 
+                html2canvas(invitationCard, { 
                     useCORS: true, 
                     scale: 3,
                     logging: false,
-                    allowTaint: true
-                };
-
-                html2canvas(stage, options).then(canvas => {
+                    allowTaint: true,
+                    backgroundColor: null // Para capturar o fundo transparente do glass-card
+                }).then(canvas => {
                     const link = document.createElement('a');
                     const partyName = "{{ party.name }}".replace(/[^a-z0-9]/gi, '_').toLowerCase();
                     link.download = `convite_${partyName || 'festa'}.png`;
@@ -154,27 +206,72 @@
                     link.click();
                 }).catch(error => {
                     console.error('Erro ao gerar imagem:', error);
-                    alert('Não foi possível salvar o convite. Tente novamente ou verifique se a imagem da festa está carregada corretamente.');
+                    alert('Não foi possível salvar o convite. Tente novamente.');
                 }).finally(() => {
-                    document.body.removeChild(stage);
                     downloadButton.disabled = false;
                     downloadButton.innerHTML = '<i class="fas fa-download mr-2"></i>Salvar Convite';
                 });
             });
+
+            // NOVO: Lógica para copiar o endereço
+            const copyLocationBtn = document.getElementById('copy-location-btn');
+            if (copyLocationBtn) {
+                copyLocationBtn.addEventListener('click', () => {
+                    const locationText = document.getElementById('location-text').innerText;
+                    navigator.clipboard.writeText(locationText).then(() => {
+                        const originalText = copyLocationBtn.innerText;
+                        copyLocationBtn.innerText = 'Copiado!';
+                        setTimeout(() => {
+                            copyLocationBtn.innerText = originalText;
+                        }, 2000);
+                    }).catch(err => {
+                        console.error('Falha ao copiar texto: ', err);
+                        alert('Não foi possível copiar o endereço.');
+                    });
+                });
+            }
+
+            // Contador Regressivo
+            const countdownElement = document.getElementById('countdown');
+            const eventDateStr = "{{ party.event_date.isoformat() if party.event_date else '' }}";
+            const eventTimeStr = "{{ party.event_time.strftime('%H:%M') if party.event_time else '' }}";
+
+            if (countdownElement && eventDateStr) {
+                let eventDateTime;
+                if (eventTimeStr) {
+                    eventDateTime = new Date(`${eventDateStr}T${eventTimeStr}:00`);
+                } else {
+                    eventDateTime = new Date(eventDateStr);
+                }
+
+                const updateCountdown = () => {
+                    const now = new Date().getTime();
+                    const distance = eventDateTime - now;
+
+                    if (distance < 0) {
+                        countdownElement.textContent = "O evento já começou!";
+                        clearInterval(countdownInterval);
+                        return;
+                    }
+
+                    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                    countdownElement.textContent = `Faltam ${days}d ${hours}h ${minutes}m ${seconds}s`;
+                };
+
+                updateCountdown();
+                const countdownInterval = setInterval(updateCountdown, 1000);
+            }
         });
     </script>
     
     <script>
+        // Script de Tema Dinâmico (Mantido com pequenos ajustes)
         document.addEventListener('DOMContentLoaded', () => {
             const partyImage = document.getElementById('party-logo-image');
-            const bgCircle1 = document.getElementById('bg-circle-1');
-            const bgCircle2 = document.getElementById('bg-circle-2');
-            const bgCircle3 = document.getElementById('bg-circle-3');
-            const guestCountBadge = document.getElementById('guest-count-badge');
-            const downloadButton = document.getElementById('download-btn');
-            const footerLink = document.getElementById('footer-link');
-            const buyTicketButton = document.querySelector('.mt-8 a[href*="buy_ticket_public"]');
-
             if (!partyImage) return;
 
             const colorThief = new ColorThief();
@@ -185,72 +282,58 @@
             const applyDynamicTheme = () => {
                 try {
                     const palette = colorThief.getPalette(partyImage, 8);
-                    if (!palette || palette.length < 5) {
-                        console.warn("Paleta de cores insuficiente extraída da imagem. Usando tema padrão.");
-                        return;
-                    }
+                    if (!palette || palette.length < 5) return;
 
-                    palette.sort((a, b) => getLuminance(a) - getLuminance(b));
+                    palette.sort((a, b) => getLuminance(b) - getLuminance(a)); // Ordena do mais claro para o mais escuro
 
-                    const darkBgStart = toRgbString(palette[0]);
-                    const darkBgEnd = toRgbString(palette[1]);
-                    const lightBgStart = toRgbString(palette[palette.length - 1]);
-                    const lightBgEnd = toRgbString(palette[palette.length - 2]);
+                    const primaryColor = toRgbString(palette[1]); // Um tom vibrante
+                    const secondaryColor = toRgbString(palette[3]); // Um segundo tom vibrante
+                    const accentColor = toRgbString(palette[4]);
                     
-                    const primaryColor = toRgbString(palette[Math.floor(palette.length / 2)]);
-                    const secondaryColor = toRgbString(palette[Math.floor(palette.length / 2) + 1]);
-                    
-                    const accent1 = toRgbString(palette[2]);
+                    const lightBgStart = toRgbString(palette[0]);
+                    const lightBgEnd = `rgb(${palette[0].map(c => Math.max(0, c - 20)).join(',')})`;
 
-                    document.body.style.background = `linear-gradient(to bottom right, ${lightBgStart}, ${lightBgEnd})`;
+                    const darkBgStart = toRgbString(palette[palette.length - 1]);
+                    const darkBgEnd = `rgb(${palette[palette.length - 1].map(c => Math.min(255, c + 20)).join(',')})`;
 
-                    const darkMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-                    const applyDarkBackground = () => {
-                        if (document.documentElement.classList.contains('dark')) {
-                            document.body.style.background = `linear-gradient(to bottom right, ${darkBgStart}, ${darkBgEnd})`;
-                        } else {
-                            document.body.style.background = `linear-gradient(to bottom right, ${lightBgStart}, ${lightBgEnd})`;
+                    // Injeta os estilos dinâmicos em uma tag <style> para sobrescrever o Tailwind
+                    const dynamicStyles = `
+                        :root {
+                            --primary-color: ${primaryColor};
+                            --secondary-color: ${secondaryColor};
                         }
-                    };
-                    applyDarkBackground();
-                    darkMediaQuery.addEventListener('change', applyDarkBackground);
+                        body {
+                            background: linear-gradient(to bottom right, ${lightBgStart}, ${lightBgEnd});
+                        }
+                        .dark body {
+                            background: linear-gradient(to bottom right, ${darkBgStart}, ${darkBgEnd});
+                        }
+                        #bg-circle-1 { background-color: ${primaryColor}; }
+                        #bg-circle-2 { background-color: ${secondaryColor}; }
+                        #bg-circle-3 { background-color: ${accentColor}; }
 
-                    if (bgCircle1) bgCircle1.style.backgroundColor = primaryColor;
-                    if (bgCircle2) bgCircle2.style.backgroundColor = secondaryColor;
-                    if (bgCircle3) bgCircle3.style.backgroundColor = accent1;
+                        .text-primary-500 { color: ${primaryColor} !important; }
+                        .text-primary-600 { color: ${primaryColor} !important; }
+                        .dark .text-primary-400 { color: ${secondaryColor} !important; }
 
-                    if (guestCountBadge) {
-                        guestCountBadge.style.backgroundColor = `${secondaryColor}33`;
-                        guestCountBadge.style.color = primaryColor;
-                        const darkGuestCountBadgeStyle = document.createElement('style');
-                        darkGuestCountBadgeStyle.innerHTML = `.dark #guest-count-badge { background-color: ${primaryColor}33; color: ${lightBgStart}; }`;
-                        document.head.appendChild(darkGuestCountBadgeStyle);
-                    }
+                        #download-btn {
+                            background: ${primaryColor};
+                        }
+                        #download-btn:hover {
+                            background: ${secondaryColor};
+                        }
+                        #footer-link:hover { color: ${primaryColor} !important; }
+                        .dark #footer-link:hover { color: ${secondaryColor} !important; }
+                    `;
 
-                    if (downloadButton) {
-                        downloadButton.style.background = `linear-gradient(to right, ${primaryColor}, ${secondaryColor})`;
-                    }
-
-                    if (footerLink) {
-                        footerLink.addEventListener('mouseenter', () => {
-                            footerLink.style.color = primaryColor;
-                        });
-                        footerLink.addEventListener('mouseleave', () => {
-                            footerLink.style.color = '';
-                        });
-                    }
-
-                    if (buyTicketButton) {
-                        buyTicketButton.style.background = `linear-gradient(to right, ${primaryColor}, ${secondaryColor})`;
-                    }
+                    document.getElementById('dynamic-theme-styles').innerHTML = dynamicStyles;
 
                 } catch (error) {
                     console.error("Erro ao aplicar tema dinâmico:", error);
                 }
             };
 
-            // Certifique-se de que a imagem tenha carregado antes de tentar extrair as cores
-            if (partyImage.complete) {
+            if (partyImage.complete && partyImage.naturalHeight !== 0) {
                 applyDynamicTheme();
             } else {
                 partyImage.addEventListener('load', applyDynamicTheme);

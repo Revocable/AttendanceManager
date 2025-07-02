@@ -8,7 +8,7 @@
     {% if invitations %}
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {% for invitation in invitations %}
-                <div class="glass-card rounded-2xl shadow-lg overflow-hidden flex flex-col justify-between">
+                <div class="glass-card invitation-card rounded-2xl shadow-lg overflow-hidden flex flex-col justify-between">
                     {% if invitation.party.logo_filename %}
                         <div class="w-full h-40 bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
                             <img src="{{ url_for('serve_persistent_file', filename='party_logos/' + invitation.party.logo_filename) }}" alt="Logo da Festa {{ invitation.party.name }}" class="w-full h-full object-cover">
@@ -30,15 +30,23 @@
                                     {{ {'paid': 'Pago', 'pending': 'Pendente', 'pending_owner_invite': 'Pendente', 'not_applicable': 'Gratuito', 'failed': 'Falhou'}.get(invitation.payment_status, invitation.payment_status) }}
                                 </span>
                             </p>
+                            {% if invitation.party.location %}
+                            <p><i class="fas fa-map-marker-alt mr-2"></i>
+                                <strong>Local:</strong> 
+                                <a href="{{ generate_google_maps_url(invitation.party.location) }}" target="_blank" class="text-primary hover:underline">
+                                    {{ invitation.party.location }}
+                                </a>
+                            </p>
+                            {% endif %}
                         </div>
                     </div>
                     
                     <div class="bg-gray-50 dark:bg-gray-700/50 p-4 flex items-center justify-center">
                         {% if invitation.payment_status == 'paid' or invitation.payment_status == 'not_applicable' %}
-                            <a href="{{ invitation.qr_image_url }}" download="ingresso_{{ invitation.party.name|replace(' ', '_') }}_{{ invitation.name|replace(' ', '_') }}.png" 
+                            <button onclick="showTicketModal('{{ invitation.qr_image_url }}', 'ingresso_{{ invitation.party.name|replace(' ', '_') }}_{{ invitation.name|replace(' ', '_') }}.png')" 
                                class="w-full text-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-lg font-bold text-white bg-gradient-to-r from-primary to-secondary hover:shadow-lg transition-all duration-200 hover-scale">
-                                <i class="fas fa-download mr-2"></i>Baixar Ingresso
-                            </a>
+                                <i class="fas fa-eye mr-2"></i>Mostrar Ingresso
+                            </button>
                         {% elif invitation.payment_charge_id %}
                              <a href="{{ url_for('show_ticket_payment', payment_charge_id=invitation.payment_charge_id) }}" 
                                class="w-full text-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-lg font-bold text-white bg-gradient-to-r from-yellow-500 to-orange-500 hover:shadow-lg transition-all duration-200 hover-scale">
@@ -59,4 +67,76 @@
         </div>
     {% endif %}
 </div>
+
+<!-- Modal do Ingresso -->
+<div id="ticketModal" class="fixed inset-0 bg-black bg-opacity-75 backdrop-blur-sm flex items-center justify-center z-50 hidden p-4">
+    <div id="modalContent" class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-lg w-full transform transition-all duration-300 scale-95 opacity-0">
+        <div class="relative p-4">
+            <button onclick="hideTicketModal()" class="absolute top-4 right-4 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white transition-colors text-2xl z-10">
+                <i class="fas fa-times-circle"></i>
+            </button>
+            <img id="ticketImage" src="" alt="Imagem do Ingresso" class="w-full rounded-lg shadow-md">
+        </div>
+        <div class="p-6 bg-gray-50 dark:bg-gray-700/50 rounded-b-2xl">
+            <a id="downloadButton" href="#" download
+               class="w-full text-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-lg font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 hover:shadow-lg transition-all duration-200 hover-scale flex items-center justify-center">
+                <i class="fas fa-download mr-2"></i>Fazer Download
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        anime({
+            targets: '.invitation-card',
+            translateY: [50, 0],
+            opacity: [0, 1],
+            delay: anime.stagger(100),
+            easing: 'easeOutExpo'
+        });
+    });
+
+    const ticketModal = document.getElementById('ticketModal');
+    const modalContent = document.getElementById('modalContent');
+    const ticketImage = document.getElementById('ticketImage');
+    const downloadButton = document.getElementById('downloadButton');
+
+    function showTicketModal(imageUrl, downloadName) {
+        ticketImage.src = imageUrl;
+        downloadButton.href = imageUrl;
+        downloadButton.download = downloadName;
+        ticketModal.classList.remove('hidden');
+        // Animação de entrada do modal
+        anime({
+            targets: modalContent,
+            scale: [0.95, 1],
+            opacity: [0, 1],
+            duration: 300,
+            easing: 'easeOutExpo'
+        });
+    }
+
+    function hideTicketModal() {
+        anime({
+            targets: modalContent,
+            scale: [1, 0.95],
+            opacity: [1, 0],
+            duration: 200,
+            easing: 'easeInExpo',
+            complete: function() {
+                ticketModal.classList.add('hidden');
+            }
+        });
+    }
+
+    // Fechar o modal ao clicar fora do conteúdo
+    ticketModal.addEventListener('click', function(event) {
+        if (event.target === ticketModal) {
+            hideTicketModal();
+        }
+    });
+</script>
 {% endblock %}

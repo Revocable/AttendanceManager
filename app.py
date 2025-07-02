@@ -11,6 +11,7 @@ import io
 import csv
 import colorsys
 import base64
+import urllib.parse
 
 from fpdf import FPDF, XPos, YPos
 from datetime import datetime
@@ -124,7 +125,7 @@ if not os.path.exists(os.path.join(basedir, 'instance')):
 
 @app.context_processor
 def inject_current_year():
-    return {'current_year': datetime.now(BRASILIA_TZ).year}
+    return {'current_year': datetime.now(BRASILIA_TZ).year, 'generate_google_maps_url': generate_google_maps_url}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -215,6 +216,21 @@ class Party(db.Model):
     share_code = db.Column(db.String(8), unique=True, nullable=False)
     ticket_price = db.Column(db.Float, default=0.0, nullable=False)
     allow_public_purchase = db.Column(db.Boolean, default=False, nullable=False)
+    location = db.Column(db.String(255), nullable=True)
+    event_date = db.Column(db.Date, nullable=True)
+    event_time = db.Column(db.Time, nullable=True)
+
+    @property
+    def formatted_date(self):
+        if self.event_date:
+            return self.event_date.strftime('%d/%m/%Y')
+        return None
+
+    @property
+    def formatted_time(self):
+        if self.event_time:
+            return self.event_time.strftime('%H:%M')
+        return None
 
 class Guest(db.Model):
     __tablename__ = 'guest'
@@ -566,6 +582,7 @@ def update_party_details(party_id):
     check_collaboration_permission(party)
 
     party.public_description = request.form.get('public_description')
+    party.location = request.form.get('location')
 
     try:
         ticket_price_str = request.form.get('ticket_price', '0.0').replace(',', '.')
@@ -577,6 +594,27 @@ def update_party_details(party_id):
         return redirect(url_for('party_manager', party_id=party_id))
 
     party.allow_public_purchase = 'allow_public_purchase' in request.form
+
+    event_date_str = request.form.get('event_date')
+    event_time_str = request.form.get('event_time')
+
+    if event_date_str:
+        try:
+            party.event_date = datetime.strptime(event_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            flash('Formato de data inválido. Use AAAA-MM-DD.', 'danger')
+            return redirect(url_for('party_manager', party_id=party_id))
+    else:
+        party.event_date = None
+
+    if event_time_str:
+        try:
+            party.event_time = datetime.strptime(event_time_str, '%H:%M').time()
+        except ValueError:
+            flash('Formato de hora inválido. Use HH:MM.', 'danger')
+            return redirect(url_for('party_manager', party_id=party_id))
+    else:
+        party.event_time = None
 
     db.session.commit()
     flash('Informações da festa atualizadas!', 'success')
@@ -1311,6 +1349,16 @@ def export_guests_pdf(party_id):
 
 def get_all_guests_for_export(party_id):
     return Guest.query.filter_by(party_id=party_id).all()
+
+def generate_google_maps_url(location_query):
+    if not location_query: return None
+    base_url = "https://www.google.com/maps/search/?api=1&query="
+    return base_url + urllib.parse.quote_plus(location_query)
+
+def generate_google_maps_url(location_query):
+    if not location_query: return None
+    base_url = "https://www.google.com/maps/search/?api=1&query="
+    return base_url + urllib.parse.quote_plus(location_query)
 
 if __name__ == '__main__':
     is_debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'

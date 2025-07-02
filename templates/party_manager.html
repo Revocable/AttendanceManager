@@ -164,6 +164,23 @@
                 <label for="ticket_price" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mt-4">Preço do Ingresso (R$):</label>
                 <input type="number" step="0.01" min="0" name="ticket_price" id="ticket_price" value="{{ '%.2f' | format(party.ticket_price) }}" class="mt-1 w-full text-sm glass-effect rounded-lg p-2 focus:ring-primary focus:border-primary">
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Defina 0.00 para ingresso gratuito.</p>
+
+                <label for="location" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mt-4">Localização do Evento (Endereço Completo):</label>
+                <input type="text" name="location" id="location" value="{{ party.location or '' }}" placeholder="Ex: Rua Exemplo, 123 - Cidade, Estado" class="mt-1 w-full text-sm glass-effect rounded-lg p-2 focus:ring-primary focus:border-primary">
+                {% if party.location %}
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <a href="{{ generate_google_maps_url(party.location) }}" target="_blank" class="text-primary hover:underline">
+                        Clique aqui para abrir no mapa
+                    </a>
+                </p>
+                {% endif %}
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Será exibido na página pública e nos ingressos.</p>
+
+                <label for="event_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mt-4">Data do Evento:</label>
+                <input type="date" name="event_date" id="event_date" value="{{ party.event_date.strftime('%Y-%m-%d') if party.event_date else '' }}" class="mt-1 w-full text-sm glass-effect rounded-lg p-2 focus:ring-primary focus:border-primary">
+
+                <label for="event_time" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mt-4">Hora do Evento (opcional):</label>
+                <input type="time" name="event_time" id="event_time" value="{{ party.event_time.strftime('%H:%M') if party.event_time else '' }}" class="mt-1 w-full text-sm glass-effect rounded-lg p-2 focus:ring-primary focus:border-primary">
                 
                 <div class="flex items-center mt-4">
                     <input type="checkbox" name="allow_public_purchase" id="allow_public_purchase" class="h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary" {% if party.allow_public_purchase %}checked{% endif %}>
