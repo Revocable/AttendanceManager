@@ -80,6 +80,11 @@
                     </div>
                 </a>
                 <div class="flex items-center space-x-2 sm:space-x-4">
+                    {% if current_user.is_authenticated %}
+                        <a href="{{ url_for('dashboard') }}" class="hidden sm:inline-block text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary-light font-semibold transition-colors">Minhas Festas</a>
+                        <a href="{{ url_for('my_invitations') }}" class="hidden sm:inline-block text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary-light font-semibold transition-colors">Meus Ingressos</a>
+                        <a href="{{ url_for('logout') }}" class="hidden sm:inline-block text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary-light font-semibold transition-colors">Sair</a>
+                    {% endif %}
                     {% block header_actions %}
                         {% endblock %}
                     <button id="darkModeToggle" class="glass-effect text-gray-700 dark:text-gray-300 p-3 rounded-xl hover:shadow-lg transition-all duration-200 hover-scale">

@@ -456,6 +456,16 @@ def dashboard():
     collaborated_parties = current_user.collaborations
     return render_template('dashboard.html', owned_parties=owned_parties, collaborated_parties=collaborated_parties)
 
+@app.route('/my_invitations')
+@login_required
+def my_invitations():
+    """
+    Displays all tickets/invitations purchased by the currently logged-in user.
+    """
+    invitations = Guest.query.filter_by(purchased_by_user_id=current_user.id).order_by(Guest.id.desc()).all()
+    return render_template('my_invitations.html', invitations=invitations)
+
+
 def generate_unique_code(model, field, length=8, chars=string.ascii_uppercase + string.digits):
     while True:
         code = ''.join(random.choices(chars, k=length))
