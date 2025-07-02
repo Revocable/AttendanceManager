@@ -3,7 +3,7 @@
 {% block content %}
 <div class="flex justify-center items-center py-12">
     <div class="w-full max-w-md">
-        <form method="POST" action="{{ url_for('signup') }}" class="glass-card rounded-2xl shadow-2xl p-8 space-y-4">
+        <form method="POST" action="{{ url_for('signup', next=request.args.get('next')) }}" class="glass-card rounded-2xl shadow-2xl p-8 space-y-4">
             <h2 class="text-center text-3xl font-bold text-gray-900 dark:text-white">Criar Conta</h2>
             <div>
                 <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nome de Usuário</label>
@@ -30,7 +30,7 @@
                 </button>
             </div>
             <p class="text-center text-sm text-gray-600 dark:text-gray-400">
-                Já tem uma conta? <a href="{{ url_for('login') }}" class="font-medium text-primary hover:text-secondary">Faça login</a>
+                Já tem uma conta? <a href="{{ url_for('login', next=request.args.get('next')) }}" class="font-medium text-primary hover:text-secondary">Faça login</a>
             </p>
         </form>
     </div>
