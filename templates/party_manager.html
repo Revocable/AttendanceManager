@@ -34,6 +34,8 @@
     .pagination-btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .fade-in { animation: fadeInAnimation 0.5s ease-in-out; }
     @keyframes fadeInAnimation { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: translateY(0); } }
+    #checkinHourlyChart { cursor: grab; }
+    #checkinHourlyChart:active { cursor: grabbing; }
 </style>
 
 <body data-party-id="{{ party.id }}">
@@ -105,11 +107,16 @@
         <div id="tab-checkin-analytics" class="tab-content pt-6 hidden fade-in">
             <div class="glass-card rounded-2xl shadow-inner p-6">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
-                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center mb-2 sm:mb-0">
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center mb-3 sm:mb-0">
                         <i class="fas fa-chart-line text-primary mr-3"></i>Check-ins por Período
                     </h2>
-                    <div class="text-sm text-gray-600 dark:text-gray-400 bg-blue-100 dark:bg-gray-700/50 px-3 py-1 rounded-full">
-                        <i class="fas fa-mouse-pointer mr-2"></i>Use o scroll do mouse no gráfico para ajustar o zoom
+                    <div class="flex items-center gap-4">
+                        <div class="text-sm text-gray-600 dark:text-gray-400 bg-blue-100 dark:bg-gray-700/50 px-3 py-1.5 rounded-full text-center">
+                            <i class="fas fa-mouse-pointer mr-2"></i>Use o scroll para zoom e arraste para navegar
+                        </div>
+                        <button id="resetZoomBtn" class="hidden bg-gray-500 text-white px-3 py-1.5 rounded-full text-sm font-semibold hover:bg-gray-600 transition-colors">
+                            <i class="fas fa-search-minus mr-2"></i>Resetar Zoom
+                        </button>
                     </div>
                 </div>
                 <div id="checkinChartContainer" class="relative h-96 w-full mt-4">
@@ -259,6 +266,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom/dist/chartjs-plugin-zoom.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js"></script>
 
 <script type="text/javascript">
@@ -337,8 +346,6 @@
     let attendanceChartInstance = null;
     let checkinChartInstance = null;
     let rawCheckinData = []; // Armazena os dados brutos para evitar novas chamadas de API
-    const zoomLevels = [60, 30, 15, 10, 5, 1]; // Intervalos em minutos
-    let currentZoomLevelIndex = 0; // Começa com 60 minutos
     let isCheckinChartInitialized = false; // Flag para inicializar apenas uma vez
 
 
@@ -387,7 +394,6 @@
         tabContent.classList.remove('hidden');
         document.querySelector(`.tab-button[data-tab="${tabId}"]`).dataset.active = 'true';
         
-        // Anima os elementos da aba que acabou de se tornar visível
         animateElements(`#tab-${tabId} .glass-effect, #tab-${tabId} .glass-card`);
 
         if (tabId === 'dashboard') {
@@ -418,28 +424,31 @@
         show();
     }
     
-    // --- LÓGICA DO NOVO GRÁFICO DE CHECK-IN ---
+    // --- LÓGICA DO GRÁFICO DE CHECK-IN ---
     async function initCheckinAnalyticsChart() {
         if (isCheckinChartInitialized) return;
         isCheckinChartInitialized = true;
 
         const chartContainer = document.getElementById('checkinChartContainer');
+        const resetButton = document.getElementById('resetZoomBtn');
         chartContainer.innerHTML = `<div class="flex items-center justify-center h-full"><i class="fas fa-spinner fa-spin text-3xl text-primary"></i></div>`;
         
         try {
             const response = await fetch(`${API_URL}/checkin_data`);
             if (!response.ok) throw new Error('Falha ao buscar dados de check-in.');
             const data = await response.json();
-            rawCheckinData = data.check_ins.map(ts => new Date(ts)); // Converte strings ISO para Objetos Date
+            rawCheckinData = data.check_ins.map(ts => new Date(ts));
 
-            if (rawCheckinData.length === 0) {
-                 chartContainer.innerHTML = `<div class="flex items-center justify-center h-full text-center text-gray-500 dark:text-gray-400 font-semibold">Nenhum dado de check-in disponível ainda.</div>`;
+            if (rawCheckinData.length < 2) {
+                 chartContainer.innerHTML = `<div class="flex items-center justify-center h-full text-center text-gray-500 dark:text-gray-400 font-semibold">São necessários pelo menos 2 check-ins para gerar o gráfico.</div>`;
                  return;
             }
             
             chartContainer.innerHTML = `<canvas id="checkinHourlyChart"></canvas>`;
-            const debouncedScrollHandler = debounce(handleChartScroll, 100);
-            document.getElementById('checkinHourlyChart').addEventListener('wheel', debouncedScrollHandler, { passive: false });
+            resetButton.classList.remove('hidden');
+            resetButton.onclick = () => {
+                if(checkinChartInstance) checkinChartInstance.resetZoom();
+            };
             
             updateCheckinChart();
 
@@ -447,18 +456,6 @@
             chartContainer.innerHTML = `<div class="flex items-center justify-center h-full text-center text-danger font-semibold">${error.message}</div>`;
             showToast(error.message, 'error');
         }
-    }
-
-    function handleChartScroll(event) {
-        event.preventDefault(); // Impede o scroll da página
-        const delta = Math.sign(event.deltaY);
-
-        if (delta > 0) { // Scroll para baixo (zoom out)
-            currentZoomLevelIndex = Math.max(0, currentZoomLevelIndex - 1);
-        } else { // Scroll para cima (zoom in)
-            currentZoomLevelIndex = Math.min(zoomLevels.length - 1, currentZoomLevelIndex + 1);
-        }
-        updateCheckinChart();
     }
     
     function processCheckinData(intervalMinutes) {
@@ -473,43 +470,85 @@
             counts.set(key, (counts.get(key) || 0) + 1);
         });
 
+        if (counts.size === 0) return { labels: [], data: [] };
+
         const sortedKeys = Array.from(counts.keys()).sort((a, b) => a - b);
-        const labels = sortedKeys.map(key => new Date(key));
-        const data = sortedKeys.map(key => counts.get(key));
+        
+        const minTime = sortedKeys[0];
+        const maxTime = sortedKeys[sortedKeys.length - 1];
+        const intervalMillis = intervalMinutes * 60 * 1000;
+        
+        for (let time = minTime; time <= maxTime; time += intervalMillis) {
+            if (!counts.has(time)) {
+                counts.set(time, 0);
+            }
+        }
+        
+        const finalSortedKeys = Array.from(counts.keys()).sort((a, b) => a - b);
+        const labels = finalSortedKeys.map(key => new Date(key));
+        const data = finalSortedKeys.map(key => counts.get(key));
+
         return { labels, data };
     }
 
     function updateCheckinChart() {
-        const interval = zoomLevels[currentZoomLevelIndex];
+        const interval = 60;
         const { labels, data } = processCheckinData(interval);
+        
         const ctx = document.getElementById('checkinHourlyChart').getContext('2d');
         if (!ctx) return;
+        
+        document.getElementById('checkinChartInfo').textContent = `Agrupado por ${interval} minuto(s) - Use o zoom e arraste para explorar`;
 
         const isDark = document.documentElement.classList.contains('dark');
         const textColor = isDark ? '#e5e7eb' : '#374151';
         const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-        
-        document.getElementById('checkinChartInfo').textContent = `Intervalos de ${interval} minuto(s)`;
+
+        const gradient = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
+        gradient.addColorStop(0, 'rgba(59, 130, 246, 0.5)');
+        gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
 
         const chartData = {
             labels: labels,
             datasets: [{
                 label: 'Check-ins',
                 data: data,
-                backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                fill: true,
+                backgroundColor: gradient,
                 borderColor: 'rgba(59, 130, 246, 1)',
-                borderWidth: 1,
-                borderRadius: 5,
-                hoverBackgroundColor: 'rgba(59, 130, 246, 0.9)'
+                pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: 'rgba(59, 130, 246, 1)',
+                borderWidth: 2.5,
+                tension: 0.4,
             }]
         };
 
         const config = {
-            type: 'bar',
+            type: 'line',
             data: chartData,
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            parser: 'dd/MM/yyyy HH:mm',
+                            tooltipFormat: 'dd/MM HH:mm',
+                            unit: 'hour',
+                            displayFormats: { hour: 'HH:mm', minute: 'HH:mm', second: 'HH:mm:ss' }
+                        },
+                        ticks: { color: textColor, maxRotation: 0, minRotation: 0, autoSkip: true, maxTicksLimit: 10 },
+                        grid: { color: gridColor }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: { color: textColor, precision: 0 },
+                        grid: { color: gridColor }
+                    }
+                },
                 plugins: {
                     legend: { display: false },
                     tooltip: {
@@ -520,36 +559,22 @@
                             },
                             label: function(context) { return `Check-ins: ${context.parsed.y}`; }
                         }
-                    }
-                },
-                scales: {
-                    x: {
-                        type: 'time',
-                        time: { unit: 'minute', stepSize: interval, tooltipFormat: 'dd/MM HH:mm', displayFormats: { minute: 'HH:mm' } },
-                        ticks: { color: textColor },
-                        grid: { color: gridColor }
                     },
-                    y: {
-                        beginAtZero: true,
-                        ticks: { color: textColor, precision: 0 },
-                        grid: { color: gridColor }
+                    zoom: {
+                        pan: { enabled: true, mode: 'x', threshold: 5 },
+                        zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }
                     }
                 }
             }
         };
 
         if (checkinChartInstance) {
-            checkinChartInstance.data.labels = labels;
-            checkinChartInstance.data.datasets[0].data = data;
-            checkinChartInstance.options.scales.x.time.stepSize = interval;
-            checkinChartInstance.update('none');
-        } else {
-            checkinChartInstance = new Chart(ctx, config);
+            checkinChartInstance.destroy();
         }
+        checkinChartInstance = new Chart(ctx, config);
     }
-
-
-    // --- LÓGICA PRINCIPAL DA PÁGINA ---
+    
+    // --- LÓGICA DAS OUTRAS ABAS ---
     async function fetchData() { await fetchGuests(); await fetchStats(); }
     
     async function fetchGuests() {

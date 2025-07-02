@@ -990,6 +990,7 @@ def abacatepay_webhook():
 def get_party_stats_data(party_id):
     total_invited = Guest.query.filter_by(party_id=party_id).count()
     entered_count = Guest.query.filter_by(party_id=party_id, entered=True).count()
+    not_entered_count = total_invited - entered_count
     party = Party.query.get(party_id)
 
     total_revenue = db.session.query(db.func.sum(Guest.purchase_price)).filter(
@@ -997,26 +998,16 @@ def get_party_stats_data(party_id):
         Guest.payment_status == 'paid'
     ).scalar() or 0.0
 
-    if party and party.ticket_price > 0:
-        total_paid_guests = Guest.query.filter_by(party_id=party_id, payment_status='paid').count()
-        entered_paid_guests = Guest.query.filter_by(party_id=party_id, payment_status='paid', entered=True).count()
-        return {
-            'total_invited': total_invited,
-            'total_paid_tickets': total_paid_guests,
-            'entered_count': entered_paid_guests,
-            'not_entered_count': total_paid_guests - entered_paid_guests,
-            'percentage_entered': round((entered_paid_guests / total_paid_guests) * 100, 2) if total_paid_guests > 0 else 0.0,
-            'total_revenue': total_revenue
-        }
-    else:
-        return {
-            'total_invited': total_invited,
-            'total_paid_tickets': 0,
-            'entered_count': entered_count,
-            'not_entered_count': total_invited - entered_count,
-            'percentage_entered': round((entered_count / total_invited) * 100, 2) if total_invited > 0 else 0.0,
-            'total_revenue': total_revenue
-        }
+    total_paid_tickets = Guest.query.filter_by(party_id=party_id, payment_status='paid').count()
+
+    return {
+        'total_invited': total_invited,
+        'total_paid_tickets': total_paid_tickets,
+        'entered_count': entered_count,
+        'not_entered_count': not_entered_count,
+        'percentage_entered': round((entered_count / total_invited) * 100, 2) if total_invited > 0 else 0.0,
+        'total_revenue': total_revenue
+    }
 
 @app.route('/api/party/<int:party_id>/stats', methods=['GET'])
 def get_stats(party_id):
@@ -1147,8 +1138,12 @@ def toggle_entry_manually(party_id, qr_hash):
     guest = Guest.query.filter_by(qr_hash=qr_hash, party_id=party_id).first_or_404()
     check_collaboration_permission(guest.party)
 
-    if guest.party.ticket_price > 0 and guest.payment_status != 'paid' and not guest.entered:
-        return jsonify({'error': f'O ingresso de {guest.name} não foi pago e não pode ser marcado como "Entrou" manualmente.'}), 403
+    # Allow manual entry regardless of payment status
+    if not guest.entered and guest.payment_status != 'paid' and guest.party.ticket_price > 0:
+        # If the guest is not entered, and payment is not paid, and there's a ticket price,
+        # we can still allow manual entry, but we might want to log this or add a warning.
+        # For now, we'll just proceed with the toggle.
+        pass
 
     guest.entered = not guest.entered
     guest.check_in_time = datetime.now(BRASILIA_TZ) if guest.entered else None
@@ -1198,7 +1193,12 @@ class PDF(FPDF):
     def footer(self):
         self.set_y(-15)
         self.set_font(self.current_font_family, 'I', 8)
+        # Adicionar número da página
         self.cell(0, 10, f'Página {self.page_no()}/{{nb}}', border=0, new_x=XPos.RIGHT, new_y=YPos.TOP, align='C')
+        # Adicionar data de geração
+        self.set_y(-10)
+        self.set_font(self.current_font_family, '', 7)
+        self.cell(0, 5, f'Gerado em: {datetime.now(BRASILIA_TZ).strftime("%d/%m/%Y %H:%M:%S")}', border=0, align='R')
     def draw_stats_summary(self, stats_data):
         self.set_font(self.current_font_family, 'B', 11)
         self.cell(0, 10, "Estatísticas do evento", border=0, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='L')
@@ -1249,7 +1249,7 @@ class PDF(FPDF):
         self.ln(5)
 
 
-    def draw_pie_chart(self, stats_data, y_offset, chart_size_mm=70):
+    def draw_pie_chart(self, stats_data, y_offset, chart_size_mm=90):
         labels, sizes, colors = ('Entraram', 'Não Entraram'), [stats_data['entered_count'], stats_data['not_entered_count']], ['#4BC0C0', '#FF6384']
 
         if sum(sizes) == 0:
@@ -1265,7 +1265,7 @@ class PDF(FPDF):
         ax.legend(wedges, [f'{l} ({s})' for l, s in zip(labels, sizes)], loc="center left", bbox_to_anchor=(1, 0, 0.5, 1))
 
         img_buffer = io.BytesIO()
-        plt.savefig(img_buffer, format='png', bbox_inches='tight', transparent=True)
+        plt.savefig(img_buffer, format='png', bbox_inches='tight', transparent=True, pad_inches=0)
         plt.close(fig)
 
         self.image(img_buffer, x=(self.w - chart_size_mm) / 2, y=self.get_y(), w=chart_size_mm)
@@ -1365,16 +1365,31 @@ def export_guests_pdf(party_id):
     pdf.alias_nb_pages()
     pdf.add_page()
 
+    # Adicionar o resumo das estatísticas
     pdf.draw_stats_summary(stats_for_chart)
+    pdf.ln(10) # Espaçamento após as estatísticas
+
+    # Adicionar o gráfico de pizza
+    pdf.set_font(pdf.current_font_family, 'B', 11)
+    pdf.cell(0, 10, "Gráfico de Comparecimento", border=0, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='L')
+    pdf.ln(1)
+    pdf.draw_pie_chart(stats_for_chart, pdf.get_y())
+    pdf.ln(0) # Espaçamento após o gráfico
 
     if guests_for_table:
         pdf.chapter_body(guests_for_table)
     else:
         pdf.set_font(pdf.current_font_family, 'I', 10)
-        self.cell(0, 10, "Nenhum convidado na lista.", 0, 1, 'C')
+        pdf.cell(0, 10, "Nenhum convidado na lista.", 0, 1, 'C')
 
     timestamp = datetime.now(BRASILIA_TZ).strftime("%Y%m%d_%H%M%S")
     filename = f"relatorio_{party.name.replace(' ', '_')}_{timestamp}.pdf"
+
+    pdf_output = bytes(pdf.output(dest='S'))
+
+    return Response(pdf_output, mimetype='application/pdf', headers={
+        'Content-Disposition': f'attachment; filename={filename}'
+    })
     return Response(bytes(pdf.output()), mimetype='application/pdf', headers={'Content-Disposition': f'attachment;filename={filename}'})
 
 def get_all_guests_for_export(party_id):
