@@ -578,6 +578,12 @@ def update_party_details(party_id):
     party = db.session.get(Party, party_id) or abort(404)
     check_collaboration_permission(party)
 
+    new_party_name = request.form.get('party_name', '').strip()
+    if not new_party_name:
+        flash('O nome da festa não pode ser vazio.', 'danger')
+        return redirect(url_for('party_manager', party_id=party_id))
+    party.name = new_party_name
+
     party.public_description = request.form.get('public_description')
     party.location = request.form.get('location')
 
