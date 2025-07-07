@@ -1,29 +1,34 @@
 {% extends "layout.html" %}
 {% block title %}QRPass - Bem-vindo{% endblock %}
 {% block header_actions %}
-    <a href="{{ url_for('public_scanner') }}" data-cursor-target class="glass-effect text-primary dark:text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale text-sm sm:text-base flex items-center space-x-2">
-        <i class="fas fa-qrcode"></i>
-        <span>Escanear Ingresso</span>
+    <a href="{{ url_for('public_scanner') }}" data-cursor-target class="glass-effect text-primary dark:text-white rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale flex items-center justify-center px-3 py-2 sm:px-4 text-xs sm:text-sm space-x-2">
+        <i class="fas fa-qrcode text-lg"></i>
+        <span>
+            <span class="sm:hidden">Escanear</span>
+            <span class="hidden sm:inline">Escanear Ingresso</span>
+        </span>
     </a>
-    <a href="{{ url_for('login') }}" data-cursor-target class="bg-gradient-to-r from-primary to-secondary text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale text-sm sm:text-base">Entrar</a>
+    <a href="{{ url_for('login') }}" data-cursor-target class="bg-gradient-to-r from-primary to-secondary text-white rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale flex items-center justify-center w-10 h-10 p-2 sm:w-auto sm:px-4 sm:py-2 sm:space-x-2">
+        <i class="fas fa-sign-in-alt text-lg"></i>
+        <span class="hidden sm:inline text-sm">Entrar</span>
+    </a>
 {% endblock %}
 {% block content %}
 <style>
-    /* Estilo do cursor personalizado (efeito de vidro) */
+    /* Estilo do cursor personalizado (efeito de borda de vidro) */
     #cursor-blob {
-        background-color: transparent; /* Fundo totalmente transparente */
-        box-shadow: 0 0 15px 1px rgba(255, 255, 255, 0.4); /* Efeito de brilho/borda desfocada */
-        height: 24px; /* Tamanho inicial um pouco maior */
+        background-color: transparent; /* Fundo transparente para não cobrir o texto */
+        border: 1px solid rgba(255, 255, 255, 0.2); /* Borda sutil para definir a forma */
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.2); /* Brilho suave para o efeito de vidro */
+        height: 24px;
         width: 24px;
         border-radius: 50%;
         position: fixed;
         top: 0;
         left: 0;
         z-index: 9999;
-        pointer-events: none; /* Permite clicar através da bolinha */
-        opacity: 0; /* Começa invisível */
-        transition: width 0.4s ease, height 0.4s ease, border-radius 0.4s ease, opacity 0.4s ease, box-shadow 0.4s ease;
-        /* A transição do transform será controlada pelo JS para mais suavidade */
+        pointer-events: none;
+        opacity: 0;
     }
 
     /* Aplica a animação de bloom ao texto */
@@ -90,7 +95,9 @@
     <p class="mt-6 max-w-2xl mx-auto text-lg sm:text-xl text-gray-600 dark:text-gray-300">
         Crie listas de convidados, gere QR Codes únicos e controle o acesso em tempo real com estatísticas detalhadas. Tudo em um só lugar.
     </p>
-    <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+    
+    <!-- Container dos botões de ação -->
+    <div class="mt-10 flex flex-col items-center justify-center gap-4 px-4 sm:px-0 sm:flex-row">
         <a href="{{ url_for('signup') }}" data-cursor-target class="bloom-button bg-gradient-to-r from-primary to-secondary text-white px-8 py-4 rounded-xl font-bold text-lg hover:shadow-2xl transition-all duration-200 hover-scale transform hover:-translate-y-1 w-full sm:w-auto">
             Comece Agora - É Grátis!
         </a>
@@ -279,105 +286,108 @@
             type();
         }
 
-        // --- CURSOR PERSONALIZADO (VERSÃO SUPER ROBUSTA) ---
-        const blob = document.createElement('div');
-        blob.id = 'cursor-blob';
-        document.body.appendChild(blob);
+        // --- CURSOR PERSONALIZADO (COM DETECÇÃO DE MOBILE) ---
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || ('ontouchstart' in document.documentElement && navigator.maxTouchPoints > 0);
 
-        // Variáveis de estado
-        const mousePos = { x: 0, y: 0 };
-        const blobFinalPos = { x: 0, y: 0 };
-        let activeTarget = null;
-        let animationFrameId = null;
+        if (!isMobile) {
+            const blob = document.createElement('div');
+            blob.id = 'cursor-blob';
+            document.body.appendChild(blob);
 
-        const lerp = (start, end, amt) => (1 - amt) * start + amt * end;
-
-        function animate() {
-            let targetX, targetY;
-
-            // Determina a posição alvo
-            if (activeTarget) {
-                const rect = activeTarget.getBoundingClientRect();
-                // Calcula o "wiggle"
-                const offsetX = mousePos.x - (rect.left + rect.width / 2);
-                const offsetY = mousePos.y - (rect.top + rect.height / 2);
-                const wiggleX = offsetX * 0.15;
-                const wiggleY = offsetY * 0.15;
-                
-                // Alvo é a posição do botão + wiggle
-                targetX = rect.left + wiggleX;
-                targetY = rect.top + wiggleY;
-            } else {
-                // Alvo é a posição do mouse, centralizado no blob
-                targetX = mousePos.x - blob.offsetWidth / 2;
-                targetY = mousePos.y - blob.offsetHeight / 2;
-            }
+            const mouse = { x: 0, y: 0 };
             
-            // Interpola suavemente a posição final do blob em direção ao alvo
-            blobFinalPos.x = lerp(blobFinalPos.x, targetX, 0.15);
-            blobFinalPos.y = lerp(blobFinalPos.y, targetY, 0.15);
+            const blobCurrentState = {
+                x: 0, y: 0, width: 24, height: 24, radius: 12
+            };
+            const blobTargetState = {
+                x: 0, y: 0, width: 24, height: 24, radius: 12
+            };
 
-            blob.style.transform = `translate(${blobFinalPos.x}px, ${blobFinalPos.y}px)`;
+            let activeTarget = null;
+            let animationFrameId = null;
+
+            const lerp = (start, end, amt) => (1 - amt) * start + amt * end;
             
-            animationFrameId = requestAnimationFrame(animate);
-        }
+            function animate() {
+                // Define o estado alvo (target)
+                if (activeTarget) {
+                    const rect = activeTarget.getBoundingClientRect();
+                    const br = parseFloat(window.getComputedStyle(activeTarget).borderRadius);
 
-        function startAnimation(e) {
-            if (e) {
-                mousePos.x = e.clientX;
-                mousePos.y = e.clientY;
-            }
-            if (!animationFrameId) {
-                blob.style.opacity = '1';
-                // Sincroniza a posição final do blob com a do mouse para evitar saltos
-                blobFinalPos.x = mousePos.x - blob.offsetWidth / 2;
-                blobFinalPos.y = mousePos.y - blob.offsetHeight / 2;
-                animate();
-            }
-        }
+                    const offsetX = mouse.x - (rect.left + rect.width / 2);
+                    const offsetY = mouse.y - (rect.top + rect.height / 2);
+                    const wiggleX = offsetX * 0.15;
+                    const wiggleY = offsetY * 0.15;
 
-        function stopAnimation() {
-            if (animationFrameId) {
-                blob.style.opacity = '0';
-                cancelAnimationFrame(animationFrameId);
-                animationFrameId = null;
-            }
-        }
+                    blobTargetState.x = rect.left + wiggleX;
+                    blobTargetState.y = rect.top + wiggleY;
+                    blobTargetState.width = rect.width;
+                    blobTargetState.height = rect.height;
+                    blobTargetState.radius = isNaN(br) ? 12 : br; // Fallback para 12px
+                } else {
+                    blobTargetState.x = mouse.x - blobCurrentState.width / 2;
+                    blobTargetState.y = mouse.y - blobCurrentState.height / 2;
+                    blobTargetState.width = 24;
+                    blobTargetState.height = 24;
+                    blobTargetState.radius = 12;
+                }
 
-        window.addEventListener('mousemove', (e) => {
-            mousePos.x = e.clientX;
-            mousePos.y = e.clientY;
-            // Garante que a animação comece se ainda não estiver rodando
-            if (!animationFrameId) {
-                startAnimation();
-            }
-        });
+                // Interpola o estado atual em direção ao alvo
+                blobCurrentState.x = lerp(blobCurrentState.x, blobTargetState.x, 0.15);
+                blobCurrentState.y = lerp(blobCurrentState.y, blobTargetState.y, 0.15);
+                blobCurrentState.width = lerp(blobCurrentState.width, blobTargetState.width, 0.15);
+                blobCurrentState.height = lerp(blobCurrentState.height, blobTargetState.height, 0.15);
+                blobCurrentState.radius = lerp(blobCurrentState.radius, blobTargetState.radius, 0.15);
 
-        document.body.addEventListener('mouseenter', startAnimation);
-        document.body.addEventListener('mouseleave', stopAnimation);
-
-        const targets = document.querySelectorAll('[data-cursor-target]');
-
-        targets.forEach(target => {
-            target.addEventListener('mouseenter', () => {
-                activeTarget = target;
-                const rect = target.getBoundingClientRect();
-                const borderRadius = window.getComputedStyle(target).borderRadius;
+                // Aplica os estilos
+                blob.style.width = `${blobCurrentState.width}px`;
+                blob.style.height = `${blobCurrentState.height}px`;
+                blob.style.borderRadius = `${blobCurrentState.radius}px`;
+                blob.style.transform = `translate(${blobCurrentState.x}px, ${blobCurrentState.y}px)`;
                 
-                // Usa transições CSS para a mudança de forma/tamanho
-                blob.style.width = `${rect.width}px`;
-                blob.style.height = `${rect.height}px`;
-                blob.style.borderRadius = borderRadius;
+                animationFrameId = requestAnimationFrame(animate);
+            }
+
+            function startAnimation(e) {
+                if (e) {
+                    mouse.x = e.clientX;
+                    mouse.y = e.clientY;
+                }
+                if (!animationFrameId) {
+                    blob.style.opacity = '1';
+                    // Sincroniza o estado atual com a posição do mouse para evitar o salto inicial
+                    blobCurrentState.x = mouse.x - blobCurrentState.width / 2;
+                    blobCurrentState.y = mouse.y - blobCurrentState.height / 2;
+                    animate();
+                }
+            }
+
+            function stopAnimation() {
+                if (animationFrameId) {
+                    blob.style.opacity = '0';
+                    cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                }
+            }
+
+            window.addEventListener('mousemove', (e) => {
+                mouse.x = e.clientX;
+                mouse.y = e.clientY;
+                if (!animationFrameId) {
+                    startAnimation();
+                }
             });
 
-            target.addEventListener('mouseleave', () => {
-                activeTarget = null;
-                // Reseta para o tamanho/forma padrão
-                blob.style.width = '24px';
-                blob.style.height = '24px';
-                blob.style.borderRadius = '50%';
+            document.body.addEventListener('mouseenter', startAnimation);
+            document.body.addEventListener('mouseleave', stopAnimation);
+
+            const targets = document.querySelectorAll('[data-cursor-target]');
+
+            targets.forEach(target => {
+                target.addEventListener('mouseenter', () => { activeTarget = target; });
+                target.addEventListener('mouseleave', () => { activeTarget = null; });
             });
-        });
+        }
     });
 </script>
 {% endblock %}
