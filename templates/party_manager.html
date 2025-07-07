@@ -16,7 +16,46 @@
 
 {% block content %}
 
-<style>
+    <style>
+    @font-face {
+        font-family: 'Birthstone-Regular';
+        src: url('{{ url_for('static', filename='fonts/Birthstone-Regular.ttf') }}') format('truetype');
+    }
+    @font-face {
+        font-family: 'Ephesis-Regular';
+        src: url('{{ url_for('static', filename='fonts/Ephesis-Regular.ttf') }}') format('truetype');
+    }
+    @font-face {
+        font-family: 'Montserrat-Regular';
+        src: url('{{ url_for('static', filename='fonts/Montserrat-Regular.ttf') }}') format('truetype');
+    }
+    @font-face {
+        font-family: 'Radley-Regular';
+        src: url('{{ url_for('static', filename='fonts/Radley-Regular.ttf') }}') format('truetype');
+    }
+    .font-button {
+        padding: 1rem;
+        border-radius: 0.75rem;
+        background-color: var(--tw-bg-opacity);
+        --tw-bg-opacity: 0.1;
+        box-shadow: var(--tw-shadow-inner);
+        text-align: center;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--tw-text-opacity);
+        --tw-text-opacity: 1;
+        transition: all 0.2s;
+        cursor: pointer;
+        border: 2px solid transparent;
+    }
+    .font-button:hover {
+        --tw-bg-opacity: 0.2;
+        box-shadow: var(--tw-shadow-lg);
+    }
+    .font-button.selected {
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px var(--color-primary-light), var(--tw-shadow-lg);
+    }
     .modal, .toast-container { transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out; }
     .modal-content, .toast { transition: transform 0.3s ease-in-out; }
     .modal.show .modal-content, .toast.show { transform: scale(1); }
@@ -60,7 +99,11 @@
             <button class="tab-button flex-1 py-3 text-center text-lg font-semibold text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors duration-200 border-b-2 border-transparent data-[active=true]:border-primary data-[active=true]:text-primary dark:data-[active=true]:text-primary" data-tab="add-invite">
                 <i class="fas fa-user-plus mr-2"></i>Adicionar & Convidar
             </button>
-            <!-- ABA 5: Configurações -->
+            <!-- ABA 5: Customizar Convite -->
+            <button class="tab-button flex-1 py-3 text-center text-lg font-semibold text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors duration-200 border-b-2 border-transparent data-[active=true]:border-primary data-[active=true]:text-primary dark:data-[active=true]:text-primary" data-tab="customize-invite">
+                <i class="fas fa-paint-brush mr-2"></i>Customizar Convite
+            </button>
+            <!-- ABA 6: Configurações -->
             <button class="tab-button flex-1 py-3 text-center text-lg font-semibold text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors duration-200 border-b-2 border-transparent data-[active=true]:border-primary data-[active=true]:text-primary dark:data-[active=true]:text-primary" data-tab="settings">
                 <i class="fas fa-cog mr-2"></i>Configurações
             </button>
@@ -201,7 +244,19 @@
             </div>
         </div>
 
-        <!-- ABA 5: CONTEÚDO DAS CONFIGURAÇÕES -->
+        <!-- ABA 5: CONTEÚDO DE CUSTOMIZAR CONVITE -->
+        <div id="tab-customize-invite" class="tab-content pt-6 hidden fade-in">
+            <div class="glass-card rounded-2xl shadow-inner p-6">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center"><i class="fas fa-paint-brush text-primary mr-3"></i>Customizar Convite</h2>
+                <p class="text-gray-600 dark:text-gray-300 mb-4">Escolha a fonte para o nome da sua festa no convite:</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" id="font-selection-container">
+                    <!-- Font buttons will be loaded here by JavaScript -->
+                </div>
+                <button id="saveFontButton" class="mt-6 w-full bg-gradient-to-r from-primary to-secondary text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale">Salvar Fonte Escolhida</button>
+            </div>
+        </div>
+
+        <!-- ABA 6: CONTEÚDO DAS CONFIGURAÇÕES -->
         <div id="tab-settings" class="tab-content pt-6 hidden fade-in">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <!-- Coluna Principal (2/3) -->
@@ -550,6 +605,8 @@
             fetchStats();
         } else if (tabId === 'checkin-analytics' && !isCheckinChartInitialized) {
             initCheckinAnalyticsChart();
+        } else if (tabId === 'customize-invite') {
+            loadFontsAndRenderButtons();
         }
     }
 
@@ -879,6 +936,82 @@
             attendanceChartInstance.update();
         } else {
             attendanceChartInstance = new Chart(ctx, config);
+        }
+    }
+
+    // --- Lógica para seleção de fonte ---
+    const availableFonts = [
+        { name: 'Birthstone-Regular', display: 'Birthstone Regular' },
+        { name: 'Ephesis-Regular', display: 'Ephesis Regular' },
+        { name: 'Montserrat-Regular', display: 'Montserrat Regular' },
+        { name: 'Radley-Regular', display: 'Radley Regular' }
+    ];
+    let selectedFont = 'Montserrat-Regular'; // Default font
+
+    async function loadFontsAndRenderButtons() {
+        const fontContainer = document.getElementById('font-selection-container');
+        fontContainer.innerHTML = '<div class="col-span-full text-center py-4"><i class="fas fa-spinner fa-spin text-2xl text-primary"></i> Carregando fontes...</div>';
+
+        try {
+            // Fetch current selected font for the party
+            const response = await fetch(`${API_URL}/font_selection`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.selected_font) {
+                    selectedFont = data.selected_font;
+                }
+            }
+
+            fontContainer.innerHTML = ''; // Clear loading message
+
+            availableFonts.forEach(font => {
+                const button = document.createElement('button');
+                button.className = `font-button glass-effect text-primary dark:text-white ${selectedFont === font.name ? 'selected' : ''}`;
+                button.style.fontFamily = `'${font.name}', sans-serif`;
+                button.textContent = font.display;
+                button.dataset.fontName = font.name;
+                button.onclick = () => selectFont(font.name);
+                fontContainer.appendChild(button);
+            });
+
+            document.getElementById('saveFontButton').onclick = saveSelectedFont;
+
+        } catch (error) {
+            console.error('Error loading fonts or fetching selected font:', error);
+            fontContainer.innerHTML = '<div class="col-span-full text-center py-4 text-danger">Erro ao carregar fontes.</div>';
+            showToast('Erro ao carregar fontes.', 'error');
+        }
+    }
+
+    function selectFont(fontName) {
+        selectedFont = fontName;
+        document.querySelectorAll('.font-button').forEach(button => {
+            if (button.dataset.fontName === fontName) {
+                button.classList.add('selected');
+            } else {
+                button.classList.remove('selected');
+            }
+        });
+    }
+
+    async function saveSelectedFont() {
+        try {
+            const response = await fetch(`${API_URL}/font_selection`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ font_name: selectedFont })
+            });
+            const data = await response.json();
+            if (response.ok) {
+                showToast(data.message, 'success');
+            } else {
+                throw new Error(data.message || 'Erro ao salvar a fonte.');
+            }
+        } catch (error) {
+            console.error('Error saving font:', error);
+            showToast(error.message, 'error');
         }
     }
 </script>

@@ -1,9 +1,14 @@
 import logging
 from logging.config import fileConfig
 
-from flask import current_app
-
 from alembic import context
+import os
+import sys
+
+# Adicione o diretório raiz do projeto ao sys.path para importar app
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from app import db, User, Party, Guest # Importe db e seus modelos
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -14,41 +19,26 @@ config = context.config
 fileConfig(config.config_file_name)
 logger = logging.getLogger('alembic.env')
 
-
-def get_engine():
-    try:
-        # this works with Flask-SQLAlchemy<3 and Alchemical
-        return current_app.extensions['migrate'].db.get_engine()
-    except (TypeError, AttributeError):
-        # this works with Flask-SQLAlchemy>=3
-        return current_app.extensions['migrate'].db.engine
-
-
-def get_engine_url():
-    try:
-        return get_engine().url.render_as_string(hide_password=False).replace(
-            '%', '%%')
-    except AttributeError:
-        return str(get_engine().url).replace('%', '%%')
-
-
 # add your model's MetaData object here
 # for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
-config.set_main_option('sqlalchemy.url', get_engine_url())
-target_db = current_app.extensions['migrate'].db
+target_metadata = db.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
+# Configura a URL do banco de dados diretamente da variável de ambiente
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if not DATABASE_URL:
+    raise ValueError("A variável de ambiente 'DATABASE_URL' não foi definida. Ela é essencial para a conexão com o PostgreSQL.")
 
-def get_metadata():
-    if hasattr(target_db, 'metadatas'):
-        return target_db.metadatas[None]
-    return target_db.metadata
+# Algumas plataformas (como Heroku e versões mais antigas do Render) usam "postgres://"
+# enquanto o SQLAlchemy espera "postgresql://". Esta linha garante a compatibilidade.
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+config.set_main_option('sqlalchemy.url', DATABASE_URL)
 
 
 def run_migrations_offline():
@@ -65,7 +55,10 @@ def run_migrations_offline():
     """
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
-        url=url, target_metadata=get_metadata(), literal_binds=True
+        url=url,
+        target_metadata=target_metadata,
+        literal_binds=True,
+        dialect_opts={"paramstyle": "named"},
     )
 
     with context.begin_transaction():
@@ -79,32 +72,35 @@ def run_migrations_online():
     and associate a connection with the context.
 
     """
+    from sqlalchemy import engine_from_config
+    from sqlalchemy import pool
 
-    # this callback is used to prevent an auto-migration from being generated
-    # when there are no changes to the schema
-    # reference: http://alembic.zzzcomputing.com/en/latest/cookbook.html
-    def process_revision_directives(context, revision, directives):
-        if getattr(config.cmd_opts, 'autogenerate', False):
-            script = directives[0]
-            if script.upgrade_ops.is_empty():
-                directives[:] = []
-                logger.info('No changes in schema detected.')
-
-    conf_args = current_app.extensions['migrate'].configure_args
-    if conf_args.get("process_revision_directives") is None:
-        conf_args["process_revision_directives"] = process_revision_directives
-
-    connectable = get_engine()
+    connectable = engine_from_config(
+        config.get_section(config.config_ini_section),
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+    )
 
     with connectable.connect() as connection:
         context.configure(
             connection=connection,
-            target_metadata=get_metadata(),
-            **conf_args
+            target_metadata=target_metadata,
+            compare_type=True, # Importante para detectar mudanças de tipo
+            # this callback is used to prevent an auto-migration from being generated
+            # when there are no changes to the schema
+            # reference: http://alembic.zzzcomputing.com/en/latest/cookbook.html
+            process_revision_directives=process_revision_directives,
         )
 
         with context.begin_transaction():
             context.run_migrations()
+
+def process_revision_directives(context, revision, directives):
+    if getattr(config.cmd_opts, 'autogenerate', False):
+        script = directives[0]
+        if script.upgrade_ops.is_empty():
+            directives[:] = []
+            logger.info('No changes in schema detected.')
 
 
 if context.is_offline_mode():

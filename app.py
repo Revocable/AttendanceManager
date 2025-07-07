@@ -219,6 +219,7 @@ class Party(db.Model):
     location = db.Column(db.String(255), nullable=True)
     event_date = db.Column(db.Date, nullable=True)
     event_time = db.Column(db.Time, nullable=True)
+    invite_font = db.Column(db.String(100), nullable=False, default='Montserrat-Regular')
 
     @property
     def formatted_date(self):
@@ -304,14 +305,19 @@ def generate_qr_code_image(qr_data, guest_name, party, output_format='PNG'):
         GUEST_NAME_COLOR = (37, 99, 235)
 
         try:
-            font_path_regular = FONT_PATH
+            # Use a fonte selecionada para a festa, com fallback para Montserrat-Regular
+            selected_font_name = party.invite_font if party.invite_font else 'Montserrat-Regular'
+            font_path_regular = os.path.join(basedir, 'static', 'fonts', f"{selected_font_name}.ttf")
+            
+            # Tenta carregar a versão Bold se existir, caso contrário usa a regular
             font_path_bold = font_path_regular.replace("Regular", "Bold")
             if not os.path.exists(font_path_bold): font_path_bold = font_path_regular
+
             font_party_name = PILImageFont.truetype(font_path_bold, 52)
             font_guest_name = PILImageFont.truetype(font_path_bold, 36)
-            font_footer = PILImageFont.truetype(font_path_regular, 14)
+            font_footer = PILImageFont.truetype(os.path.join(basedir, "Montserrat-Regular.ttf"), 14) # Footer always Montserrat
         except IOError:
-            app.logger.warning(f"Fonte personalizada não encontrada em {FONT_PATH}. Usando fonte padrão.")
+            app.logger.warning(f"Fonte personalizada {selected_font_name} não encontrada. Usando fonte padrão.")
             font_party_name, font_guest_name, font_footer = (PILImageFont.load_default(s) for s in [52,36,14])
 
         logo_img_raw, logo_height = None, 0
@@ -1012,6 +1018,30 @@ def get_party_stats_data(party_id):
 @app.route('/api/party/<int:party_id>/stats', methods=['GET'])
 def get_stats(party_id):
     return jsonify(get_party_stats_data(party_id))
+
+@app.route('/api/party/<int:party_id>/font_selection', methods=['GET', 'POST'])
+@login_required
+def handle_font_selection(party_id):
+    party = db.session.get(Party, party_id) or abort(404)
+    check_collaboration_permission(party)
+
+    if request.method == 'GET':
+        return jsonify({'selected_font': party.invite_font})
+
+    elif request.method == 'POST':
+        data = request.get_json()
+        font_name = data.get('font_name')
+        if not font_name:
+            return jsonify({'message': 'Nome da fonte não fornecido.'}), 400
+        
+        # Basic validation to ensure the font is one of the allowed ones
+        allowed_fonts = ['Birthstone-Regular', 'Ephesis-Regular', 'Montserrat-Regular', 'Radley-Regular']
+        if font_name not in allowed_fonts:
+            return jsonify({'message': 'Fonte selecionada inválida.'}), 400
+
+        party.invite_font = font_name
+        db.session.commit()
+        return jsonify({'message': 'Fonte do convite atualizada com sucesso!', 'selected_font': party.invite_font})
 
 @app.route('/api/party/<int:party_id>/guests', methods=['GET', 'POST'])
 @login_required

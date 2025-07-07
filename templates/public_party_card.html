@@ -20,6 +20,25 @@
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.0/color-thief.umd.js"></script>
 
+    <style>
+        @font-face {
+            font-family: 'Birthstone-Regular';
+            src: url('{{ url_for('static', filename='fonts/Birthstone-Regular.ttf') }}') format('truetype');
+        }
+        @font-face {
+            font-family: 'Ephesis-Regular';
+            src: url('{{ url_for('static', filename='fonts/Ephesis-Regular.ttf') }}') format('truetype');
+        }
+        @font-face {
+            font-family: 'Montserrat-Regular';
+            src: url('{{ url_for('static', filename='fonts/Montserrat-Regular.ttf') }}') format('truetype');
+        }
+        @font-face {
+            font-family: 'Radley-Regular';
+            src: url('{{ url_for('static', filename='fonts/Radley-Regular.ttf') }}') format('truetype');
+        }
+    </style>
+
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -78,7 +97,7 @@
             {% endif %}
 
             <div class="p-6 sm:p-8">
-                <h1 class="text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight text-center">{{ party.name }}</h1>
+                <h1 class="text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight text-center" style="font-family: '{{ party.invite_font if party.invite_font else 'Montserrat-Regular' }}', sans-serif;">{{ party.name }}</h1>
                 
                 <div class="mt-8 space-y-5 text-left border-t border-gray-200 dark:border-gray-700/50 pt-6">
                     
