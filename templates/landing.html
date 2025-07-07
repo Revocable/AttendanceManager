@@ -1,29 +1,85 @@
 {% extends "layout.html" %}
 {% block title %}QRPass - Bem-vindo{% endblock %}
 {% block header_actions %}
-    <a href="{{ url_for('public_scanner') }}" class="glass-effect text-primary dark:text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale text-sm sm:text-base flex items-center space-x-2">
+    <a href="{{ url_for('public_scanner') }}" data-cursor-target class="glass-effect text-primary dark:text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale text-sm sm:text-base flex items-center space-x-2">
         <i class="fas fa-qrcode"></i>
         <span>Escanear Ingresso</span>
     </a>
-    <a href="{{ url_for('login') }}" class="bg-gradient-to-r from-primary to-secondary text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale text-sm sm:text-base">Entrar</a>
+    <a href="{{ url_for('login') }}" data-cursor-target class="bg-gradient-to-r from-primary to-secondary text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale text-sm sm:text-base">Entrar</a>
 {% endblock %}
 {% block content %}
 <style>
+    /* Estilo do cursor personalizado (efeito de vidro) */
+    #cursor-blob {
+        background-color: transparent; /* Fundo totalmente transparente */
+        box-shadow: 0 0 15px 1px rgba(255, 255, 255, 0.4); /* Efeito de brilho/borda desfocada */
+        height: 24px; /* Tamanho inicial um pouco maior */
+        width: 24px;
+        border-radius: 50%;
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 9999;
+        pointer-events: none; /* Permite clicar através da bolinha */
+        opacity: 0; /* Começa invisível */
+        transition: width 0.4s ease, height 0.4s ease, border-radius 0.4s ease, opacity 0.4s ease, box-shadow 0.4s ease;
+        /* A transição do transform será controlada pelo JS para mais suavidade */
+    }
+
+    /* Aplica a animação de bloom ao texto */
+    #typing-text {
+        animation: bloom-effect 2.5s infinite ease-in-out;
+    }
+
+    /* Estilo para o cursor piscante */
     #typing-text::after {
         content: '|';
         display: inline-block;
         animation: blink-caret 0.75s step-end infinite;
         color: #3b82f6;
     }
+
     @keyframes blink-caret { from, to { opacity: 1 } 50% { opacity: 0 } }
     
+    /* Animação de bloom para o texto com intensidade reduzida */
+    @keyframes bloom-effect {
+        0%, 100% {
+            text-shadow: 0 0 2px rgba(59, 130, 246, 0.5), 
+                         0 0 8px rgba(59, 130, 246, 0.3);
+        }
+        50% {
+            text-shadow: 0 0 5px rgba(59, 130, 246, 0.7), 
+                         0 0 15px rgba(59, 130, 246, 0.4);
+        }
+    }
+    
+    /* Animação da seta para baixo */
     .bounce-arrow {
         animation: bounce 2s infinite;
     }
+
     @keyframes bounce {
         0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
         40% { transform: translateY(-15px); }
         60% { transform: translateY(-7px); }
+    }
+
+    /* Animação de bloom para o botão principal */
+    .bloom-button {
+        animation: button-bloom-effect 2.5s infinite ease-in-out;
+    }
+
+    @keyframes button-bloom-effect {
+        0%, 100% {
+            box-shadow: 0 0 7px rgba(99, 102, 241, 0.5), 
+                         0 0 15px rgba(59, 130, 246, 0.4),
+                         inset 0 0 5px rgba(255, 255, 255, 0.2);
+        }
+        50% {
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.8), 
+                         0 0 30px rgba(59, 130, 246, 0.6),
+                         inset 0 0 7px rgba(255, 255, 255, 0.3);
+        }
     }
 </style>
 
@@ -35,10 +91,10 @@
         Crie listas de convidados, gere QR Codes únicos e controle o acesso em tempo real com estatísticas detalhadas. Tudo em um só lugar.
     </p>
     <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-        <a href="{{ url_for('signup') }}" class="bg-gradient-to-r from-primary to-secondary text-white px-8 py-4 rounded-xl font-bold text-lg hover:shadow-2xl transition-all duration-200 hover-scale transform hover:-translate-y-1 w-full sm:w-auto">
+        <a href="{{ url_for('signup') }}" data-cursor-target class="bloom-button bg-gradient-to-r from-primary to-secondary text-white px-8 py-4 rounded-xl font-bold text-lg hover:shadow-2xl transition-all duration-200 hover-scale transform hover:-translate-y-1 w-full sm:w-auto">
             Comece Agora - É Grátis!
         </a>
-        <a href="{{ url_for('my_invitations') }}" class="glass-effect text-primary dark:text-white px-8 py-4 rounded-xl font-bold text-lg hover:shadow-2xl transition-all duration-200 hover-scale transform hover:-translate-y-1 w-full sm:w-auto">
+        <a href="{{ url_for('my_invitations') }}" data-cursor-target class="glass-effect text-primary dark:text-white px-8 py-4 rounded-xl font-bold text-lg hover:shadow-2xl transition-all duration-200 hover-scale transform hover:-translate-y-1 w-full sm:w-auto">
             Ver Meus Ingressos
         </a>
     </div>
@@ -72,18 +128,24 @@
                     <div class="mt-4 space-y-3">
                         <div class="flex items-center justify-between p-3 bg-gray-100 dark:bg-gray-800/50 rounded-lg">
                             <span class="text-gray-800 dark:text-gray-200">Ana Silva</span>
-                            <span class="text-xs bg-green-200 text-green-800 font-semibold px-2 py-0.5 rounded-full">Confirmado</span>
-                            <i class="fas fa-edit text-blue-500 cursor-pointer"></i>
+                            <div class="flex items-center space-x-4">
+                                <span class="text-xs bg-green-200 text-green-800 font-semibold px-2 py-0.5 rounded-full">Confirmado</span>
+                                <i class="fas fa-edit text-blue-500 cursor-pointer"></i>
+                            </div>
                         </div>
                         <div class="flex items-center justify-between p-3 bg-gray-100 dark:bg-gray-800/50 rounded-lg">
                             <span class="text-gray-800 dark:text-gray-200">Bruno Costa</span>
-                            <span class="text-xs bg-green-200 text-green-800 font-semibold px-2 py-0.5 rounded-full">Confirmado</span>
-                            <i class="fas fa-edit text-blue-500 cursor-pointer"></i>
+                            <div class="flex items-center space-x-4">
+                                <span class="text-xs bg-green-200 text-green-800 font-semibold px-2 py-0.5 rounded-full">Confirmado</span>
+                                <i class="fas fa-edit text-blue-500 cursor-pointer"></i>
+                            </div>
                         </div>
                         <div class="flex items-center justify-between p-3 bg-gray-100 dark:bg-gray-800/50 rounded-lg">
                             <span class="text-gray-800 dark:text-gray-200">Carla Dias</span>
-                            <span class="text-xs bg-yellow-200 text-yellow-800 font-semibold px-2 py-0.5 rounded-full">Pendente</span>
-                            <i class="fas fa-edit text-blue-500 cursor-pointer"></i>
+                            <div class="flex items-center space-x-4">
+                                <span class="text-xs bg-yellow-200 text-yellow-800 font-semibold px-2 py-0.5 rounded-full">Pendente</span>
+                                <i class="fas fa-edit text-blue-500 cursor-pointer"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -108,7 +170,7 @@
                 <span class="text-success font-semibold tracking-wide uppercase">Agilidade e Segurança</span>
                 <h3 class="mt-4 text-4xl sm:text-5xl font-extrabold text-gray-900 dark:text-white tracking-tight">Scanner Web Integrado. Sem Apps.</h3>
                 <p class="mt-6 text-xl text-gray-600 dark:text-gray-300">
-                   Abandone as pranchetas. Qualquer smartphone com câmera pode se tornar um validador de ingressos poderoso. Seguro, rápido e sem downloads.
+                    Abandone as pranchetas. Qualquer smartphone com câmera pode se tornar um validador de ingressos poderoso. Seguro, rápido e sem downloads.
                 </p>
                 <ul class="mt-8 space-y-4 text-gray-600 dark:text-gray-400">
                     <li class="flex items-start"><i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i><span>QR Code único e seguro para cada convidado, evitando fraudes.</span></li>
@@ -127,7 +189,7 @@
                 <span class="text-warning font-semibold tracking-wide uppercase">Inteligência de Dados</span>
                 <h3 class="mt-4 text-4xl sm:text-5xl font-extrabold text-gray-900 dark:text-white tracking-tight">Entenda o Pulso do Seu Evento.</h3>
                 <p class="mt-6 text-xl text-gray-600 dark:text-gray-300">
-                   Seu dashboard mostra os dados mais importantes em tempo real. Acompanhe os números e tome decisões com base em informações, não em achismos.
+                    Seu dashboard mostra os dados mais importantes em tempo real. Acompanhe os números e tome decisões com base em informações, não em achismos.
                 </p>
                 <ul class="mt-8 space-y-4 text-gray-600 dark:text-gray-400">
                     <li class="flex items-start"><i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i><span>Veja o total de convidados, quantos entraram e quantos faltam.</span></li>
@@ -186,6 +248,7 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // --- EFEITO DE DIGITAÇÃO ---
         const typingElement = document.getElementById('typing-text');
         if (typingElement) {
             const words = ['inteligente', 'eficiente', 'prática', 'moderna', 'rápida', 'descomplicada', 'segura', 'inovadora', 'ágil', 'confiável'];
@@ -215,6 +278,106 @@
             }
             type();
         }
+
+        // --- CURSOR PERSONALIZADO (VERSÃO SUPER ROBUSTA) ---
+        const blob = document.createElement('div');
+        blob.id = 'cursor-blob';
+        document.body.appendChild(blob);
+
+        // Variáveis de estado
+        const mousePos = { x: 0, y: 0 };
+        const blobFinalPos = { x: 0, y: 0 };
+        let activeTarget = null;
+        let animationFrameId = null;
+
+        const lerp = (start, end, amt) => (1 - amt) * start + amt * end;
+
+        function animate() {
+            let targetX, targetY;
+
+            // Determina a posição alvo
+            if (activeTarget) {
+                const rect = activeTarget.getBoundingClientRect();
+                // Calcula o "wiggle"
+                const offsetX = mousePos.x - (rect.left + rect.width / 2);
+                const offsetY = mousePos.y - (rect.top + rect.height / 2);
+                const wiggleX = offsetX * 0.15;
+                const wiggleY = offsetY * 0.15;
+                
+                // Alvo é a posição do botão + wiggle
+                targetX = rect.left + wiggleX;
+                targetY = rect.top + wiggleY;
+            } else {
+                // Alvo é a posição do mouse, centralizado no blob
+                targetX = mousePos.x - blob.offsetWidth / 2;
+                targetY = mousePos.y - blob.offsetHeight / 2;
+            }
+            
+            // Interpola suavemente a posição final do blob em direção ao alvo
+            blobFinalPos.x = lerp(blobFinalPos.x, targetX, 0.15);
+            blobFinalPos.y = lerp(blobFinalPos.y, targetY, 0.15);
+
+            blob.style.transform = `translate(${blobFinalPos.x}px, ${blobFinalPos.y}px)`;
+            
+            animationFrameId = requestAnimationFrame(animate);
+        }
+
+        function startAnimation(e) {
+            if (e) {
+                mousePos.x = e.clientX;
+                mousePos.y = e.clientY;
+            }
+            if (!animationFrameId) {
+                blob.style.opacity = '1';
+                // Sincroniza a posição final do blob com a do mouse para evitar saltos
+                blobFinalPos.x = mousePos.x - blob.offsetWidth / 2;
+                blobFinalPos.y = mousePos.y - blob.offsetHeight / 2;
+                animate();
+            }
+        }
+
+        function stopAnimation() {
+            if (animationFrameId) {
+                blob.style.opacity = '0';
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        }
+
+        window.addEventListener('mousemove', (e) => {
+            mousePos.x = e.clientX;
+            mousePos.y = e.clientY;
+            // Garante que a animação comece se ainda não estiver rodando
+            if (!animationFrameId) {
+                startAnimation();
+            }
+        });
+
+        document.body.addEventListener('mouseenter', startAnimation);
+        document.body.addEventListener('mouseleave', stopAnimation);
+
+        const targets = document.querySelectorAll('[data-cursor-target]');
+
+        targets.forEach(target => {
+            target.addEventListener('mouseenter', () => {
+                activeTarget = target;
+                const rect = target.getBoundingClientRect();
+                const borderRadius = window.getComputedStyle(target).borderRadius;
+                
+                // Usa transições CSS para a mudança de forma/tamanho
+                blob.style.width = `${rect.width}px`;
+                blob.style.height = `${rect.height}px`;
+                blob.style.borderRadius = borderRadius;
+            });
+
+            target.addEventListener('mouseleave', () => {
+                activeTarget = null;
+                // Reseta para o tamanho/forma padrão
+                blob.style.width = '24px';
+                blob.style.height = '24px';
+                blob.style.borderRadius = '50%';
+            });
+        });
     });
 </script>
 {% endblock %}

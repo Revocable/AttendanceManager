@@ -1,8 +1,8 @@
 """Reset e criação inicial das tabelas
 
-Revision ID: ab5f97567bec
+Revision ID: de7b1978faca
 Revises: 
-Create Date: 2025-07-07 01:21:08.654559
+Create Date: 2025-07-07 03:10:24.781322
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'ab5f97567bec'
+revision = 'de7b1978faca'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -46,6 +46,7 @@ def upgrade():
     sa.Column('location', sa.String(length=255), nullable=True),
     sa.Column('event_date', sa.Date(), nullable=True),
     sa.Column('event_time', sa.Time(), nullable=True),
+    sa.Column('invite_font', sa.String(length=100), nullable=False),
     sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('party_code'),
