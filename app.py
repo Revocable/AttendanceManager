@@ -94,7 +94,7 @@ PARTY_LOGOS_SAVE_PATH = os.path.join(STORAGE_BASE_PATH, PARTY_LOGOS_FOLDER_NAME)
 PAYMENT_QRCODES_SAVE_PATH = os.path.join(STORAGE_BASE_PATH, PAYMENT_QRCODES_FOLDER_NAME)
 
 # A fonte é um recurso da aplicação, não precisa ser persistente no disco de dados
-FONT_PATH = os.path.join(basedir, "Montserrat-Regular.ttf")
+FONT_PATH = os.path.join(basedir, "static", "fonts", "Montserrat-Regular.ttf")
 BRASILIA_TZ = pytz.timezone('America/Sao_Paulo')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
@@ -297,7 +297,7 @@ def get_vibrant_colors(pil_img, num_colors=2):
     vibrant_candidates.sort(key=lambda x: x['score'], reverse=True)
     return [c['color'] for c in vibrant_candidates[:num_colors]]
 
-def generate_qr_code_image(qr_data, guest_name, party, output_format='PNG'):
+def generate_qr_code_image(qr_data, guest_name, party, output_format='PNG', font_override=None):
     try:
         CARD_WIDTH, PADDING, SPACING, LOGO_ASPECT_RATIO = 600, 40, 25, 2 / 1
         GRADIENT_START, GRADIENT_END = (15, 23, 42), (59, 130, 246)
@@ -305,17 +305,15 @@ def generate_qr_code_image(qr_data, guest_name, party, output_format='PNG'):
         GUEST_NAME_COLOR = (37, 99, 235)
 
         try:
-            # Use a fonte selecionada para a festa, com fallback para Montserrat-Regular
-            selected_font_name = party.invite_font if party.invite_font else 'Montserrat-Regular'
-            font_path_regular = os.path.join(basedir, 'static', 'fonts', f"{selected_font_name}.ttf")
+            # Use a fonte selecionada para a festa
+            selected_font_name = font_override if font_override else (party.invite_font if party.invite_font else 'Montserrat-Regular')
+            font_path = os.path.join(basedir, 'static', 'fonts', f"{selected_font_name}.ttf")
             
-            # Tenta carregar a versão Bold se existir, caso contrário usa a regular
-            font_path_bold = font_path_regular.replace("Regular", "Bold")
-            if not os.path.exists(font_path_bold): font_path_bold = font_path_regular
+            app.logger.info(f"Attempting to load font from: {font_path}")
 
-            font_party_name = PILImageFont.truetype(font_path_bold, 52)
-            font_guest_name = PILImageFont.truetype(font_path_bold, 36)
-            font_footer = PILImageFont.truetype(os.path.join(basedir, "Montserrat-Regular.ttf"), 14) # Footer always Montserrat
+            font_party_name = PILImageFont.truetype(font_path, 52)
+            font_guest_name = PILImageFont.truetype(font_path, 36)
+            font_footer = PILImageFont.truetype(os.path.join(basedir, "static", "fonts", "Montserrat-Regular.ttf"), 14) # Footer always Montserrat
         except IOError:
             app.logger.warning(f"Fonte personalizada {selected_font_name} não encontrada. Usando fonte padrão.")
             font_party_name, font_guest_name, font_footer = (PILImageFont.load_default(s) for s in [52,36,14])
@@ -1015,6 +1013,26 @@ def get_party_stats_data(party_id):
         'total_revenue': total_revenue
     }
 
+@app.route('/api/party/<int:party_id>/preview_invite', methods=['GET'])
+@login_required
+def preview_invite(party_id):
+    party = db.session.get(Party, party_id) or abort(404)
+    check_collaboration_permission(party)
+
+    # Usar dados de teste para a pré-visualização
+    test_guest_name = "Nome do Convidado Teste"
+    test_qr_hash = "PREVIEW_QR_HASH"
+
+    # Obter a fonte da query string, se disponível, caso contrário, usar a fonte da festa
+    font_to_use = request.args.get('font_name', party.invite_font)
+
+    # Passar a fonte para a função de geração de imagem
+    img_buffer = generate_qr_code_image(test_qr_hash, test_guest_name, party, font_override=font_to_use)
+    if img_buffer:
+        return Response(img_buffer, mimetype='image/png')
+    else:
+        abort(500, description="Falha ao gerar a imagem de pré-visualização do convite.")
+
 @app.route('/api/party/<int:party_id>/stats', methods=['GET'])
 def get_stats(party_id):
     return jsonify(get_party_stats_data(party_id))
@@ -1035,7 +1053,7 @@ def handle_font_selection(party_id):
             return jsonify({'message': 'Nome da fonte não fornecido.'}), 400
         
         # Basic validation to ensure the font is one of the allowed ones
-        allowed_fonts = ['Birthstone-Regular', 'Ephesis-Regular', 'Montserrat-Regular', 'Radley-Regular']
+        allowed_fonts = ['Birthstone-Regular', 'Ephesis-Regular', 'Montserrat-Regular', 'Radley-Regular', 'BebasNeue-Regular', 'Cinzel-Regular', 'JosefinSans-Regular']
         if font_name not in allowed_fonts:
             return jsonify({'message': 'Fonte selecionada inválida.'}), 400
 

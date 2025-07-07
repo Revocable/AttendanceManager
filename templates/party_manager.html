@@ -33,6 +33,18 @@
         font-family: 'Radley-Regular';
         src: url('{{ url_for('static', filename='fonts/Radley-Regular.ttf') }}') format('truetype');
     }
+    @font-face {
+        font-family: 'BebasNeue-Regular';
+        src: url('{{ url_for('static', filename='fonts/BebasNeue-Regular.ttf') }}') format('truetype');
+    }
+    @font-face {
+        font-family: 'Cinzel-Regular';
+        src: url('{{ url_for('static', filename='fonts/Cinzel-Regular.ttf') }}') format('truetype');
+    }
+    @font-face {
+        font-family: 'JosefinSans-Regular';
+        src: url('{{ url_for('static', filename='fonts/JosefinSans-Regular.ttf') }}') format('truetype');
+    }
     .font-button {
         padding: 1rem;
         border-radius: 0.75rem;
@@ -246,13 +258,24 @@
 
         <!-- ABA 5: CONTEÚDO DE CUSTOMIZAR CONVITE -->
         <div id="tab-customize-invite" class="tab-content pt-6 hidden fade-in">
-            <div class="glass-card rounded-2xl shadow-inner p-6">
-                <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center"><i class="fas fa-paint-brush text-primary mr-3"></i>Customizar Convite</h2>
-                <p class="text-gray-600 dark:text-gray-300 mb-4">Escolha a fonte para o nome da sua festa no convite:</p>
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" id="font-selection-container">
-                    <!-- Font buttons will be loaded here by JavaScript -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-6">
+                    <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center"><i class="fas fa-paint-brush text-primary mr-3"></i>Escolha a Fonte</h2>
+                    <p class="text-gray-600 dark:text-gray-300 mb-4">Escolha a fonte para o nome da sua festa no convite:</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="font-selection-container">
+                        <!-- Font buttons will be loaded here by JavaScript -->
+                    </div>
+                    <button id="saveFontButton" class="mt-6 w-full bg-gradient-to-r from-primary to-secondary text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale">Salvar Fonte Escolhida</button>
                 </div>
-                <button id="saveFontButton" class="mt-6 w-full bg-gradient-to-r from-primary to-secondary text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 hover-scale">Salvar Fonte Escolhida</button>
+                <div class="glass-card rounded-2xl shadow-inner p-6 flex flex-col items-center justify-center">
+                    <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center"><i class="fas fa-eye text-primary mr-3"></i>Pré-visualização do Convite</h2>
+                    <div id="invite-preview-container" class="w-full max-w-sm border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden shadow-lg bg-white dark:bg-gray-800">
+                        <!-- Conteúdo do convite será carregado aqui -->
+                        <div class="p-4 text-center text-gray-500 dark:text-gray-400">
+                            Carregando pré-visualização...
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -944,19 +967,24 @@
         { name: 'Birthstone-Regular', display: 'Birthstone Regular' },
         { name: 'Ephesis-Regular', display: 'Ephesis Regular' },
         { name: 'Montserrat-Regular', display: 'Montserrat Regular' },
-        { name: 'Radley-Regular', display: 'Radley Regular' }
+        { name: 'Radley-Regular', display: 'Radley Regular' },
+        { name: 'BebasNeue-Regular', display: 'Bebas Neue Regular' },
+        { name: 'Cinzel-Regular', display: 'Cinzel Regular' },
+        { name: 'JosefinSans-Regular', display: 'Josefin Sans Regular' }
     ];
     let selectedFont = 'Montserrat-Regular'; // Default font
 
     async function loadFontsAndRenderButtons() {
         const fontContainer = document.getElementById('font-selection-container');
+        const previewContainer = document.getElementById('invite-preview-container');
         fontContainer.innerHTML = '<div class="col-span-full text-center py-4"><i class="fas fa-spinner fa-spin text-2xl text-primary"></i> Carregando fontes...</div>';
+        previewContainer.innerHTML = '<div class="p-4 text-center text-gray-500 dark:text-gray-400">Carregando pré-visualização...</div>';
 
         try {
             // Fetch current selected font for the party
-            const response = await fetch(`${API_URL}/font_selection`);
-            if (response.ok) {
-                const data = await response.json();
+            const fontResponse = await fetch(`${API_URL}/font_selection`);
+            if (fontResponse.ok) {
+                const data = await fontResponse.json();
                 if (data.selected_font) {
                     selectedFont = data.selected_font;
                 }
@@ -975,6 +1003,7 @@
             });
 
             document.getElementById('saveFontButton').onclick = saveSelectedFont;
+            updatePreviewImage(); // Initial load of the preview image
 
         } catch (error) {
             console.error('Error loading fonts or fetching selected font:', error);
@@ -992,6 +1021,26 @@
                 button.classList.remove('selected');
             }
         });
+        updatePreviewImage(); // Update preview image when font changes
+    }
+
+    async function updatePreviewImage() {
+        const previewContainer = document.getElementById('invite-preview-container');
+        previewContainer.innerHTML = '<div class="p-4 text-center text-gray-500 dark:text-gray-400"><i class="fas fa-spinner fa-spin text-2xl text-primary"></i> Gerando pré-visualização...</div>';
+        try {
+            const response = await fetch(`${API_URL}/preview_invite?font_name=${selectedFont}`);
+            if (response.ok) {
+                const blob = await response.blob();
+                const imageUrl = URL.createObjectURL(blob);
+                previewContainer.innerHTML = `<img src="${imageUrl}" alt="Pré-visualização do Convite" class="w-full h-auto rounded-lg shadow-md">`;
+            } else {
+                throw new Error('Falha ao carregar a imagem de pré-visualização.');
+            }
+        } catch (error) {
+            console.error('Error updating preview image:', error);
+            previewContainer.innerHTML = '<div class="p-4 text-center text-danger">Erro ao carregar pré-visualização.</div>';
+            showToast('Erro ao carregar pré-visualização.', 'error');
+        }
     }
 
     async function saveSelectedFont() {
