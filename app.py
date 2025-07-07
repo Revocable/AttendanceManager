@@ -550,16 +550,16 @@ def upload_logo(party_id):
     party = db.session.get(Party, party_id) or abort(404)
     check_collaboration_permission(party)
     if 'party_logo' not in request.files:
-        flash('Nenhum arquivo selecionado.', 'danger')
-        return redirect(url_for('party_manager', party_id=party_id))
+        return jsonify({'success': False, 'message': 'Nenhum arquivo selecionado.'}), 400
     file = request.files['party_logo']
     if file.filename == '':
-        flash('Nenhum arquivo selecionado.', 'danger')
-        return redirect(url_for('party_manager', party_id=party_id))
+        return jsonify({'success': False, 'message': 'Nenhum arquivo selecionado.'}), 400
     if file and allowed_file(file.filename):
         if party.logo_filename:
-            try: os.remove(os.path.join(PARTY_LOGOS_SAVE_PATH, party.logo_filename))
-            except OSError: pass
+            try:
+                os.remove(os.path.join(PARTY_LOGOS_SAVE_PATH, party.logo_filename))
+            except OSError:
+                pass
         filename = secure_filename(file.filename)
         unique_id = uuid.uuid4().hex
         ext = filename.rsplit('.', 1)[1].lower()
@@ -567,46 +567,44 @@ def upload_logo(party_id):
         file.save(os.path.join(PARTY_LOGOS_SAVE_PATH, new_filename))
         party.logo_filename = new_filename
         db.session.commit()
-        flash('Logo da festa atualizado!', 'success')
+        logo_url = url_for('serve_persistent_file', filename=f'{PARTY_LOGOS_FOLDER_NAME}/{new_filename}')
+        return jsonify({'success': True, 'message': 'Logo da festa atualizado!', 'logo_url': logo_url})
     else:
-        flash('Tipo de arquivo inválido.', 'danger')
-    return redirect(url_for('party_manager', party_id=party_id))
+        return jsonify({'success': False, 'message': 'Tipo de arquivo inválido.'}), 400
 
 @app.route('/party/<int:party_id>/update_details', methods=['POST'])
 @login_required
 def update_party_details(party_id):
     party = db.session.get(Party, party_id) or abort(404)
     check_collaboration_permission(party)
+    data = request.get_json()
 
-    new_party_name = request.form.get('party_name', '').strip()
+    new_party_name = data.get('party_name', '').strip()
     if not new_party_name:
-        flash('O nome da festa não pode ser vazio.', 'danger')
-        return redirect(url_for('party_manager', party_id=party_id))
+        return jsonify({'success': False, 'message': 'O nome da festa não pode ser vazio.'}), 400
     party.name = new_party_name
 
-    party.public_description = request.form.get('public_description')
-    party.location = request.form.get('location')
+    party.public_description = data.get('public_description')
+    party.location = data.get('location')
 
     try:
-        ticket_price_str = request.form.get('ticket_price', '0.0').replace(',', '.')
+        ticket_price_str = str(data.get('ticket_price', '0.0')).replace(',', '.')
         party.ticket_price = float(ticket_price_str)
         if party.ticket_price < 0:
             raise ValueError("Preço do ingresso não pode ser negativo.")
-    except ValueError:
-        flash('Preço do ingresso inválido. Use um número (ex: 50.00).', 'danger')
-        return redirect(url_for('party_manager', party_id=party_id))
+    except (ValueError, TypeError):
+        return jsonify({'success': False, 'message': 'Preço do ingresso inválido. Use um número (ex: 50.00).'}), 400
 
-    party.allow_public_purchase = 'allow_public_purchase' in request.form
+    party.allow_public_purchase = bool(data.get('allow_public_purchase'))
 
-    event_date_str = request.form.get('event_date')
-    event_time_str = request.form.get('event_time')
+    event_date_str = data.get('event_date')
+    event_time_str = data.get('event_time')
 
     if event_date_str:
         try:
             party.event_date = datetime.strptime(event_date_str, '%Y-%m-%d').date()
         except ValueError:
-            flash('Formato de data inválido. Use AAAA-MM-DD.', 'danger')
-            return redirect(url_for('party_manager', party_id=party_id))
+            return jsonify({'success': False, 'message': 'Formato de data inválido. Use AAAA-MM-DD.'}), 400
     else:
         party.event_date = None
 
@@ -614,14 +612,13 @@ def update_party_details(party_id):
         try:
             party.event_time = datetime.strptime(event_time_str, '%H:%M').time()
         except ValueError:
-            flash('Formato de hora inválido. Use HH:MM.', 'danger')
-            return redirect(url_for('party_manager', party_id=party_id))
+            return jsonify({'success': False, 'message': 'Formato de hora inválido. Use HH:MM.'}), 400
     else:
         party.event_time = None
 
     db.session.commit()
-    flash('Informações da festa atualizadas!', 'success')
-    return redirect(url_for('party_manager', party_id=party_id))
+    return jsonify({'success': True, 'message': 'Informações da festa atualizadas!', 'party_name': party.name})
+
 
 @app.route('/party/<int:party_id>/toggle_guest_count', methods=['POST'])
 @login_required
@@ -630,8 +627,11 @@ def toggle_guest_count(party_id):
     check_collaboration_permission(party)
     party.show_guest_count = not party.show_guest_count
     db.session.commit()
-    flash('Visibilidade da contagem de convidados atualizada.', 'success')
-    return redirect(url_for('party_manager', party_id=party_id))
+    return jsonify({
+        'success': True,
+        'message': 'Visibilidade da contagem de convidados atualizada.',
+        'show_guest_count': party.show_guest_count
+    })
 
 @app.route('/party/<int:party_id>/register_guest_for_payment', methods=['POST'])
 @login_required

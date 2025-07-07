@@ -208,7 +208,7 @@
                 <div class="md:col-span-2 space-y-6">
                     <div class="glass-card rounded-2xl shadow-inner p-6">
                         <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center"><i class="fas fa-edit text-primary mr-3"></i>Informações Principais</h2>
-                        <form action="{{ url_for('update_party_details', party_id=party.id) }}" method="POST">
+                        <form id="updatePartyDetailsForm" data-party-id="{{ party.id }}">
                             <div class="space-y-4">
                                 <div><label for="party_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nome da Festa:</label><input type="text" name="party_name" id="party_name" value="{{ party.name }}" required class="mt-1 w-full text-sm glass-effect rounded-lg p-2 focus:ring-primary focus:border-primary"></div>
                                 <div><label for="public_description" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Descrição Pública:</label><textarea name="public_description" id="public_description" rows="4" class="mt-1 w-full text-sm glass-effect rounded-lg p-2 focus:ring-primary focus:border-primary">{{ party.public_description or '' }}</textarea></div>
@@ -230,22 +230,33 @@
                 <div class="space-y-6">
                     <div class="glass-card rounded-2xl shadow-inner p-6">
                         <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center"><i class="fas fa-image text-purple-500 mr-3"></i>Logo & Identidade</h2>
-                        <form action="{{ url_for('upload_logo', party_id=party.id) }}" method="POST" enctype="multipart/form-data">
-                            {% if party.logo_filename %}<img src="{{ url_for('serve_persistent_file', filename='party_logos/' + party.logo_filename) }}?v={{ range(1, 1000) | random }}" alt="Logo atual" class="w-24 h-24 rounded-full object-cover my-2 border-2 border-primary mx-auto">{% endif %}
+                        <form id="uploadLogoForm" data-party-id="{{ party.id }}" enctype="multipart/form-data">
+                            {% if party.logo_filename %}<img id="partyLogoImage" src="{{ url_for('serve_persistent_file', filename='party_logos/' + party.logo_filename) }}?v={{ range(1, 1000) | random }}" alt="Logo atual" class="w-24 h-24 rounded-full object-cover my-2 border-2 border-primary mx-auto">{% endif %}
                             <input type="file" name="party_logo" id="party_logo" class="text-sm text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-primary hover:file:bg-blue-100 w-full">
-                            <button type="submit" class="mt-2 w-full text-sm bg-primary text-white py-2 px-3 rounded-lg hover:bg-secondary">Enviar Logo</button>
+                            <button type="submit" class="mt-2 w-full text-sm bg-primary text-white py-2 px-3 rounded-lg hover:bg-secondary"><i class="fas fa-upload mr-2"></i>Enviar Logo</button>
                         </form>
                     </div>
                     <div class="glass-card rounded-2xl shadow-inner p-6">
                         <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center"><i class="fas fa-share-alt text-teal-500 mr-3"></i>Links & Compartilhamento</h2>
                         <div class="space-y-4">
                             {% if party.owner == current_user %}<div class="space-y-1"><label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Código de Colaborador:</label><div class="relative"><input type="text" id="shareCode" value="{{ party.share_code }}" readonly class="w-full text-lg font-mono tracking-widest px-2 py-2 bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 break-all"><button onclick="copyToClipboard('#shareCode', '#copyShareBtnIcon')" class="absolute right-1 top-1/2 -translate-y-1/2 bg-purple-500 text-white p-2 rounded-md hover:bg-purple-600 transition-colors text-xs"><i id="copyShareBtnIcon" class="fas fa-copy"></i></button></div></div>{% endif %}
-                            <div class="space-y-1"><label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Link da Página Pública:</label><div class="relative"><input type="text" id="shareableLink" value="{{ url_for('public_party_page', shareable_link_id=party.shareable_link_id, _external=True) }}" readonly class="w-full text-xs px-2 py-2 bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 break-all"><button onclick="copyToClipboard('#shareableLink', '#copyBtnIcon')" class="absolute right-1 top-1/2 -translate-y-1/2 bg-primary text-white p-2 rounded-md hover:bg-secondary transition-colors text-xs"><i id="copyBtnIcon" class="fas fa-copy"></i></button></div></div>
+                            <div class="space-y-1">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Link da Página Pública:</label>
+                                <div class="relative">
+                                    <input type="text" id="shareableLink" value="{{ url_for('public_party_page', shareable_link_id=party.shareable_link_id, _external=True) }}" readonly class="w-full text-xs px-2 py-2 bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 break-all">
+                                    <button onclick="copyToClipboard('#shareableLink', '#copyBtnIcon')" class="absolute right-1 top-1/2 -translate-y-1/2 bg-primary text-white p-2 rounded-md hover:bg-secondary transition-colors text-xs">
+                                        <i id="copyBtnIcon" class="fas fa-copy"></i>
+                                    </button>
+                                </div>
+                                <a href="{{ url_for('public_party_page', shareable_link_id=party.shareable_link_id) }}" target="_blank" class="inline-block mt-2 text-sm text-primary hover:underline">
+                                    Abrir página pública <i class="fas fa-external-link-alt ml-1"></i>
+                                </a>
+                            </div>
                         </div>
                     </div>
                     <div class="glass-card rounded-2xl shadow-inner p-6 border-2 border-transparent dark:border-transparent hover:border-danger dark:hover:border-danger transition-colors">
                         <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center"><i class="fas fa-exclamation-triangle text-danger mr-3"></i>Zona de Perigo</h2>
-                        <form action="{{ url_for('toggle_guest_count', party_id=party.id) }}" method="POST"><label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Visibilidade da Contagem de Convidados:</label><div class="flex items-center justify-between mt-1"><span class="text-sm font-bold {{ 'text-green-500' if party.show_guest_count else 'text-red-500' }}">{% if party.show_guest_count %} Visível {% else %} Oculto {% endif %}</span><button type="submit" class="text-xs bg-gray-500 text-white py-1 px-3 rounded-lg hover:bg-gray-600">{% if party.show_guest_count %} Ocultar {% else %} Mostrar {% endif %}</button></div></form>
+                        <form id="toggleGuestCountForm" data-party-id="{{ party.id }}"><label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Visibilidade da Contagem de Convidados:</label><div class="flex items-center justify-between mt-1"><span class="text-sm font-bold {{ 'text-green-500' if party.show_guest_count else 'text-red-500' }}">{% if party.show_guest_count %} Visível {% else %} Oculto {% endif %}</span><button type="submit" class="text-xs bg-gray-500 text-white py-1 px-3 rounded-lg hover:bg-gray-600">{% if party.show_guest_count %} Ocultar {% else %} Mostrar {% endif %}</button></div></form>
                     </div>
                 </div>
             </div>
@@ -269,8 +280,147 @@
 <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom/dist/chartjs-plugin-zoom.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js"></script>
-
 <script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+    // Handle guest count visibility form
+    const toggleGuestCountForm = document.getElementById('toggleGuestCountForm');
+    if (toggleGuestCountForm) {
+        toggleGuestCountForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const partyId = this.dataset.partyId;
+            const button = this.querySelector('button[type="submit"]');
+            const statusSpan = this.querySelector('span');
+
+            fetch(`/party/${partyId}/toggle_guest_count`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    statusSpan.textContent = data.show_guest_count ? 'Visível' : 'Oculto';
+                    statusSpan.className = data.show_guest_count ? 'text-sm font-bold text-green-500' : 'text-sm font-bold text-red-500';
+                    button.textContent = data.show_guest_count ? 'Ocultar' : 'Mostrar';
+                    showToast(data.message, 'success');
+                } else {
+                    showToast(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Ocorreu um erro.', 'error');
+            });
+        });
+    }
+
+    // Handle logo upload form
+    const uploadLogoForm = document.getElementById('uploadLogoForm');
+    if (uploadLogoForm) {
+        uploadLogoForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const partyId = this.dataset.partyId;
+            const formData = new FormData(this);
+            const button = this.querySelector('button[type="submit"]');
+            const originalButtonText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+            button.disabled = true;
+
+            fetch(`/party/${partyId}/upload_logo`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const logoImage = document.getElementById('partyLogoImage');
+                    if (logoImage) {
+                        logoImage.src = data.logo_url + '?v=' + new Date().getTime();
+                    } else {
+                        // If the image element doesn't exist, create it
+                        const newLogoImage = document.createElement('img');
+                        newLogoImage.id = 'partyLogoImage';
+                        newLogoImage.src = data.logo_url + '?v=' + new Date().getTime();
+                        newLogoImage.alt = 'Logo atual';
+                        newLogoImage.className = 'w-24 h-24 rounded-full object-cover my-2 border-2 border-primary mx-auto';
+                        this.prepend(newLogoImage);
+                    }
+                    showToast(data.message, 'success');
+                } else {
+                    showToast(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Ocorreu um erro ao enviar o logo.', 'error');
+            })
+            .finally(() => {
+                button.innerHTML = originalButtonText;
+                button.disabled = false;
+                this.reset(); // Clear the file input
+            });
+        });
+    }
+
+    // Handle party details update form
+    const updatePartyDetailsForm = document.getElementById('updatePartyDetailsForm');
+    if (updatePartyDetailsForm) {
+        updatePartyDetailsForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const partyId = this.dataset.partyId;
+            const formData = new FormData(this);
+            const button = this.querySelector('button[type="submit"]');
+            const originalButtonText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+            button.disabled = true;
+
+            // Convert FormData to a JSON object
+            let object = {};
+            formData.forEach((value, key) => {
+                // Handle checkbox value
+                if (key === 'allow_public_purchase') {
+                    object[key] = true;
+                } else {
+                    object[key] = value;
+                }
+            });
+            // If checkbox was not checked, it won't be in formData, so set it to false
+            if (!object.hasOwnProperty('allow_public_purchase')) {
+                object['allow_public_purchase'] = false;
+            }
+
+
+            fetch(`/party/${partyId}/update_details`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(object)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    // Optionally, update the party name in the header if it changed
+                    if (data.party_name) {
+                        document.querySelector('h1 .text-primary').textContent = data.party_name;
+                    }
+                } else {
+                    showToast(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Ocorreu um erro ao salvar as alterações.', 'error');
+            })
+            .finally(() => {
+                button.innerHTML = originalButtonText;
+                button.disabled = false;
+            });
+        });
+    }
+});
     function fallbackCopyTextToClipboard(text, iconSelector) {
         const textArea = document.createElement("textarea");
         textArea.value = text;
