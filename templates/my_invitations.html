@@ -2,27 +2,65 @@
 {% block title %}Meus Ingressos - QRPass{% endblock %}
 
 {% block content %}
+<style>
+    @keyframes gradient-animation {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+    .animated-gradient-bg {
+        background: linear-gradient(-45deg, #1e3a8a, #3b82f6, #10b981, #059669);
+        background-size: 400% 400%;
+        animation: gradient-animation 15s ease infinite;
+    }
+    .invitation-card {
+        position: relative;
+        transition: transform 0.3s ease-out, box-shadow 0.3s ease-out;
+    }
+    .invitation-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+    }
+    /* Glow effect for cards */
+    .invitation-card::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border-radius: 1rem; /* same as rounded-2xl */
+        box-shadow: 0 0 25px rgba(59, 130, 246, 0);
+        transition: box-shadow 0.3s ease-out;
+        pointer-events: none;
+    }
+    .invitation-card:hover::after {
+        box-shadow: 0 0 35px rgba(59, 130, 246, 0.5);
+    }
+</style>
+
 <div class="container mx-auto px-4 py-8">
-    <h1 class="text-3xl font-bold text-gray-800 dark:text-white mb-8">Meus Ingressos</h1>
+    <h1 class="text-4xl font-bold text-gray-800 dark:text-white mb-2 text-center">Meus Ingressos</h1>
+    <p class="text-center text-gray-600 dark:text-gray-400 mb-10">Seus convites para os melhores eventos.</p>
 
     {% if invitations %}
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {% for invitation in invitations %}
-                <div class="glass-card invitation-card rounded-2xl shadow-lg overflow-hidden flex flex-col justify-between">
+                <div class="invitation-card glass-card rounded-2xl shadow-lg overflow-hidden flex flex-col justify-between">
                     {% if invitation.party.logo_filename %}
                         <div class="w-full h-40 bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
                             <img src="{{ url_for('serve_persistent_file', filename='party_logos/' + invitation.party.logo_filename) }}" alt="Logo da Festa {{ invitation.party.name }}" class="w-full h-full object-cover">
                         </div>
                     {% endif %}
-                    <div class="p-6">
+                    <div class="p-6 flex-grow">
                         <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">{{ invitation.party.name }}</h2>
                         <p class="text-lg font-semibold text-primary dark:text-primary-light mb-4">Ingresso para: {{ invitation.name }}</p>
                         
-                        <div class="space-y-2 text-gray-700 dark:text-gray-300">
-                            <p><i class="fas fa-calendar-alt mr-2"></i><strong>Data:</strong> {{ invitation.party.created_at.strftime('%d/%m/%Y') }}</p>
-                            <p><i class="fas fa-money-bill-wave mr-2"></i>
+                        <div class="space-y-3 text-gray-700 dark:text-gray-300 text-sm mt-4">
+                            <p class="flex items-center"><i class="fas fa-calendar-alt mr-3 w-4 text-center text-primary"></i><strong>Data:</strong><span class="ml-2">{{ invitation.party.formatted_date or 'A ser definida' }}</span></p>
+                            <p class="flex items-center"><i class="fas fa-money-bill-wave mr-3 w-4 text-center text-primary"></i>
                                 <strong>Status:</strong> 
-                                <span class="font-semibold 
+                                <span class="font-semibold ml-2
                                     {% if invitation.payment_status == 'paid' %}text-green-500
                                     {% elif invitation.payment_status in ['pending', 'pending_owner_invite'] %}text-yellow-500
                                     {% elif invitation.payment_status == 'not_applicable' %}text-blue-500
@@ -31,17 +69,16 @@
                                 </span>
                             </p>
                             {% if invitation.party.location %}
-                            <p><i class="fas fa-map-marker-alt mr-2"></i>
+                            <p class="flex items-center"><i class="fas fa-map-marker-alt mr-3 w-4 text-center text-primary"></i>
                                 <strong>Local:</strong> 
-                                <a href="{{ generate_google_maps_url(invitation.party.location) }}" target="_blank" class="text-primary hover:underline">
+                                <a href="{{ generate_google_maps_url(invitation.party.location) }}" target="_blank" class="text-primary hover:underline ml-2 truncate" title="{{ invitation.party.location }}">
                                     {{ invitation.party.location }}
                                 </a>
                             </p>
                             {% endif %}
                         </div>
                     </div>
-                    
-                    <div class="bg-gray-50 dark:bg-gray-700/50 p-4 flex items-center justify-center">
+                     <div class="bg-gray-50 dark:bg-gray-700/50 p-4 mt-4">
                         {% if invitation.payment_status == 'paid' or invitation.payment_status == 'not_applicable' %}
                             <button onclick="showTicketModal('{{ invitation.qr_image_url }}', 'ingresso_{{ invitation.party.name|replace(' ', '_') }}_{{ invitation.name|replace(' ', '_') }}.png')" 
                                class="w-full text-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-lg font-bold text-white bg-gradient-to-r from-primary to-secondary hover:shadow-lg transition-all duration-200 hover-scale">
@@ -53,17 +90,19 @@
                                 <i class="fas fa-money-check-alt mr-2"></i>Ver Pagamento
                             </a>
                         {% else %}
-                            <p class="text-sm text-gray-500 dark:text-gray-400">Pagamento pendente.</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 text-center">Pagamento pendente.</p>
                         {% endif %}
                     </div>
                 </div>
             {% endfor %}
         </div>
     {% else %}
-        <div class="text-center py-16 glass-card rounded-2xl">
-            <i class="fas fa-ticket-alt fa-4x text-gray-400 dark:text-gray-500 mb-4"></i>
-            <h2 class="text-2xl font-semibold text-gray-700 dark:text-gray-300">Você ainda não tem ingressos.</h2>
-            <p class="text-gray-500 dark:text-gray-400 mt-2">Explore as festas públicas ou aguarde um convite!</p>
+        <div id="emptyState" class="text-center py-16 glass-card rounded-2xl overflow-hidden relative animated-gradient-bg">
+            <div class="relative z-10">
+                <i id="emptyIcon" class="fas fa-ticket-alt fa-4x text-white mb-4 inline-block"></i>
+                <h2 class="text-2xl font-semibold text-white">Sua carteira de ingressos está vazia.</h2>
+                <p class="text-white/80 mt-2 mb-6">Quando você comprar ou receber um ingresso, ele aparecerá aqui.</p>
+            </div>
         </div>
     {% endif %}
 </div>
@@ -88,15 +127,45 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        anime({
-            targets: '.invitation-card',
-            translateY: [50, 0],
-            opacity: [0, 1],
-            delay: anime.stagger(100),
-            easing: 'easeOutExpo'
-        });
+        const cards = document.querySelectorAll('.invitation-card');
+        
+        if (cards.length > 0) {
+            cards.forEach((card, index) => {
+                // Animação de entrada
+                anime({
+                    targets: card,
+                    translateY: [50, 0],
+                    opacity: [0, 1],
+                    delay: 100 * index,
+                    easing: 'easeOutExpo',
+                    duration: 800
+                });
+            });
+        } else {
+            // Animações para o estado vazio
+            const emptyState = document.getElementById('emptyState');
+            const emptyIcon = document.getElementById('emptyIcon');
+
+            anime({
+                targets: emptyState,
+                opacity: [0, 1],
+                scale: [0.98, 1],
+                duration: 600,
+                easing: 'easeOutCubic'
+            });
+
+            anime({
+                targets: emptyIcon,
+                translateY: ['-8px', '8px'],
+                direction: 'alternate',
+                loop: true,
+                duration: 2000,
+                easing: 'easeInOutSine'
+            });
+        }
     });
 
     const ticketModal = document.getElementById('ticketModal');
@@ -109,13 +178,14 @@
         downloadButton.href = imageUrl;
         downloadButton.download = downloadName;
         ticketModal.classList.remove('hidden');
-        // Animação de entrada do modal
+        
         anime({
             targets: modalContent,
-            scale: [0.95, 1],
+            scale: [0.9, 1],
             opacity: [0, 1],
-            duration: 300,
-            easing: 'easeOutExpo'
+            translateY: [20, 0],
+            duration: 400,
+            easing: 'easeOutCubic'
         });
     }
 
@@ -124,15 +194,15 @@
             targets: modalContent,
             scale: [1, 0.95],
             opacity: [1, 0],
-            duration: 200,
-            easing: 'easeInExpo',
+            translateY: [0, 10],
+            duration: 300,
+            easing: 'easeInCubic',
             complete: function() {
                 ticketModal.classList.add('hidden');
             }
         });
     }
 
-    // Fechar o modal ao clicar fora do conteúdo
     ticketModal.addEventListener('click', function(event) {
         if (event.target === ticketModal) {
             hideTicketModal();
@@ -140,3 +210,5 @@
     });
 </script>
 {% endblock %}
+
+
